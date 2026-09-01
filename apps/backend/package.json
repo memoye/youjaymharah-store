@@ -1,8 +1,8 @@
 {
-  "name": "@dtc/backend",
+  "name": "@youjaymharah/backend",
   "version": "0.0.1",
-  "description": "A starter for Medusa projects.",
-  "author": "Medusa (https://medusajs.com)",
+  "description": "A fashion store.",
+  "author": "Brown Memoye <memoyebrown@gmail.com>",
   "license": "MIT",
   "keywords": [
     "sqlite",
