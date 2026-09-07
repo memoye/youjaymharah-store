@@ -10,8 +10,22 @@ import type { BigNumberInput } from "@medusajs/framework/types";
  * two-decimal, so in practice the multiplier here is always 100.
  */
 const ZERO_DECIMAL_CURRENCIES = new Set([
-  "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA",
-  "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF",
+  "BIF",
+  "CLP",
+  "DJF",
+  "GNF",
+  "JPY",
+  "KMF",
+  "KRW",
+  "MGA",
+  "PYG",
+  "RWF",
+  "UGX",
+  "VND",
+  "VUV",
+  "XAF",
+  "XOF",
+  "XPF",
 ]);
 
 function getMultiplier(currencyCode: string): number {
@@ -19,7 +33,10 @@ function getMultiplier(currencyCode: string): number {
 }
 
 /** 49.99 NGN -> 4999 kobo */
-export function toMinorUnit(amount: BigNumberInput, currencyCode: string): number {
+export function toMinorUnit(
+  amount: BigNumberInput,
+  currencyCode: string,
+): number {
   const multiplier = getMultiplier(currencyCode);
   const minor = new BigNumber(MathBN.mult(amount, multiplier)).numeric;
 
@@ -27,7 +44,10 @@ export function toMinorUnit(amount: BigNumberInput, currencyCode: string): numbe
 }
 
 /** 4999 kobo -> 49.99 NGN */
-export function fromMinorUnit(amountInMinor: BigNumberInput, currencyCode: string): number {
+export function fromMinorUnit(
+  amountInMinor: BigNumberInput,
+  currencyCode: string,
+): number {
   const multiplier = getMultiplier(currencyCode);
 
   return new BigNumber(MathBN.div(amountInMinor, multiplier)).numeric;

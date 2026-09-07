@@ -12,14 +12,21 @@ import type {
   NormalizedWebhook,
   RedirectSessionData,
 } from "../shared/types";
-import { PaystackClient, normalizeStatus, type PaystackOptions } from "./client";
+import {
+  PaystackClient,
+  normalizeStatus,
+  type PaystackOptions,
+} from "./client";
 
 class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
   static identifier = "paystack";
 
   private readonly client: PaystackClient;
 
-  constructor(container: RedirectProviderDependencies, options: PaystackOptions) {
+  constructor(
+    container: RedirectProviderDependencies,
+    options: PaystackOptions,
+  ) {
     super(container, options);
 
     this.client = new PaystackClient(options);
@@ -29,20 +36,20 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
     if (!options.secretKey) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        'Paystack payment provider requires the "secretKey" option.'
+        'Paystack payment provider requires the "secretKey" option.',
       );
     }
   }
 
   protected async initializeTransaction(
-    input: InitializeTransactionInput
+    input: InitializeTransactionInput,
   ): Promise<InitializedTransaction> {
     const email = input.context?.customer?.email;
 
     if (!email) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        "Paystack requires a customer email to initialize a transaction."
+        "Paystack requires a customer email to initialize a transaction.",
       );
     }
 
@@ -64,7 +71,7 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
   }
 
   protected async verifyTransaction(
-    session: RedirectSessionData
+    session: RedirectSessionData,
   ): Promise<NormalizedTransaction> {
     const result = await this.client.verify(session.reference);
 
@@ -84,7 +91,7 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
   }
 
   protected async parseWebhook(
-    payload: ProviderWebhookPayload["payload"]
+    payload: ProviderWebhookPayload["payload"],
   ): Promise<NormalizedWebhook> {
     this.assertSignature(payload);
 
@@ -94,7 +101,8 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
     const metadata = (data.metadata ?? {}) as Record<string, unknown>;
 
     const action =
-      event === "charge.success" && normalizeStatus(data.status) === "successful"
+      event === "charge.success" &&
+      normalizeStatus(data.status) === "successful"
         ? "captured"
         : event.startsWith("charge.")
           ? "failed"
@@ -103,21 +111,27 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
     return {
       action,
       sessionId:
-        typeof metadata.session_id === "string" ? metadata.session_id : undefined,
+        typeof metadata.session_id === "string"
+          ? metadata.session_id
+          : undefined,
       amountInMinor: typeof data.amount === "number" ? data.amount : undefined,
-      currencyCode: typeof data.currency === "string" ? data.currency : undefined,
+      currencyCode:
+        typeof data.currency === "string" ? data.currency : undefined,
     };
   }
 
   /** HMAC-SHA512 of the raw body, keyed with the secret key. */
   private assertSignature(payload: ProviderWebhookPayload["payload"]): void {
-    const headers = (payload.headers ?? {}) as Record<string, string | string[]>;
+    const headers = (payload.headers ?? {}) as Record<
+      string,
+      string | string[]
+    >;
     const received = String(headers["x-paystack-signature"] ?? "");
 
     if (!received) {
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
-        "Missing x-paystack-signature header."
+        "Missing x-paystack-signature header.",
       );
     }
 
@@ -126,7 +140,7 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
     if (!raw) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        "Raw request body was not preserved; cannot verify signature."
+        "Raw request body was not preserved; cannot verify signature.",
       );
     }
 
@@ -140,7 +154,7 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
     if (a.length !== b.length || !timingSafeEqual(a, b)) {
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
-        "x-paystack-signature did not match."
+        "x-paystack-signature did not match.",
       );
     }
   }

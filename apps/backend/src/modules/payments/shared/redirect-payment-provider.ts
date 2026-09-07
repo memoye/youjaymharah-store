@@ -1,4 +1,8 @@
-import { AbstractPaymentProvider, BigNumber, MedusaError } from "@medusajs/framework/utils";
+import {
+  AbstractPaymentProvider,
+  BigNumber,
+  MedusaError,
+} from "@medusajs/framework/utils";
 import type {
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
@@ -51,7 +55,7 @@ export type RedirectProviderDependencies = {
  * Subclasses supply only the four gateway-specific operations at the bottom.
  */
 export abstract class RedirectPaymentProvider<
-  TOptions extends RedirectProviderOptions = RedirectProviderOptions
+  TOptions extends RedirectProviderOptions = RedirectProviderOptions,
 > extends AbstractPaymentProvider<TOptions> {
   protected readonly logger_: Logger;
   protected readonly options_: TOptions;
@@ -63,13 +67,15 @@ export abstract class RedirectPaymentProvider<
     this.options_ = options;
   }
 
-  async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutput> {
+  async initiatePayment(
+    input: InitiatePaymentInput,
+  ): Promise<InitiatePaymentOutput> {
     const sessionId = input.data?.session_id as string | undefined;
 
     if (!sessionId) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        `[${this.getIdentifier()}] No session_id was provided when initiating the payment.`
+        `[${this.getIdentifier()}] No session_id was provided when initiating the payment.`,
       );
     }
 
@@ -98,12 +104,18 @@ export abstract class RedirectPaymentProvider<
     const amountInMinor = toMinorUnit(input.amount, input.currency_code);
 
     if (session.amount_in_minor === amountInMinor) {
-      return { data: session as unknown as Record<string, unknown>, status: "pending" };
+      return {
+        data: session as unknown as Record<string, unknown>,
+        status: "pending",
+      };
     }
 
     const data = await this.createSession({
       sessionId: session.session_id,
-      reference: toGatewayReference(session.session_id, Date.now().toString(36)),
+      reference: toGatewayReference(
+        session.session_id,
+        Date.now().toString(36),
+      ),
       amount: input.amount,
       currencyCode: input.currency_code,
       context: input.context,
@@ -116,11 +128,15 @@ export abstract class RedirectPaymentProvider<
     };
   }
 
-  async authorizePayment(input: AuthorizePaymentInput): Promise<AuthorizePaymentOutput> {
+  async authorizePayment(
+    input: AuthorizePaymentInput,
+  ): Promise<AuthorizePaymentOutput> {
     return await this.getPaymentStatus(input);
   }
 
-  async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> {
+  async getPaymentStatus(
+    input: GetPaymentStatusInput,
+  ): Promise<GetPaymentStatusOutput> {
     const session = this.getSessionData(input.data);
     const transaction = await this.verifyTransaction(session);
 
@@ -135,14 +151,16 @@ export abstract class RedirectPaymentProvider<
    * capture step — we re-verify and refuse to report success unless the gateway
    * agrees the money moved.
    */
-  async capturePayment(input: CapturePaymentInput): Promise<CapturePaymentOutput> {
+  async capturePayment(
+    input: CapturePaymentInput,
+  ): Promise<CapturePaymentOutput> {
     const session = this.getSessionData(input.data);
     const transaction = await this.verifyTransaction(session);
 
     if (transaction.status !== "successful") {
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
-        `[${this.getIdentifier()}] Cannot capture ${session.reference}: gateway reports "${transaction.status}".`
+        `[${this.getIdentifier()}] Cannot capture ${session.reference}: gateway reports "${transaction.status}".`,
       );
     }
 
@@ -159,7 +177,9 @@ export abstract class RedirectPaymentProvider<
     return { data: { ...session, refund: raw } };
   }
 
-  async retrievePayment(input: RetrievePaymentInput): Promise<RetrievePaymentOutput> {
+  async retrievePayment(
+    input: RetrievePaymentInput,
+  ): Promise<RetrievePaymentOutput> {
     const session = this.getSessionData(input.data);
     const transaction = await this.verifyTransaction(session);
 
@@ -179,7 +199,7 @@ export abstract class RedirectPaymentProvider<
   }
 
   async getWebhookActionAndData(
-    payload: ProviderWebhookPayload["payload"]
+    payload: ProviderWebhookPayload["payload"],
   ): Promise<WebhookActionResult> {
     let parsed: NormalizedWebhook;
 
@@ -187,7 +207,7 @@ export abstract class RedirectPaymentProvider<
       parsed = await this.parseWebhook(payload);
     } catch (error) {
       this.logger_.error(
-        `[${this.getIdentifier()}] Rejected webhook: ${(error as Error).message}`
+        `[${this.getIdentifier()}] Rejected webhook: ${(error as Error).message}`,
       );
       return { action: "failed" };
     }
@@ -209,7 +229,10 @@ export abstract class RedirectPaymentProvider<
       data: {
         session_id: parsed.sessionId,
         amount: new BigNumber(
-          fromMinorUnit(parsed.amountInMinor ?? 0, parsed.currencyCode ?? "NGN")
+          fromMinorUnit(
+            parsed.amountInMinor ?? 0,
+            parsed.currencyCode ?? "NGN",
+          ),
         ),
       },
     };
@@ -245,13 +268,15 @@ export abstract class RedirectPaymentProvider<
     };
   }
 
-  protected getSessionData(data?: Record<string, unknown>): RedirectSessionData {
+  protected getSessionData(
+    data?: Record<string, unknown>,
+  ): RedirectSessionData {
     const session = data as RedirectSessionData | undefined;
 
     if (!session?.reference) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        `[${this.getIdentifier()}] The payment session has no gateway reference stored.`
+        `[${this.getIdentifier()}] The payment session has no gateway reference stored.`,
       );
     }
 
@@ -259,7 +284,7 @@ export abstract class RedirectPaymentProvider<
   }
 
   protected toSessionStatus(
-    status: NormalizedTransaction["status"]
+    status: NormalizedTransaction["status"],
   ): PaymentSessionStatus {
     switch (status) {
       case "successful":
@@ -278,12 +303,12 @@ export abstract class RedirectPaymentProvider<
 
   /** Create the transaction and return the hosted page to redirect to. */
   protected abstract initializeTransaction(
-    input: InitializeTransactionInput
+    input: InitializeTransactionInput,
   ): Promise<InitializedTransaction>;
 
   /** Server-side verification. This is what decides whether money moved. */
   protected abstract verifyTransaction(
-    session: RedirectSessionData
+    session: RedirectSessionData,
   ): Promise<NormalizedTransaction>;
 
   protected abstract refundTransaction(args: {
@@ -293,6 +318,6 @@ export abstract class RedirectPaymentProvider<
 
   /** Verify the signature and map the event. Throw to reject the webhook. */
   protected abstract parseWebhook(
-    payload: ProviderWebhookPayload["payload"]
+    payload: ProviderWebhookPayload["payload"],
   ): Promise<NormalizedWebhook>;
 }

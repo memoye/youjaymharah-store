@@ -38,6 +38,30 @@ module.exports = defineConfig({
       },
     },
     {
+      resolve: "@medusajs/medusa/rbac",
+    },
+    {
+      resolve: "./src/modules/branding",
+    },
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/resend",
+            id: "resend",
+            options: {
+              // Without "email" here the module does not count this as an email
+              // provider and silently falls back to the local logging provider.
+              channels: ["email"],
+              api_key: process.env.RESEND_API_KEY,
+              from: process.env.RESEND_FROM_EMAIL,
+            },
+          },
+        ],
+      },
+    },
+    {
       resolve: "@medusajs/medusa/payment",
       options: {
         providers: [

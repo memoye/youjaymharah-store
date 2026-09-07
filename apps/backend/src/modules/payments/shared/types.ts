@@ -1,4 +1,7 @@
-import type { PaymentActions, PaymentProviderContext } from "@medusajs/framework/types";
+import type {
+  PaymentActions,
+  PaymentProviderContext,
+} from "@medusajs/framework/types";
 
 /**
  * Options every redirect-style gateway needs. Concrete providers extend this.
@@ -48,10 +51,7 @@ export type InitializedTransaction = {
 
 /** Gateway-agnostic transaction state. */
 export type NormalizedTransactionStatus =
-  | "pending"
-  | "successful"
-  | "failed"
-  | "canceled";
+  "pending" | "successful" | "failed" | "canceled";
 
 export type NormalizedTransaction = {
   status: NormalizedTransactionStatus;

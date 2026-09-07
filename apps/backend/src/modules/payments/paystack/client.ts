@@ -11,7 +11,8 @@ export type PaystackOptions = RedirectProviderOptions & {
   channels?: string[];
 };
 
-export type PaystackTransactionState = "pending" | "successful" | "failed" | "canceled";
+export type PaystackTransactionState =
+  "pending" | "successful" | "failed" | "canceled";
 
 export class PaystackClient {
   constructor(private readonly options: PaystackOptions) {}
@@ -24,7 +25,7 @@ export class PaystackClient {
     const data = await this.request<Record<string, unknown>>(
       "POST",
       "/transaction/initialize",
-      payload
+      payload,
     );
 
     const redirectUrl = data.authorization_url;
@@ -32,7 +33,7 @@ export class PaystackClient {
     if (typeof redirectUrl !== "string") {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Paystack did not return an authorization_url. Keys received: ${Object.keys(data).join(", ")}`
+        `Paystack did not return an authorization_url. Keys received: ${Object.keys(data).join(", ")}`,
       );
     }
 
@@ -51,18 +52,22 @@ export class PaystackClient {
   }> {
     const data = await this.request<Record<string, unknown>>(
       "GET",
-      `/transaction/verify/${encodeURIComponent(reference)}`
+      `/transaction/verify/${encodeURIComponent(reference)}`,
     );
 
     return {
       state: normalizeStatus(data.status),
       amountInMinor: typeof data.amount === "number" ? data.amount : undefined,
-      currencyCode: typeof data.currency === "string" ? data.currency : undefined,
+      currencyCode:
+        typeof data.currency === "string" ? data.currency : undefined,
       raw: data,
     };
   }
 
-  async refund(reference: string, amountInMinor: number): Promise<Record<string, unknown>> {
+  async refund(
+    reference: string,
+    amountInMinor: number,
+  ): Promise<Record<string, unknown>> {
     return await this.request<Record<string, unknown>>("POST", "/refund", {
       transaction: reference,
       amount: amountInMinor,
@@ -72,7 +77,7 @@ export class PaystackClient {
   private async request<T>(
     method: "GET" | "POST",
     path: string,
-    body?: unknown
+    body?: unknown,
   ): Promise<T> {
     let response: Response;
 
@@ -89,7 +94,7 @@ export class PaystackClient {
     } catch (error) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Could not reach Paystack at ${path}: ${(error as Error).message}`
+        `Could not reach Paystack at ${path}: ${(error as Error).message}`,
       );
     }
 
@@ -101,14 +106,14 @@ export class PaystackClient {
     } catch {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Paystack returned a non-JSON response (${response.status}): ${text.slice(0, 200)}`
+        `Paystack returned a non-JSON response (${response.status}): ${text.slice(0, 200)}`,
       );
     }
 
     if (!response.ok || envelope.status === false) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Paystack ${method} ${path} failed (${response.status}): ${envelope.message ?? text.slice(0, 200)}`
+        `Paystack ${method} ${path} failed (${response.status}): ${envelope.message ?? text.slice(0, 200)}`,
       );
     }
 

@@ -124,7 +124,12 @@ claude mcp add --transport http medusa https://docs.medusajs.com/mcp # or agent 
 ## Code Style
 
 - **The backend must satisfy `@medusajs/eslint-plugin`'s recommended config** (`eslint.config.ts`). Its rules encode Medusa framework requirements — correct route/workflow/module shapes, not just cosmetics — so a lint failure usually means the code is actually wrong, not just badly formatted. Never disable a `@medusajs/*` rule to make lint pass; fix the code.
-- No semicolons. Double quotes, 2-space indent.
+- **Formatting is Prettier's job, not yours.** Run `<pm> run format` (or `prettier --write <paths>`) rather than hand-matching style. **The two apps do not share a style**, and Prettier resolves config per file, so the right rules apply automatically:
+  - Root `.prettierrc` — governs the backend and repo root: **semicolons**, double quotes, 2-space indent, trailing commas, 80-column width.
+  - `apps/storefront/.prettierrc.json` — overrides with **`semi: false`** for everything under `apps/storefront`.
+
+  Never copy the backend's style into the storefront or vice versa; let Prettier decide.
+
 - Files: kebab-case. Types/classes: PascalCase. Functions/variables: camelCase. DB columns: snake_case.
 - No emojis in code, comments, or commit messages.
 

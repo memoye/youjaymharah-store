@@ -1,6 +1,10 @@
 import { MedusaError } from "@medusajs/framework/utils";
 
-import type { CredoEnvelope, CredoInitializePayload, CredoOptions } from "./types";
+import type {
+  CredoEnvelope,
+  CredoInitializePayload,
+  CredoOptions,
+} from "./types";
 
 const LIVE_BASE_URL = "https://api.credocentral.com";
 const TEST_BASE_URL = "https://api.credodemo.com";
@@ -34,20 +38,20 @@ const GATEWAY_REFERENCE_KEYS = ["credoReference", "transRef", "reference"];
  * Review (6) stays `pending` — flagged for manual review is not yet money.
  */
 const STATUS_CODES: Record<string, CredoTransactionState> = {
-  "0": "successful",  // Successful   — payment completed successfully
-  "1": "successful",  // Refunded     — transaction has been refunded
-  "2": "successful",  // Refund       — queued for refund
-  "3": "failed",      // Failed       — payment failed
-  "4": "successful",  // Settle       — queued for settlement
-  "5": "successful",  // Settled      — funds have been paid out
-  "6": "pending",     // Review       — flagged for manual review
-  "7": "failed",      // Declined     — failed fraud check
-  "9": "canceled",    // Cancelled    — by customer
-  "10": "canceled",   // Cancelled    — by merchant
-  "12": "pending",    // Attempted    — account generated, awaiting credit
-  "13": "pending",    // Attempted    — customer attempted payment
-  "14": "pending",    // Initialized  — payment page loaded
-  "15": "pending",    // Initializing — payment URL generated
+  "0": "successful", // Successful   — payment completed successfully
+  "1": "successful", // Refunded     — transaction has been refunded
+  "2": "successful", // Refund       — queued for refund
+  "3": "failed", // Failed       — payment failed
+  "4": "successful", // Settle       — queued for settlement
+  "5": "successful", // Settled      — funds have been paid out
+  "6": "pending", // Review       — flagged for manual review
+  "7": "failed", // Declined     — failed fraud check
+  "9": "canceled", // Cancelled    — by customer
+  "10": "canceled", // Cancelled    — by merchant
+  "12": "pending", // Attempted    — account generated, awaiting credit
+  "13": "pending", // Attempted    — customer attempted payment
+  "14": "pending", // Initialized  — payment page loaded
+  "15": "pending", // Initializing — payment URL generated
 };
 
 /** Accepted alongside the codes in case a payload carries the label instead. */
@@ -68,7 +72,8 @@ const STATUS_LABELS: Record<string, CredoTransactionState> = {
   initializing: "pending",
 };
 
-export type CredoTransactionState = "pending" | "successful" | "failed" | "canceled";
+export type CredoTransactionState =
+  "pending" | "successful" | "failed" | "canceled";
 
 export class CredoClient {
   private readonly baseUrl: string;
@@ -93,7 +98,7 @@ export class CredoClient {
       "POST",
       "/transaction/initialize",
       this.options.publicKey,
-      payload
+      payload,
     );
 
     const redirectUrl = pick(body, REDIRECT_URL_KEYS);
@@ -101,12 +106,14 @@ export class CredoClient {
     if (!redirectUrl) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Credo did not return a checkout URL. Keys received: ${Object.keys(body).join(", ") || "none"}`
+        `Credo did not return a checkout URL. Keys received: ${Object.keys(body).join(", ") || "none"}`,
       );
     }
 
     return {
-      reference: (payload.reference ?? pick(body, ["reference"]) ?? "") as string,
+      reference: (payload.reference ??
+        pick(body, ["reference"]) ??
+        "") as string,
       gatewayReference: pick(body, GATEWAY_REFERENCE_KEYS),
       redirectUrl,
       raw: body,
@@ -123,13 +130,14 @@ export class CredoClient {
     const body = await this.request<Record<string, unknown>>(
       "GET",
       `/transaction/${encodeURIComponent(reference)}/verify`,
-      this.options.secretKey
+      this.options.secretKey,
     );
 
     return {
       state: normalizeStatus(body.status),
       amountInMinor: toNumber(body.amount ?? body.transAmount),
-      currencyCode: typeof body.currency === "string" ? body.currency : undefined,
+      currencyCode:
+        typeof body.currency === "string" ? body.currency : undefined,
       raw: body,
     };
   }
@@ -138,7 +146,7 @@ export class CredoClient {
     method: "GET" | "POST",
     path: string,
     authKey: string,
-    body?: unknown
+    body?: unknown,
   ): Promise<T> {
     let response: Response;
 
@@ -156,7 +164,7 @@ export class CredoClient {
     } catch (error) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Could not reach Credo at ${this.baseUrl}${path}: ${(error as Error).message}`
+        `Could not reach Credo at ${this.baseUrl}${path}: ${(error as Error).message}`,
       );
     }
 
@@ -168,14 +176,17 @@ export class CredoClient {
     } catch {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Credo returned a non-JSON response (${response.status}): ${text.slice(0, 200)}`
+        `Credo returned a non-JSON response (${response.status}): ${text.slice(0, 200)}`,
       );
     }
 
-    if (!response.ok || (envelope.status !== undefined && Number(envelope.status) >= 400)) {
+    if (
+      !response.ok ||
+      (envelope.status !== undefined && Number(envelope.status) >= 400)
+    ) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Credo ${method} ${path} failed (${response.status}): ${envelope.message ?? text.slice(0, 200)}`
+        `Credo ${method} ${path} failed (${response.status}): ${envelope.message ?? text.slice(0, 200)}`,
       );
     }
 
@@ -183,7 +194,10 @@ export class CredoClient {
   }
 }
 
-function pick(source: Record<string, unknown>, keys: string[]): string | undefined {
+function pick(
+  source: Record<string, unknown>,
+  keys: string[],
+): string | undefined {
   for (const key of keys) {
     const value = source[key];
     if (typeof value === "string" && value.length) {
@@ -197,7 +211,9 @@ function pick(source: Record<string, unknown>, keys: string[]): string | undefin
 function toNumber(value: unknown): number | undefined {
   const parsed = typeof value === "string" ? Number(value) : value;
 
-  return typeof parsed === "number" && Number.isFinite(parsed) ? parsed : undefined;
+  return typeof parsed === "number" && Number.isFinite(parsed)
+    ? parsed
+    : undefined;
 }
 
 /**
@@ -208,7 +224,9 @@ function toNumber(value: unknown): number | undefined {
  * could not read.
  */
 export function normalizeStatus(status: unknown): CredoTransactionState {
-  const normalized = String(status ?? "").trim().toLowerCase();
+  const normalized = String(status ?? "")
+    .trim()
+    .toLowerCase();
 
   return STATUS_CODES[normalized] ?? STATUS_LABELS[normalized] ?? "pending";
 }
