@@ -5,7 +5,6 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd());
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
-    redisUrl: process.env.REDIS_URL,
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,
@@ -14,4 +13,56 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET,
     },
   },
+  modules: [
+    {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/file-s3",
+            id: "s3",
+            options: {
+              file_url: process.env.S3_FILE_URL,
+              access_key_id: process.env.S3_ACCESS_KEY_ID,
+              secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
+              region: process.env.S3_REGION,
+              bucket: process.env.S3_BUCKET,
+              endpoint: process.env.S3_ENDPOINT,
+              // R2 does not implement S3 ACLs; without this the provider sends
+              // `ACL: public-read` and every upload is rejected. Public reads are
+              // controlled by the bucket's custom domain / public-access toggle.
+              acl: false,
+            },
+          },
+        ],
+      },
+    },
+    {
+      resolve: "@medusajs/medusa/payment",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/payments/credo",
+            id: "credo",
+            options: {
+              publicKey: process.env.CREDO_PUBLIC_KEY,
+              secretKey: process.env.CREDO_SECRET_KEY,
+              mode: process.env.CREDO_MODE ?? "test",
+              callbackUrl: process.env.PAYMENT_CALLBACK_URL,
+              webhookToken: process.env.CREDO_WEBHOOK_TOKEN,
+              businessCode: process.env.CREDO_BUSINESS_CODE,
+            },
+          },
+          {
+            resolve: "./src/modules/payments/paystack",
+            id: "paystack",
+            options: {
+              secretKey: process.env.PAYSTACK_SECRET_KEY,
+              callbackUrl: process.env.PAYMENT_CALLBACK_URL,
+            },
+          },
+        ],
+      },
+    },
+  ],
 });
