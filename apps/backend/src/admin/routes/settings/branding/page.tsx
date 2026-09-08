@@ -288,6 +288,7 @@ const EditBrandingDrawer = ({
 
 export const config = defineRouteConfig({
   label: "Branding",
+  rank: 1,
 });
 
 export default BrandingSettingsPage;

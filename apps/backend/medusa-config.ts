@@ -13,7 +13,32 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET,
     },
   },
+  featureFlags: {
+    // The dashboard gates all RBAC UI (role picker on invites, role settings
+    // pages) behind this flag; the module alone does not reveal them.
+    rbac: true,
+  },
   modules: [
+    // Durable infrastructure: with REDIS_URL set, events survive restarts and
+    // workflow steps retry on schedule instead of dying with the process (the
+    // default local event bus drops anything in flight on every deploy).
+    // Kept conditional so a dev machine without Redis still boots on defaults.
+    ...(process.env.REDIS_URL
+      ? [
+          {
+            resolve: "@medusajs/medusa/event-bus-redis",
+            options: {
+              redisUrl: process.env.REDIS_URL,
+            },
+          },
+          {
+            resolve: "@medusajs/medusa/workflow-engine-redis",
+            options: {
+              redisUrl: process.env.REDIS_URL,
+            },
+          },
+        ]
+      : []),
     {
       resolve: "@medusajs/medusa/file",
       options: {
@@ -42,6 +67,9 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/modules/branding",
+    },
+    {
+      resolve: "./src/modules/newsletter",
     },
     {
       resolve: "@medusajs/medusa/notification",

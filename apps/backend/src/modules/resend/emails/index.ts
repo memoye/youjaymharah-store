@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { STORE_NAME } from "./constants";
 import { inviteUserEmail } from "./invite-user";
+import { newsletterConfirmEmail } from "./newsletter-confirm";
+import { newsletterWelcomeEmail } from "./newsletter-welcome";
 import { orderCanceledEmail } from "./order-canceled";
 import { orderPlacedEmail } from "./order-placed";
 import { orderShippedEmail } from "./order-shipped";
@@ -18,6 +20,8 @@ export const EmailTemplates = {
   ORDER_CANCELED: "order-canceled",
   PASSWORD_RESET: "password-reset",
   INVITE_USER: "invite-user",
+  NEWSLETTER_CONFIRM: "newsletter-confirm",
+  NEWSLETTER_WELCOME: "newsletter-welcome",
 } as const;
 
 export type EmailTemplate =
@@ -61,7 +65,26 @@ const registry: Record<EmailTemplate, TemplateEntry> = {
     subject: `You have been invited to ${STORE_NAME}`,
     react: inviteUserEmail(data as Parameters<typeof inviteUserEmail>[0]),
   }),
+  [EmailTemplates.NEWSLETTER_CONFIRM]: (data) => ({
+    subject: brandName(data, `Confirm your ${STORE_NAME} subscription`),
+    react: newsletterConfirmEmail(
+      data as Parameters<typeof newsletterConfirmEmail>[0],
+    ),
+  }),
+  [EmailTemplates.NEWSLETTER_WELCOME]: (data) => ({
+    subject: brandName(data, `Welcome to ${STORE_NAME}`),
+    react: newsletterWelcomeEmail(
+      data as Parameters<typeof newsletterWelcomeEmail>[0],
+    ),
+  }),
 };
+
+/** Uses the live store name in the subject when branding was passed in. */
+function brandName(data: TemplateData, fallback: string): string {
+  const brand = data.brand as { name?: string | null } | undefined;
+
+  return brand?.name ? fallback.replace(STORE_NAME, brand.name) : fallback;
+}
 
 /**
  * Returns the rendered component and default subject for a template name, or
