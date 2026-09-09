@@ -24,3 +24,5 @@ build
 !.yarn/versions
 
 .medusa
+# medusa build copies the admin bundle here for medusa start
+public
