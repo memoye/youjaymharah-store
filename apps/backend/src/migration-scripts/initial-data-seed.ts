@@ -7,6 +7,7 @@ import {
   createApiKeysWorkflow,
   createRegionsWorkflow,
   createSalesChannelsWorkflow,
+  createStockLocationsWorkflow,
   createStoresWorkflow,
   createTaxRegionsWorkflow,
   createUsersWorkflow,
@@ -104,6 +105,11 @@ export default async function initial_data_seed({
   }
 
   logger.info("Seeding Nigeria region and tax region...");
+  // The region is created without payment providers: during db:migrate the
+  // payment module has not yet registered pp_credo/pp_paystack (its boot
+  // loader upserts those rows on first app start), so passing them to the
+  // region workflow would fail validation. They are linked directly below --
+  // the link pivot does not require the provider rows to exist yet.
   const { result: regionResult } = await createRegionsWorkflow(container).run({
     input: {
       regions: [
@@ -111,14 +117,20 @@ export default async function initial_data_seed({
           name: "Nigeria",
           currency_code: "ngn",
           countries: ["ng"],
-          // The system provider stays so admins can record manual payments;
-          // credo and paystack are the storefront checkout methods.
-          payment_providers: ["pp_system_default", "pp_credo", "pp_paystack"],
         },
       ],
     },
   });
   const region = regionResult[0];
+
+  await link.create(
+    ["pp_system_default", "pp_credo_credo", "pp_paystack_paystack"].map(
+      (payment_provider_id) => ({
+        [Modules.REGION]: { region_id: region.id },
+        [Modules.PAYMENT]: { payment_provider_id },
+      }),
+    ),
+  );
 
   await createTaxRegionsWorkflow(container).run({
     input: [
@@ -226,7 +238,7 @@ async function seedAdminUser(
   }
 
   await authService.updateAuthIdentities({
-    id: authIdentity.id,
+    id: authIdentity!.id,
     app_metadata: {
       user_id: user.id,
     },
