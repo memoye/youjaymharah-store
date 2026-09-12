@@ -1,0 +1,39 @@
+name: Backend
+
+# Runs what the deploy runs. `medusa build` type-checks and lints the backend,
+# so a type error like a mis-parameterised StepResponse fails here rather than
+# in Render's build log.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  build:
+    name: Type-check, lint and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from the root package.json `packageManager` field.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Explicit type-check: `-p .` from the app directory. Pointing -p at a
+      # path that does not exist makes tsc exit quietly, which is how a broken
+      # build reached the deploy once already.
+      - name: Type-check backend
+        working-directory: apps/backend
+        run: pnpm exec tsc --noEmit -p .
+
+      - name: Build backend
+        working-directory: apps/backend
+        run: pnpm run build

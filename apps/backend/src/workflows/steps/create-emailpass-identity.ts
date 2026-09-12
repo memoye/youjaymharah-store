@@ -40,7 +40,9 @@ export const createEmailpassIdentityStep = createStep(
       );
     }
 
-    return new StepResponse<CreateEmailpassIdentityOutput>(
+    // Both generics matter: the second is the compensation input (the id to
+    // delete), which is not the same shape as the step's output.
+    return new StepResponse<CreateEmailpassIdentityOutput, string>(
       { auth_identity_id: authIdentity.id },
       authIdentity.id,
     );
