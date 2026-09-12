@@ -1,6 +1,47 @@
-import { loadEnv, defineConfig } from "@medusajs/framework/utils";
+import { loadEnv, defineConfig, MedusaError } from "@medusajs/framework/utils";
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd());
+
+/**
+ * Validates REDIS_URL before any module tries to connect.
+ *
+ * Provider consoles offer several "connect" snippets, and pasting the
+ * `redis-cli --tls -u redis://...` command instead of the URL is an easy
+ * mistake: every Redis module then fails deep inside the module loader with a
+ * bare "Invalid URL" and the server exits. Failing here instead names the
+ * variable and says what to paste. The value is truncated in the error so a
+ * token never reaches the logs.
+ */
+function resolveRedisUrl(): string | undefined {
+  const raw = process.env.REDIS_URL?.trim();
+
+  if (!raw) {
+    return undefined;
+  }
+
+  const hint = `Got "${raw.slice(0, 24)}...". Use the connection URL (rediss://default:<token>@<host>:6379), not a redis-cli command.`;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      `REDIS_URL is not a valid URL. ${hint}`,
+    );
+  }
+
+  if (parsed.protocol !== "redis:" && parsed.protocol !== "rediss:") {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      `REDIS_URL must use the redis:// or rediss:// scheme, got "${parsed.protocol}". ${hint}`,
+    );
+  }
+
+  return raw;
+}
+
+const REDIS_URL = resolveRedisUrl();
 
 module.exports = defineConfig({
   projectConfig: {
@@ -8,7 +49,7 @@ module.exports = defineConfig({
     // Admin sessions live in Redis when it is available. Without this Medusa
     // falls back to express-session's MemoryStore, which logs every admin out
     // on each deploy and leaks memory -- it also cannot work past one instance.
-    redisUrl: process.env.REDIS_URL,
+    redisUrl: REDIS_URL,
     redisPrefix: process.env.REDIS_PREFIX ?? "youjaymharah:",
     sessionOptions: {
       // Ten hours: a full working day in the dashboard without re-login.
@@ -32,12 +73,12 @@ module.exports = defineConfig({
     // workflow steps retry on schedule instead of dying with the process (the
     // default local event bus drops anything in flight on every deploy).
     // Kept conditional so a dev machine without Redis still boots on defaults.
-    ...(process.env.REDIS_URL
+    ...(REDIS_URL
       ? [
           {
             resolve: "@medusajs/medusa/event-bus-redis",
             options: {
-              redisUrl: process.env.REDIS_URL,
+              redisUrl: REDIS_URL,
             },
           },
           {
@@ -46,7 +87,7 @@ module.exports = defineConfig({
             // bus takes a flat `redisUrl`; the workflow engine does not).
             options: {
               redis: {
-                redisUrl: process.env.REDIS_URL,
+                redisUrl: REDIS_URL,
               },
             },
           },
@@ -61,7 +102,7 @@ module.exports = defineConfig({
                   resolve: "@medusajs/medusa/caching-redis",
                   id: "cache-redis",
                   options: {
-                    redisUrl: process.env.REDIS_URL,
+                    redisUrl: REDIS_URL,
                     // Keyed apart from sessions and locks, so flushing the
                     // cache cannot take anything else with it.
                     prefix: "youjaymharah:cache:",
@@ -82,7 +123,7 @@ module.exports = defineConfig({
                   id: "locking-redis",
                   is_default: true,
                   options: {
-                    redisUrl: process.env.REDIS_URL,
+                    redisUrl: REDIS_URL,
                     namespace: "youjaymharah:lock:",
                   },
                 },
