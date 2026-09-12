@@ -437,7 +437,12 @@ async function ensureSharedOptions(container: MedusaContainer) {
         },
       });
     } else {
-      const known = new Set((existing.values ?? []).map((v) => v!.value));
+      // Typed explicitly: query.graph results are only strongly typed once
+      // `medusa build` has generated .medusa/types, which is gitignored -- so
+      // without this the Set is Set<unknown> in CI but Set<string> locally.
+      const known = new Set<string>(
+        (existing.values ?? []).map((v) => String(v!.value)),
+      );
       const missing = values.filter((v) => !known.has(v));
       if (missing.length) {
         await updateProductOptionsWorkflow(container).run({

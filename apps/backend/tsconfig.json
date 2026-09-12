@@ -28,6 +28,7 @@
     ".medusa/server",
     ".medusa/admin",
     ".cache",
-    "eslint.config.*"
+    "eslint.config.*",
+    "src/admin"
   ]
 }
