@@ -5,6 +5,15 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd());
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    // Admin sessions live in Redis when it is available. Without this Medusa
+    // falls back to express-session's MemoryStore, which logs every admin out
+    // on each deploy and leaks memory -- it also cannot work past one instance.
+    redisUrl: process.env.REDIS_URL,
+    redisPrefix: process.env.REDIS_PREFIX ?? "youjaymharah:",
+    sessionOptions: {
+      // Ten hours: a full working day in the dashboard without re-login.
+      ttl: 10 * 60 * 60 * 1000,
+    },
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,
@@ -39,6 +48,45 @@ module.exports = defineConfig({
               redis: {
                 redisUrl: process.env.REDIS_URL,
               },
+            },
+          },
+          // Shared cache (query results, price calculations). The in-memory
+          // default gives every instance its own copy and throws it away on
+          // restart.
+          {
+            resolve: "@medusajs/medusa/caching",
+            options: {
+              providers: [
+                {
+                  resolve: "@medusajs/medusa/caching-redis",
+                  id: "cache-redis",
+                  options: {
+                    redisUrl: process.env.REDIS_URL,
+                    // Keyed apart from sessions and locks, so flushing the
+                    // cache cannot take anything else with it.
+                    prefix: "youjaymharah:cache:",
+                  },
+                },
+              ],
+            },
+          },
+          // Distributed locks. The in-memory default only guards one process,
+          // so two instances could enter the same guarded section at once
+          // (inventory reservations, order edits).
+          {
+            resolve: "@medusajs/medusa/locking",
+            options: {
+              providers: [
+                {
+                  resolve: "@medusajs/medusa/locking-redis",
+                  id: "locking-redis",
+                  is_default: true,
+                  options: {
+                    redisUrl: process.env.REDIS_URL,
+                    namespace: "youjaymharah:lock:",
+                  },
+                },
+              ],
             },
           },
         ]
