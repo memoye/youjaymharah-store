@@ -42,12 +42,17 @@ export const sendOrderConfirmationStep = createStep(
         "email",
         "currency_code",
         "total",
-        "item_total",
+        "item_subtotal",
+        "discount_subtotal",
         "tax_total",
         "customer.*",
         "shipping_address.*",
         "items.*",
+        // Computed totals are not part of `items.*` / `shipping_methods.*`;
+        // they have to be requested by name.
+        "items.subtotal",
         "shipping_methods.*",
+        "shipping_methods.subtotal",
       ],
       filters: { id: input.id },
     });

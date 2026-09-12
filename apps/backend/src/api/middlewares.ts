@@ -42,6 +42,14 @@ export const StoreNewsletterToken = z.object({
 
 export type StoreNewsletterTokenType = z.infer<typeof StoreNewsletterToken>;
 
+export const StoreAddWishlistItem = z.object({
+  product_id: z.string().min(1),
+  /** Set when a specific colour/size was chosen on the product page. */
+  variant_id: z.string().min(1).nullable().optional(),
+});
+
+export type StoreAddWishlistItemType = z.infer<typeof StoreAddWishlistItem>;
+
 export default defineMiddlewares({
   routes: [
     // Custom admin routes are ungated unless they declare policies -- without
@@ -85,6 +93,13 @@ export default defineMiddlewares({
       matcher: "/store/newsletter/unsubscribe",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreNewsletterToken)],
+    },
+    // Wishlist routes live under /store/customers/me, which Medusa already
+    // restricts to logged-in customers; only the body needs validating.
+    {
+      matcher: "/store/customers/me/wishlist/items",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreAddWishlistItem)],
     },
   ],
 });

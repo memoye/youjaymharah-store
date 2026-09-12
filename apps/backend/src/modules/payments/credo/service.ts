@@ -63,8 +63,8 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
   protected async initializeTransaction(
     input: InitializeTransactionInput,
   ): Promise<InitializedTransaction> {
-    const customer = input.context?.customer;
-    const email = customer?.email;
+    const payer = this.resolvePayer(input);
+    const email = payer.email;
 
     if (!email) {
       throw new MedusaError(
@@ -83,9 +83,9 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
     const result = await this.client.initialize({
       amount: input.amountInMinor,
       email,
-      customerFirstName: customer?.first_name ?? undefined,
-      customerLastName: customer?.last_name ?? undefined,
-      customerPhoneNumber: customer?.phone ?? undefined,
+      customerFirstName: payer.first_name ?? undefined,
+      customerLastName: payer.last_name ?? undefined,
+      customerPhoneNumber: payer.phone ?? undefined,
       currency: input.currencyCode,
       reference: input.reference,
       callbackUrl: this.options_.callbackUrl,

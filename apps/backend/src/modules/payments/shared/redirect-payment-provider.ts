@@ -34,6 +34,7 @@ import type {
   InitializeTransactionInput,
   NormalizedTransaction,
   NormalizedWebhook,
+  Payer,
   RedirectProviderOptions,
   RedirectSessionData,
 } from "./types";
@@ -265,6 +266,27 @@ export abstract class RedirectPaymentProvider<
       session_id: args.sessionId,
       amount_in_minor: amountInMinor,
       currency_code: currencyCode,
+      payer: args.extra?.payer as Payer | undefined,
+    };
+  }
+
+  /**
+   * Medusa only puts `context.customer` on the session for logged-in
+   * customers (the store route passes the auth actor id), so guest checkouts
+   * arrive with no customer at all. The storefront therefore sends the cart's
+   * contact details as `data.payer`; the authenticated customer still wins
+   * when present. This is only the receipt address and name shown on the
+   * gateway's page -- nothing about whether money moved is taken from it.
+   */
+  protected resolvePayer(input: InitializeTransactionInput): Payer {
+    const customer = input.context?.customer;
+    const payer = (input.data?.payer ?? {}) as Payer;
+
+    return {
+      email: customer?.email || payer.email,
+      first_name: customer?.first_name || payer.first_name,
+      last_name: customer?.last_name || payer.last_name,
+      phone: customer?.phone || payer.phone,
     };
   }
 

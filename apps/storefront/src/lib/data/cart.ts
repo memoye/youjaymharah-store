@@ -1,6 +1,7 @@
 "use server"
 
 import { sdk } from "@lib/config"
+import { isRedirectPayment } from "@lib/constants"
 import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
@@ -70,7 +71,7 @@ export async function getOrSetCart(countryCode: string) {
     const cartResp = await sdk.store.cart.create(
       { region_id: region.id, locale: locale || undefined },
       {},
-      headers,
+      headers
     )
     cart = cartResp.cart
 
@@ -145,7 +146,7 @@ export async function addToCart({
         quantity,
       },
       {},
-      headers,
+      headers
     )
     .then(async () => {
       const cartCacheTag = await getCacheTag("carts")
@@ -239,14 +240,34 @@ export async function setShippingMethod({
 
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
-  data: HttpTypes.StoreInitializePaymentSession,
+  data: HttpTypes.StoreInitializePaymentSession
 ) {
   const headers = {
     ...(await getAuthHeaders()),
   }
 
+  // Medusa only gives payment providers the customer's details when they are
+  // logged in. Paystack and Credo need an email to open a transaction, so
+  // guests' contact details travel with the session instead.
+  const payload: HttpTypes.StoreInitializePaymentSession = isRedirectPayment(
+    data.provider_id
+  )
+    ? {
+        ...data,
+        data: {
+          ...data.data,
+          payer: {
+            email: cart.email,
+            first_name: cart.billing_address?.first_name,
+            last_name: cart.billing_address?.last_name,
+            phone: cart.billing_address?.phone,
+          },
+        },
+      }
+    : data
+
   return sdk.store.payment
-    .initiatePaymentSession(cart, data, {}, headers)
+    .initiatePaymentSession(cart, payload, {}, headers)
     .then(async (resp) => {
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
@@ -303,7 +324,7 @@ export async function removeDiscount(code: string) {
 
 export async function removeGiftCard(
   codeToRemove: string,
-  giftCards: any[],
+  giftCards: any[]
   // giftCards: GiftCard[]
 ) {
   //   const cartId = getCartId()
@@ -323,7 +344,7 @@ export async function removeGiftCard(
 
 export async function submitPromotionForm(
   currentState: unknown,
-  formData: FormData,
+  formData: FormData
 ) {
   const code = formData.get("code") as string
   try {
@@ -382,7 +403,7 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
   }
 
   redirect(
-    `/${formData.get("shipping_address.country_code")}/checkout?step=delivery`,
+    `/${formData.get("shipping_address.country_code")}/checkout?step=delivery`
   )
 }
 

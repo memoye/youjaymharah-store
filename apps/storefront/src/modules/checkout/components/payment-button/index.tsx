@@ -1,11 +1,16 @@
 "use client"
 
-import { isManual, isStripeLike } from "@lib/constants"
-import { placeOrder } from "@lib/data/cart"
+import {
+  isManual,
+  isRedirectPayment,
+  isStripeLike,
+  redirectPaymentName,
+} from "@lib/constants"
+import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import React, { useState } from "react"
 import ErrorMessage from "../error-message"
 
@@ -33,6 +38,15 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         <StripePaymentButton
           notReady={notReady}
           cart={cart}
+          data-testid={dataTestId}
+        />
+      )
+    case isRedirectPayment(paymentSession?.provider_id):
+      return (
+        <RedirectPaymentButton
+          cart={cart}
+          providerId={paymentSession!.provider_id}
+          notReady={notReady}
           data-testid={dataTestId}
         />
       )
@@ -151,6 +165,82 @@ const StripePaymentButton = ({
       <ErrorMessage
         error={errorMessage}
         data-testid="stripe-payment-error-message"
+      />
+    </>
+  )
+}
+
+/** Set by /checkout/callback when the gateway did not confirm the payment. */
+const PAYMENT_FAILED_MESSAGE =
+  "We couldn't confirm your payment, so your order wasn't placed. Try again, or choose another payment method."
+
+const RedirectPaymentButton = ({
+  cart,
+  providerId,
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  cart: HttpTypes.StoreCart
+  providerId: string
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const searchParams = useSearchParams()
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    searchParams.get("payment_error") ? PAYMENT_FAILED_MESSAGE : null
+  )
+
+  const handlePayment = async () => {
+    setSubmitting(true)
+    setErrorMessage(null)
+
+    try {
+      // Re-initiate right before leaving: anything changed since the payment
+      // step (a promo code, delivery option) changes the total, and the
+      // gateway must be asked to charge the current amount.
+      const { payment_collection } = await initiatePaymentSession(cart, {
+        provider_id: providerId,
+      })
+
+      const redirectUrl = payment_collection?.payment_sessions?.find(
+        (session) => session.provider_id === providerId
+      )?.data?.redirect_url
+
+      if (
+        typeof redirectUrl !== "string" ||
+        !redirectUrl.startsWith("https://")
+      ) {
+        throw new Error(
+          `${redirectPaymentName(
+            providerId
+          )} is unavailable right now. Choose another payment method or try again shortly.`
+        )
+      }
+
+      // Leaving the site: keep the button in its loading state until the
+      // browser navigates away.
+      window.location.assign(redirectUrl)
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady}
+        isLoading={submitting}
+        onClick={handlePayment}
+        size="large"
+        data-testid={dataTestId}
+      >
+        Continue to {redirectPaymentName(providerId)}
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="redirect-payment-error-message"
       />
     </>
   )

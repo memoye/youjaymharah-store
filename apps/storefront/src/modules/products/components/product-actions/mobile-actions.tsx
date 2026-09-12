@@ -130,8 +130,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 {!variant
                   ? "Select variant"
                   : !inStock
-                    ? "Out of stock"
-                    : "Add to cart"}
+                  ? "Out of stock"
+                  : "Add to cart"}
               </Button>
             </div>
           </div>
@@ -183,6 +183,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                             <div key={option.id}>
                               <OptionSelect
                                 option={option}
+                                product={product}
+                                selected={options}
                                 current={options[option.id]}
                                 updateOption={updateOptions}
                                 title={option.title ?? ""}

@@ -32,6 +32,20 @@ export type RedirectSessionData = {
   session_id: string;
   amount_in_minor: number;
   currency_code: string;
+  /**
+   * Guest contact details the storefront sent with the session. Kept so
+   * updatePayment -- which only receives this stored data -- can re-initialize
+   * the transaction for a guest.
+   */
+  payer?: Payer;
+};
+
+/** Who the gateway should address the receipt to. */
+export type Payer = {
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
 };
 
 export type InitializeTransactionInput = {

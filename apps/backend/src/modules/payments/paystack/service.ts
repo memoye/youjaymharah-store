@@ -44,7 +44,7 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
   protected async initializeTransaction(
     input: InitializeTransactionInput,
   ): Promise<InitializedTransaction> {
-    const email = input.context?.customer?.email;
+    const email = this.resolvePayer(input).email;
 
     if (!email) {
       throw new MedusaError(

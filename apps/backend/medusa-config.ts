@@ -76,6 +76,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/newsletter",
     },
     {
+      resolve: "./src/modules/wishlist",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [

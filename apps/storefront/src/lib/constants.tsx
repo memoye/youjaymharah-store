@@ -33,7 +33,30 @@ export const paymentInfoMap: Record<
     title: "Manual Payment",
     icon: <CreditCard />,
   },
+  pp_paystack_paystack: {
+    title: "Card, bank transfer or USSD (Paystack)",
+    icon: <CreditCard />,
+  },
+  pp_credo_credo: {
+    title: "Card or bank transfer (Credo)",
+    icon: <CreditCard />,
+  },
   // Add more payment providers here
+}
+
+/**
+ * Hosted-checkout gateways: the customer pays on the gateway's own page and
+ * comes back to /checkout/callback, where the order is completed.
+ */
+export const isRedirectPayment = (providerId?: string) => {
+  return (
+    providerId?.startsWith("pp_paystack_") ||
+    providerId?.startsWith("pp_credo_")
+  )
+}
+
+export const redirectPaymentName = (providerId?: string) => {
+  return providerId?.startsWith("pp_credo_") ? "Credo" : "Paystack"
 }
 
 // This only checks if it is native stripe or medusa payments for card payments, it ignores the other stripe-based providers

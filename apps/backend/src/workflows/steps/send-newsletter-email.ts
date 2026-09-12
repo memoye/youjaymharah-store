@@ -17,7 +17,15 @@ export type SendNewsletterEmailInput = {
 };
 
 export const sendNewsletterEmailStep = createStep(
-  "send-newsletter-email",
+  {
+    name: "send-newsletter-email",
+    // Transient Resend/network failures are retried by the workflow engine.
+    // This matters most for the confirm email: without it a double opt-in
+    // signup is stranded as `pending` with no way for the subscriber to
+    // complete, and no record that anything went wrong.
+    maxRetries: 5,
+    retryInterval: 15,
+  },
   async (input: SendNewsletterEmailInput, { container }) => {
     if (input.skip) {
       return new StepResponse(null);
@@ -39,25 +47,22 @@ export const sendNewsletterEmailStep = createStep(
     const confirmUrl = `${STOREFRONT_URL}/newsletter/confirm?token=${encodeURIComponent(input.token)}`;
     const unsubscribeUrl = `${STOREFRONT_URL}/newsletter/unsubscribe?token=${encodeURIComponent(input.token)}`;
 
-    try {
-      await notificationModuleService.createNotifications({
-        to: input.email,
-        channel: "email",
-        template: input.template,
-        from: settings.reply_to ?? undefined,
-        data: {
-          brand,
-          confirm_url: confirmUrl,
-          unsubscribe_url: unsubscribeUrl,
-        },
-      });
-    } catch (error) {
-      // As elsewhere: a failed email must not undo a stored consent record,
-      // and the in-memory event bus offers no retry to wait for.
-      logger.error(
-        `newsletter: could not send "${input.template}" to ${input.email}: ${(error as Error).message}`,
-      );
-    }
+    // Deliberately not caught: a throw is what schedules the retry. The
+    // subscriber row is already written, so a retry re-sends the email without
+    // touching the consent record.
+    await notificationModuleService.createNotifications({
+      to: input.email,
+      channel: "email",
+      template: input.template,
+      from: settings.reply_to ?? undefined,
+      data: {
+        brand,
+        confirm_url: confirmUrl,
+        unsubscribe_url: unsubscribeUrl,
+      },
+    });
+
+    logger.info(`newsletter: sent "${input.template}" to ${input.email}.`);
 
     return new StepResponse(null);
   },

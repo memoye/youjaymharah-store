@@ -7,6 +7,8 @@ import { ChevronDownMini } from "@medusajs/icons"
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import clsx from "clsx"
+import { getSwatch, isColourOption, Swatch } from "@lib/util/swatch"
+import ColourSwatch from "@modules/common/components/colour-swatch"
 
 type OptionsPickerProps = {
   selectedValueIds: string[]
@@ -73,10 +75,16 @@ const OptionsPicker = ({
               ?.map((value) => ({
                 id: value.id,
                 label: value.value,
+                swatch: isColourOption(option.title) ? getSwatch(value) : null,
               }))
               .filter(
-                (value): value is { id: string; label: string } =>
-                  !!value.id && !!value.label,
+                (
+                  value
+                ): value is {
+                  id: string
+                  label: string
+                  swatch: Swatch | null
+                } => !!value.id && !!value.label
               ) || []
 
           if (!values.length) {
@@ -94,7 +102,7 @@ const OptionsPicker = ({
 
           const isOpen = openItems.includes(option.id)
           const selectedCount = values.filter((value) =>
-            selectedValueIds.includes(value.id),
+            selectedValueIds.includes(value.id)
           ).length
 
           return (
@@ -118,7 +126,7 @@ const OptionsPicker = ({
                       "flex h-7 w-7 items-center justify-center text-ui-fg-muted transition-transform duration-150",
                       {
                         "rotate-180": isOpen,
-                      },
+                      }
                     )}
                   >
                     <ChevronDownMini />
@@ -141,10 +149,18 @@ const OptionsPicker = ({
                               isSelected,
                             "text-ui-fg-muted hover:text-ui-fg-base":
                               !isSelected,
-                          },
+                          }
                         )}
                         aria-pressed={isSelected}
                       >
+                        {value.swatch && (
+                          <ColourSwatch
+                            swatch={value.swatch}
+                            label={value.label}
+                            size="xs"
+                            className="mr-2"
+                          />
+                        )}
                         {value.label}
                       </button>
                     )

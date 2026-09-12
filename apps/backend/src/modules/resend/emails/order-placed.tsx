@@ -119,7 +119,7 @@ function OrderPlacedEmailComponent({
                 </Text>
                 <Text className="text-gray-600">{item.variant_title}</Text>
                 <Text className="text-gray-800 mt-2 font-bold">
-                  {formatPrice(item.total)}
+                  {formatPrice(item.subtotal)}
                 </Text>
               </Column>
             </Row>
@@ -130,12 +130,19 @@ function OrderPlacedEmailComponent({
           <Heading className="text-xl font-semibold text-gray-800 mb-4">
             Order Summary
           </Heading>
+          {/*
+            Every line above Total is tax-exclusive and pre-discount (the same
+            fields the storefront's cart totals use), so the column adds up:
+            subtotal + shipping - discount + tax = total. `item_total` is not
+            usable here -- it already includes tax and discounts, which made
+            the separate Tax line count VAT twice.
+          */}
           <Row className="text-gray-600">
             <Column className="w-1/2">
               <Text className="m-0">Subtotal</Text>
             </Column>
             <Column className="w-1/2 text-right">
-              <Text className="m-0">{formatPrice(order.item_total)}</Text>
+              <Text className="m-0">{formatPrice(order.item_subtotal)}</Text>
             </Column>
           </Row>
           {order.shipping_methods?.map((method) => (
@@ -144,10 +151,22 @@ function OrderPlacedEmailComponent({
                 <Text className="m-0">{method.name}</Text>
               </Column>
               <Column className="w-1/2 text-right">
-                <Text className="m-0">{formatPrice(method.total)}</Text>
+                <Text className="m-0">{formatPrice(method.subtotal)}</Text>
               </Column>
             </Row>
           ))}
+          {Number(order.discount_subtotal) > 0 && (
+            <Row className="text-gray-600">
+              <Column className="w-1/2">
+                <Text className="m-0">Discount</Text>
+              </Column>
+              <Column className="w-1/2 text-right">
+                <Text className="m-0">
+                  -{formatPrice(order.discount_subtotal)}
+                </Text>
+              </Column>
+            </Row>
+          )}
           <Row className="text-gray-600">
             <Column className="w-1/2">
               <Text className="m-0">Tax</Text>
@@ -184,13 +203,13 @@ const mockProps = {
     display_id: 42,
     email: "ada@example.com",
     currency_code: "ngn",
-    total: 32500,
+    // 27,500 + 5,000 shipping - 2,750 discount = 29,750; 7.5% VAT = 2,231.25
+    total: 31981.25,
     subtotal: 27500,
-    discount_total: 0,
-    shipping_total: 5000,
-    tax_total: 0,
+    discount_subtotal: 2750,
+    shipping_subtotal: 5000,
+    tax_total: 2231.25,
     item_subtotal: 27500,
-    item_total: 27500,
     customer: { first_name: "Ada", last_name: "Obi", email: "ada@example.com" },
     shipping_address: { first_name: "Ada", last_name: "Obi" },
     items: [
@@ -201,14 +220,14 @@ const mockProps = {
         thumbnail:
           "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
         quantity: 1,
-        total: 27500,
+        subtotal: 27500,
       },
     ],
     shipping_methods: [
       {
         id: "ordsm_01JSNXDH9B9DDRQXJT5J5AE5V1",
         name: "Standard Shipping",
-        total: 5000,
+        subtotal: 5000,
       },
     ],
   },
