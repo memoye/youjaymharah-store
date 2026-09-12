@@ -9,9 +9,12 @@ It is generated, not hand-written:
 
 ```bash
 cd apps/backend
-pnpm run docs:openapi              # regenerate
-pnpm run docs:openapi -- --check   # fail if out of date (for CI)
+pnpm run codegen              # regenerate this spec + packages/api-types
+pnpm run codegen -- --check   # fail if either is out of date (for CI)
 ```
+
+The same run also emits `packages/api-types/index.d.ts`, the shared types the
+storefront imports — see that package's README.
 
 Request bodies come from the same Zod schemas the routes validate with
 (`src/api/middlewares.ts`), so the spec cannot describe a body the server would

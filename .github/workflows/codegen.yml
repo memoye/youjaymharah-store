@@ -1,0 +1,37 @@
+name: Codegen
+
+# Fails when a Zod validator or route changed without regenerating the
+# artifacts derived from it: docs/api/openapi.json and the shared types in
+# packages/api-types. Fix a failure with:
+#
+#   pnpm --dir apps/backend run codegen
+#
+# The same command also fails if a route file exists with no entry in
+# scripts/openapi-routes.ts (or the other way round).
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  check:
+    name: Generated files are up to date
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from the root package.json `packageManager` field.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # The generator imports the backend's Zod schemas, so the workspace has
+      # to be installed; --frozen-lockfile also catches a stale lockfile.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --dir apps/backend run codegen -- --check

@@ -1,4 +1,5 @@
 import {
+  authenticate,
   defineMiddlewares,
   validateAndTransformBody,
 } from "@medusajs/framework/http";
@@ -41,6 +42,23 @@ export const StoreNewsletterToken = z.object({
 });
 
 export type StoreNewsletterTokenType = z.infer<typeof StoreNewsletterToken>;
+
+export const StoreSetCustomerPassword = z.object({
+  password: z.string().min(8),
+});
+
+export type StoreSetCustomerPasswordType = z.infer<
+  typeof StoreSetCustomerPassword
+>;
+
+export const StoreCreateSocialCustomer = z.object({
+  first_name: z.string().min(1).nullable().optional(),
+  last_name: z.string().min(1).nullable().optional(),
+});
+
+export type StoreCreateSocialCustomerType = z.infer<
+  typeof StoreCreateSocialCustomer
+>;
 
 export const StoreAddWishlistItem = z.object({
   product_id: z.string().min(1),
@@ -93,6 +111,26 @@ export default defineMiddlewares({
       matcher: "/store/newsletter/unsubscribe",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreNewsletterToken)],
+    },
+    // Finishing a social sign-in: the caller holds a token for an auth
+    // identity that may not have a customer yet, so `allowUnregistered`
+    // mirrors how Medusa gates its own POST /store/customers.
+    {
+      matcher: "/store/customers/social",
+      method: ["POST"],
+      middlewares: [
+        authenticate("customer", ["session", "bearer"], {
+          allowUnregistered: true,
+        }),
+        validateAndTransformBody(StoreCreateSocialCustomer),
+      ],
+    },
+    // Also under /store/customers/me, so a logged-in customer is guaranteed;
+    // the email comes from their account, never from the body.
+    {
+      matcher: "/store/customers/me/password",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreSetCustomerPassword)],
     },
     // Wishlist routes live under /store/customers/me, which Medusa already
     // restricts to logged-in customers; only the body needs validating.

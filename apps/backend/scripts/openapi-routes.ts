@@ -4,8 +4,10 @@ import {
   AdminUpdateBranding,
   AdminUpdateNewsletterSettings,
   StoreAddWishlistItem,
+  StoreCreateSocialCustomer,
   StoreNewsletterSubscribe,
   StoreNewsletterToken,
+  StoreSetCustomerPassword,
 } from "../src/api/middlewares";
 
 /**
@@ -93,8 +95,20 @@ const Acknowledged = z.object({
   status: z.string().optional(),
 });
 
+const Customer = z.object({
+  id: z.string(),
+  email: z.string(),
+  first_name: z.string().nullable(),
+  last_name: z.string().nullable(),
+  phone: z.string().nullable(),
+  has_account: z.boolean(),
+  created_at: z.string(),
+});
+
 /** Group descriptions, shown as section intros by API viewers. */
 export const TAGS: Record<string, string> = {
+  Accounts:
+    "Customer accounts beyond Medusa's built-in routes: finishing a social sign-in so one person keeps one customer record.",
   Branding:
     "The store's name, logo and support email, used across customer emails and the storefront.",
   Newsletter:
@@ -104,6 +118,104 @@ export const TAGS: Record<string, string> = {
   Scaffolding:
     "Placeholder routes left by the Medusa starter. They return 200 with no body and can be deleted.",
 };
+
+/**
+ * The types shared with the storefront, emitted to packages/api-types.
+ *
+ * `io` decides which side of the schema is described: "input" is what a
+ * client sends (optional fields stay optional), "output" is what the server
+ * returns. Names are the storefront's public API -- renaming one is a
+ * breaking change for whoever imports it.
+ */
+export const TYPES: {
+  name: string;
+  schema: z.ZodType;
+  io: "input" | "output";
+}[] = [
+  // Entities
+  { name: "Branding", schema: Branding, io: "output" },
+  { name: "NewsletterSettings", schema: NewsletterSettings, io: "output" },
+  { name: "NewsletterSubscriber", schema: NewsletterSubscriber, io: "output" },
+  { name: "ResendAudience", schema: ResendAudience, io: "output" },
+  { name: "Wishlist", schema: Wishlist, io: "output" },
+  { name: "Customer", schema: Customer, io: "output" },
+
+  // Request bodies
+  { name: "AdminUpdateBrandingBody", schema: AdminUpdateBranding, io: "input" },
+  {
+    name: "AdminUpdateNewsletterSettingsBody",
+    schema: AdminUpdateNewsletterSettings,
+    io: "input",
+  },
+  {
+    name: "StoreNewsletterSubscribeBody",
+    schema: StoreNewsletterSubscribe,
+    io: "input",
+  },
+  {
+    name: "StoreNewsletterTokenBody",
+    schema: StoreNewsletterToken,
+    io: "input",
+  },
+  {
+    name: "StoreCreateSocialCustomerBody",
+    schema: StoreCreateSocialCustomer,
+    io: "input",
+  },
+  {
+    name: "StoreSetCustomerPasswordBody",
+    schema: StoreSetCustomerPassword,
+    io: "input",
+  },
+  {
+    name: "StoreAddWishlistItemBody",
+    schema: StoreAddWishlistItem,
+    io: "input",
+  },
+
+  // Response payloads
+  {
+    name: "AdminBrandingResponse",
+    schema: z.object({ branding: Branding }),
+    io: "output",
+  },
+  {
+    name: "AdminNewsletterSettingsResponse",
+    schema: z.object({ settings: NewsletterSettings }),
+    io: "output",
+  },
+  {
+    name: "AdminNewsletterSubscribersResponse",
+    schema: z.object({
+      subscribers: z.array(NewsletterSubscriber),
+      count: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+    }),
+    io: "output",
+  },
+  {
+    name: "AdminNewsletterAudiencesResponse",
+    schema: z.object({ audiences: z.array(ResendAudience) }),
+    io: "output",
+  },
+  { name: "StoreNewsletterAckResponse", schema: Acknowledged, io: "output" },
+  {
+    name: "StoreWishlistResponse",
+    schema: z.object({ wishlist: Wishlist }),
+    io: "output",
+  },
+  {
+    name: "StoreSocialCustomerResponse",
+    schema: z.object({ customer: Customer, linked: z.boolean() }),
+    io: "output",
+  },
+  {
+    name: "StoreSetCustomerPasswordResponse",
+    schema: z.object({ success: z.boolean() }),
+    io: "output",
+  },
+];
 
 export const ROUTES: RouteDoc[] = [
   {
@@ -246,6 +358,55 @@ export const ROUTES: RouteDoc[] = [
     body: StoreNewsletterToken,
     response: { description: "Unsubscribed.", schema: Acknowledged },
     errors: [{ status: 400, description: "Missing, unknown or used token." }],
+  },
+  {
+    method: "POST",
+    path: "/store/customers/social",
+    tag: "Accounts",
+    summary: "Finish a social sign-in",
+    description:
+      "Call this with the token from GET /auth/customer/{provider}/callback instead of POST /store/customers. If the provider-verified email already has an account, the sign-in method is attached to it and that customer is returned (`linked: true`); otherwise a new customer is created. Only providers that verify email ownership (currently Google) may link; an emailpass identity is rejected.",
+    auth: "customer",
+    body: StoreCreateSocialCustomer,
+    response: {
+      description: "The customer this sign-in now belongs to.",
+      schema: z.object({ customer: Customer, linked: z.boolean() }),
+    },
+    errors: [
+      { status: 400, description: "The sign-in returned no email address." },
+      { status: 401, description: "No auth token was provided." },
+      {
+        status: 403,
+        description:
+          "This sign-in method may not be linked to an existing account.",
+      },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/store/customers/me/password",
+    tag: "Accounts",
+    summary: "Set a password on an account that has none",
+    description:
+      "For customers who signed up with Google and want to sign in with a password too. The email is taken from the logged-in account, not the request. Refused when the account already has a password — that is a reset, not a set.",
+    auth: "customer",
+    body: StoreSetCustomerPassword,
+    response: {
+      description: "The password was set.",
+      schema: z.object({ success: z.boolean() }),
+    },
+    errors: [
+      {
+        status: 400,
+        description: "The password is shorter than 8 characters.",
+      },
+      { status: 401, description: "No customer is logged in." },
+      {
+        status: 403,
+        description:
+          "This account already has a password; use the reset flow instead.",
+      },
+    ],
   },
   {
     method: "GET",

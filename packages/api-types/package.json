@@ -1,0 +1,19 @@
+{
+  "name": "@youjaymharah/api-types",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Generated TypeScript types for the backend's custom API routes. Types only - no runtime code.",
+  "types": "./index.d.ts",
+  "main": "./index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.d.ts",
+    "index.js"
+  ],
+  "license": "MIT"
+}

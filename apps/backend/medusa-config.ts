@@ -44,6 +44,42 @@ module.exports = defineConfig({
         ]
       : []),
     {
+      // Declaring this module replaces the default provider list, so emailpass
+      // has to be named explicitly -- drop it and password login stops working.
+      // MFA and email-verification providers are registered by the module
+      // itself and are unaffected by this list.
+      resolve: "@medusajs/medusa/auth",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/auth-emailpass",
+            id: "emailpass",
+          },
+          // Google sign-in turns itself on once credentials exist. The
+          // provider throws at boot when any option is missing, so a dev
+          // machine without them still starts -- same trick as Redis above.
+          ...(process.env.GOOGLE_CLIENT_ID &&
+          process.env.GOOGLE_CLIENT_SECRET &&
+          process.env.GOOGLE_CALLBACK_URL
+            ? [
+                {
+                  resolve: "@medusajs/medusa/auth-google",
+                  id: "google",
+                  options: {
+                    clientId: process.env.GOOGLE_CLIENT_ID,
+                    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                    // Where Google sends the customer back: a storefront page
+                    // that forwards `code` and `state` to
+                    // GET /auth/customer/google/callback on this backend.
+                    callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+                  },
+                },
+              ]
+            : []),
+        ],
+      },
+    },
+    {
       resolve: "@medusajs/medusa/file",
       options: {
         providers: [

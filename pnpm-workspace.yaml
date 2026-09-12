@@ -1,6 +1,7 @@
 packages:
   - "apps/**"
   - "!apps/backend/.medusa/**"
+  - "packages/*"
 allowBuilds:
   "@medusajs/telemetry": true
   "@swc/core": true
