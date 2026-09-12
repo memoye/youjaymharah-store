@@ -1,8 +1,15 @@
 name: Backend
 
-# Runs what the deploy runs. `medusa build` type-checks and lints the backend,
-# so a type error like a mis-parameterised StepResponse fails here rather than
-# in Render's build log.
+# Runs what the deploy runs. `medusa build` generates .medusa/types, then lints
+# and type-checks the backend source before compiling, so a type error fails
+# here rather than in Render's build log.
+#
+# Deliberately NOT a standalone `tsc --noEmit` step:
+#   - .medusa/types is gitignored and only exists after a build, so type-checking
+#     first reports errors (query.graph results degrade to `unknown`) that no one
+#     sees locally;
+#   - the root tsconfig sweeps in src/admin, which Vite compiles separately as
+#     ESM with its own tsconfig, producing CommonJS errors the real build never hits.
 
 on:
   push:
@@ -11,7 +18,7 @@ on:
 
 jobs:
   build:
-    name: Type-check, lint and build
+    name: Lint, type-check and build
     runs-on: ubuntu-latest
 
     steps:
@@ -27,13 +34,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Explicit type-check: `-p .` from the app directory. Pointing -p at a
-      # path that does not exist makes tsc exit quietly, which is how a broken
-      # build reached the deploy once already.
-      - name: Type-check backend
-        working-directory: apps/backend
-        run: pnpm exec tsc --noEmit -p .
-
-      - name: Build backend
+      - name: Build backend (generates types, lints, type-checks, compiles)
         working-directory: apps/backend
         run: pnpm run build
