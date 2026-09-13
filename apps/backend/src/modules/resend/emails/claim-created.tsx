@@ -64,19 +64,26 @@ function ClaimCreatedEmailComponent({
     claim.pending_difference,
     order.currency_code,
   );
-  const refundAmount = !isRefund
-    ? ""
-    : claim.refund_amount && claim.refund_amount > 0
-      ? formatMoney(claim.refund_amount, order.currency_code)
-      : balance.direction === "store_owes"
-        ? balance.amount
-        : "";
 
-  const heading = isRefund
-    ? `We are refunding you, ${recipient}`
-    : hasReplacements
-      ? `A replacement is on its way, ${recipient}`
-      : `We are sorting out your order, ${recipient}`;
+  const getRefundAmount = () => {
+    if (!isRefund) return "";
+    if (claim.refund_amount && claim.refund_amount > 0) {
+      return formatMoney(claim.refund_amount, order.currency_code);
+    } else if (balance.direction === "store_owes") {
+      return balance.amount;
+    }
+    return "";
+  };
+
+  const refundAmount = getRefundAmount();
+
+  const getHeading = () => {
+    if (isRefund) return `We are refunding you, ${recipient}`;
+    if (hasReplacements) return `A replacement is on its way, ${recipient}`;
+    return `We are sorting out your order, ${recipient}`;
+  };
+  
+  const heading = getHeading();
 
   const claimedItems = claim.claimed_items?.map((item) => ({
     ...item,
