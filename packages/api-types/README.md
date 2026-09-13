@@ -24,10 +24,15 @@ import type {
 
 const body: StoreAddWishlistItemBody = { product_id: "prod_123" };
 
-const { wishlist } = await sdk.client.fetch<StoreWishlistResponse>(
-  "/store/customers/me/wishlist",
+const { wishlist } = await getBrowserSdk().client.fetch<StoreWishlistResponse>(
+  "/store/wishlists/current/items",
+  { method: "POST", body },
 );
 ```
+
+For the wishlist itself, use the hooks in
+`apps/storefront/features/wishlist/hooks.ts`, which wrap exactly this; see
+`apps/storefront/DATA-LAYER.md`.
 
 Types only: nothing here is imported at runtime, so the storefront bundle is
 unaffected and no Zod copy is pulled in. Medusa's own endpoints are already

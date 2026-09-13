@@ -77,6 +77,35 @@ export const StoreMergeWishlist = z.object({
 
 export type StoreMergeWishlistType = z.infer<typeof StoreMergeWishlist>;
 
+export const StoreCreateProductAlert = z.object({
+  /** Required for guests; ignored when signed in (the account email is used). */
+  email: z.email().optional(),
+  /** Set when a specific size/colour was chosen; omit to wait on any. */
+  variant_id: z.string().min(1).nullable().optional(),
+  /** Also sign the address up for the newsletter (double opt-in applies). */
+  marketing_opt_in: z.boolean().optional(),
+});
+
+export type StoreCreateProductAlertType = z.infer<
+  typeof StoreCreateProductAlert
+>;
+
+export const StoreSetMarketingPreference = z.object({
+  subscribed: z.boolean(),
+});
+
+export type StoreSetMarketingPreferenceType = z.infer<
+  typeof StoreSetMarketingPreference
+>;
+
+export const AdminSetProductComingSoon = z.object({
+  coming_soon: z.boolean(),
+});
+
+export type AdminSetProductComingSoonType = z.infer<
+  typeof AdminSetProductComingSoon
+>;
+
 /**
  * A repeatable query parameter: Express hands over a string for one
  * occurrence and an array for several, so both are normalized to an array.
@@ -185,6 +214,36 @@ export default defineMiddlewares({
       matcher: "/store/wishlists/:id/items",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreAddWishlistItem)],
+    },
+    // Guests and customers share one route: a valid customer token means the
+    // account email is used, and no token means the body must carry one.
+    {
+      matcher: "/store/products/:id/alerts",
+      method: ["POST"],
+      middlewares: [
+        authenticate("customer", ["session", "bearer"], {
+          allowUnauthenticated: true,
+        }),
+        validateAndTransformBody(StoreCreateProductAlert),
+      ],
+    },
+    {
+      matcher: "/store/customers/me/marketing",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreSetMarketingPreference)],
+    },
+    // Built-in product permissions, so whoever may edit a product may also
+    // launch it, and whoever may view it sees who is waiting.
+    {
+      matcher: "/admin/products/:id/alerts",
+      method: ["GET"],
+      policies: [{ resource: "product", operation: "read" }],
+    },
+    {
+      matcher: "/admin/products/:id/coming-soon",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminSetProductComingSoon)],
+      policies: [{ resource: "product", operation: "update" }],
     },
     // Search reads its arguments from the query string, so the schema gates
     // the paging limits as well -- an unbounded `limit` would let one request

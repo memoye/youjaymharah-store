@@ -71,6 +71,9 @@ above and for exploring in Postman.
 
 - Every `/store` route needs the `x-publishable-api-key` header.
 - Customer routes also need a customer bearer token (`/auth/customer/emailpass`).
+- Guest wishlist routes (`/store/wishlists/...`) need only the key: the wishlist
+  ID is the credential, as with a guest cart, so keep it out of URLs and
+  browser JavaScript.
 - Admin routes need an admin bearer token (`/auth/user/emailpass`) or the
   dashboard's session cookie. Custom admin routes list the RBAC policies they
   require as `x-required-policies`.

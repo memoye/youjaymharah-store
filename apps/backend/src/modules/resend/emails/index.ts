@@ -13,6 +13,7 @@ import { orderPlacedEmail } from "./order-placed";
 import { orderShippedEmail } from "./order-shipped";
 import { orderUpdatedEmail } from "./order-updated";
 import { passwordResetEmail } from "./password-reset";
+import { productAvailableEmail } from "./product-available";
 import { refundIssuedEmail } from "./refund-issued";
 import { returnReceivedEmail } from "./return-received";
 import { returnRequestedEmail } from "./return-requested";
@@ -38,6 +39,8 @@ export const EmailTemplates = {
   INVITE_USER: "invite-user",
   NEWSLETTER_CONFIRM: "newsletter-confirm",
   NEWSLETTER_WELCOME: "newsletter-welcome",
+  PRODUCT_BACK_IN_STOCK: "product-back-in-stock",
+  PRODUCT_LAUNCHED: "product-launched",
 } as const;
 
 export type EmailTemplate =
@@ -57,6 +60,12 @@ function orderNumber(data: TemplateData): string {
   const order = data.order as { display_id?: number | string } | undefined;
 
   return order?.display_id ? `#${order.display_id}` : "";
+}
+
+/** The product title for alert subject lines. */
+function productTitle(data: TemplateData): string {
+  const product = data.product as { title?: string } | undefined;
+  return product?.title || "Your item";
 }
 
 const registry: Record<EmailTemplate, TemplateEntry> = {
@@ -176,6 +185,20 @@ const registry: Record<EmailTemplate, TemplateEntry> = {
     react: newsletterWelcomeEmail(
       data as Parameters<typeof newsletterWelcomeEmail>[0],
     ),
+  }),
+  [EmailTemplates.PRODUCT_BACK_IN_STOCK]: (data) => ({
+    subject: `${productTitle(data)} is back in stock`,
+    react: productAvailableEmail({
+      ...(data as Parameters<typeof productAvailableEmail>[0]),
+      reason: "restock",
+    }),
+  }),
+  [EmailTemplates.PRODUCT_LAUNCHED]: (data) => ({
+    subject: `${productTitle(data)} is now available`,
+    react: productAvailableEmail({
+      ...(data as Parameters<typeof productAvailableEmail>[0]),
+      reason: "launch",
+    }),
   }),
 };
 

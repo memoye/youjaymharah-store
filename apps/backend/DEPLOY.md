@@ -51,6 +51,13 @@ courier pricing), and any publishable key beyond the first.
 - **Emails during deploys.** With the Redis workflow engine configured,
   in-flight order confirmation emails survive restarts and retry on schedule.
   Without it, anything in flight when the process stops is lost.
+- **Guest wishlist cleanup.** A scheduled job
+  (`src/jobs/delete-stale-guest-wishlists.ts`) deletes guest wishlists with no
+  saves for 90 days, daily at 03:30 server time. It only runs while the
+  service is awake, so on a free tier that sleeps overnight it simply runs on
+  a later day; nothing breaks. The 90 days must match the storefront's
+  wishlist cookie (`WISHLIST_MAX_AGE_SECONDS` in
+  `apps/storefront/lib/medusa/session.ts`) -- change both together.
 - **Resend audience picker.** Settings -> Newsletter needs `RESEND_API_KEY`;
   if it is missing the picker shows an error but settings can still be saved.
 
