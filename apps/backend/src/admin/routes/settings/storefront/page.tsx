@@ -84,7 +84,10 @@ const StorefrontSettingsPage = () => {
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           onSaved={(updated) =>
-            queryClient.setQueryData(SETTINGS_QUERY_KEY, { settings: updated })
+            queryClient.setQueryData<{ settings: StorefrontSettings }>(
+              SETTINGS_QUERY_KEY,
+              { settings: updated },
+            )
           }
         />
       )}
