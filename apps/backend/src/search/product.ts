@@ -165,7 +165,7 @@ export default defineSearchIndex({
         entity: "product",
         fields: PRODUCT_FIELDS,
         filters: {
-          ...(filters ?? {}),
+          ...filters,
           ...(cursor ? { id: { $gt: cursor } } : {}),
         },
         pagination: { take: SEED_PAGE_SIZE, order: { id: "ASC" } },
