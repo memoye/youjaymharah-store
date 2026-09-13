@@ -42,8 +42,8 @@ The store manager can't do these; whoever deploys must.
    `apps/backend/.env.template`), or product image uploads will fail.
 7. **Email.** Set `RESEND_API_KEY` and a `RESEND_FROM_EMAIL` on a domain
    verified in Resend. Every email depends on it: order confirmation,
-   shipping, delivery and cancellation; returns and refunds; email
-   verification and password resets; and team invites.
+   shipping, delivery, changes and cancellation; returns, exchanges, claims and
+   refunds; email verification and password resets; and team invites.
 
 ## 2. What already exists on day one
 
@@ -179,9 +179,11 @@ Customers can't request these on the website yet; they contact you.
   send back and where (the return location's address, so keep it complete),
   that it arrived, and the refund.
 - **Exchange:** return one item and send another (size swap); the difference
-  is charged or refunded.
+  is charged or refunded. Confirming it emails the customer what is coming,
+  what to send back and where, and any balance.
 - **Claim:** wrong or damaged item sent; replace or refund without waiting for
-  the return.
+  the return. Confirming it emails the customer the replacement or refund, and
+  whether to send anything back.
 
 Guides: [Returns](https://docs.medusajs.com/user-guide/orders/returns) ·
 [Exchanges](https://docs.medusajs.com/user-guide/orders/exchanges) ·
@@ -189,7 +191,9 @@ Guides: [Returns](https://docs.medusajs.com/user-guide/orders/returns) ·
 
 ### Editing or cancelling an order
 
-Before shipping you can edit an order (swap a size, add or remove items). To
+Before shipping you can edit an order (swap a size, add or remove items). With
+"Send notification" on, confirming the edit emails the customer the updated
+order and any balance left to pay or refund. To
 cancel, choose **Cancel** from the order's menu: reserved stock is released
 and the customer is emailed that the order was cancelled and will be refunded.
 Then refund the payment (manually for Credo).
@@ -271,7 +275,6 @@ check `Settings › Workflows` for the failed send.
 | Area                                     | Status        | Meanwhile                                        |
 | ---------------------------------------- | ------------- | ------------------------------------------------ |
 | Tracking on customer's order page        | Status only   | The shipping email carries the tracking link     |
-| Exchange and claim emails                | Not built     | Confirm to the customer yourself                 |
 | Credo refunds                            | Manual        | Refund in the Credo dashboard; log the reference |
 | Customer self-service returns            | Not built     | Customers contact support; you create the return |
 | POS app                                  | Workaround    | Draft orders with a separate shop location       |

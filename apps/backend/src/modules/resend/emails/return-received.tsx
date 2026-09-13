@@ -20,6 +20,8 @@ export type ReturnReceiptSummary = {
   }[];
   /** What is owed back to the customer for this return, if anything. */
   refund_amount?: number | null;
+  /** Set when the return belongs to an exchange or a claim. */
+  part_of?: "exchange" | "claim" | null;
 };
 
 export type ReturnReceivedEmailProps = {
@@ -37,8 +39,12 @@ function ReturnReceivedEmailComponent({
 }: ReturnReceivedEmailProps) {
   const recipient =
     order.customer?.first_name ?? order.shipping_address?.first_name ?? "there";
+  // An exchange or claim settles its balance on its own terms (a swap, a
+  // replacement), so its return must not promise a refund of its own.
   const refund =
-    orderReturn.refund_amount && orderReturn.refund_amount > 0
+    !orderReturn.part_of &&
+    orderReturn.refund_amount &&
+    orderReturn.refund_amount > 0
       ? formatMoney(orderReturn.refund_amount, order.currency_code)
       : "";
   const anyDamaged = orderReturn.items?.some(

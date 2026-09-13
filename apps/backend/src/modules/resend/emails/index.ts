@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 
+import { claimCreatedEmail } from "./claim-created";
 import { STORE_NAME } from "./constants";
 import { emailVerificationEmail } from "./email-verification";
+import { exchangeCreatedEmail } from "./exchange-created";
 import { inviteUserEmail } from "./invite-user";
 import { newsletterConfirmEmail } from "./newsletter-confirm";
 import { newsletterWelcomeEmail } from "./newsletter-welcome";
@@ -9,6 +11,7 @@ import { orderCanceledEmail } from "./order-canceled";
 import { orderDeliveredEmail } from "./order-delivered";
 import { orderPlacedEmail } from "./order-placed";
 import { orderShippedEmail } from "./order-shipped";
+import { orderUpdatedEmail } from "./order-updated";
 import { passwordResetEmail } from "./password-reset";
 import { refundIssuedEmail } from "./refund-issued";
 import { returnReceivedEmail } from "./return-received";
@@ -21,12 +24,15 @@ import { returnRequestedEmail } from "./return-requested";
  */
 export const EmailTemplates = {
   ORDER_PLACED: "order-placed",
+  ORDER_UPDATED: "order-updated",
   ORDER_SHIPPED: "order-shipped",
   ORDER_DELIVERED: "order-delivered",
   ORDER_CANCELED: "order-canceled",
   REFUND_ISSUED: "refund-issued",
   RETURN_REQUESTED: "return-requested",
   RETURN_RECEIVED: "return-received",
+  EXCHANGE_CREATED: "exchange-created",
+  CLAIM_CREATED: "claim-created",
   PASSWORD_RESET: "password-reset",
   EMAIL_VERIFICATION: "email-verification",
   INVITE_USER: "invite-user",
@@ -59,6 +65,16 @@ const registry: Record<EmailTemplate, TemplateEntry> = {
       `Your ${STORE_NAME} order ${orderNumber(data)} is confirmed`.trim(),
     react: orderPlacedEmail(data as Parameters<typeof orderPlacedEmail>[0]),
   }),
+  [EmailTemplates.ORDER_UPDATED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `Your order ${number} has been updated`
+        : "Your order has been updated",
+      react: orderUpdatedEmail(data as Parameters<typeof orderUpdatedEmail>[0]),
+    };
+  },
   [EmailTemplates.ORDER_SHIPPED]: (data) => ({
     subject: `Your order ${orderNumber(data)} has shipped`.trim(),
     react: orderShippedEmail(data as Parameters<typeof orderShippedEmail>[0]),
@@ -111,6 +127,28 @@ const registry: Record<EmailTemplate, TemplateEntry> = {
       react: returnReceivedEmail(
         data as Parameters<typeof returnReceivedEmail>[0],
       ),
+    };
+  },
+  [EmailTemplates.EXCHANGE_CREATED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `Your exchange for order ${number} is confirmed`
+        : "Your exchange is confirmed",
+      react: exchangeCreatedEmail(
+        data as Parameters<typeof exchangeCreatedEmail>[0],
+      ),
+    };
+  },
+  [EmailTemplates.CLAIM_CREATED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `We are sorting out order ${number}`
+        : "We are sorting out your order",
+      react: claimCreatedEmail(data as Parameters<typeof claimCreatedEmail>[0]),
     };
   },
   [EmailTemplates.PASSWORD_RESET]: (data) => ({

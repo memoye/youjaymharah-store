@@ -44,6 +44,9 @@ export const sendReturnReceivedEmailStep = createStep(
         "order_id",
         "no_notification",
         "refund_amount",
+        // Which of these is set tells the template not to promise a refund.
+        "exchange.id",
+        "claim.id",
         "items.quantity",
         "items.received_quantity",
         "items.damaged_quantity",
@@ -126,6 +129,11 @@ export const sendReturnReceivedEmailStep = createStep(
         orderReturn.refund_amount == null
           ? null
           : Number(orderReturn.refund_amount),
+      part_of: orderReturn.exchange?.id
+        ? "exchange"
+        : orderReturn.claim?.id
+          ? "claim"
+          : null,
     };
 
     const brand = await brandingModuleService.retrieveSettings();
