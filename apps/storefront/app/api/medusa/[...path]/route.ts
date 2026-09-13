@@ -1,0 +1,179 @@
+import type { NextRequest } from "next/server";
+
+import { crossOriginRefused, isSameOrigin } from "@/lib/http/same-origin";
+import { CURRENT_CART_ID } from "@/lib/medusa/constants";
+import { MEDUSA_BACKEND_URL } from "@/lib/medusa/server";
+import {
+  clearCartId,
+  getAuthToken,
+  getCartId,
+  setCartId,
+} from "@/lib/medusa/session";
+
+/**
+ * The browser's only way into Medusa.
+ *
+ * Forwards Store API calls from Client Components (lib/medusa/browser.ts) to the
+ * backend and attaches the customer's token from the httpOnly cookie, so the
+ * token never reaches browser JavaScript.
+ *
+ * This forwards requests verbatim with fetch rather than the SDK: it must pass
+ * Medusa's status codes and bodies through untouched, while the SDK parses
+ * responses and throws on errors.
+ */
+
+/** Only these request headers reach Medusa -- never the browser's cookies. */
+const FORWARDED_REQUEST_HEADERS = [
+  "accept",
+  "content-type",
+  "x-publishable-api-key",
+  "x-medusa-locale",
+  "x-forwarded-for",
+];
+
+async function proxy(
+  request: NextRequest,
+  context: RouteContext<"/api/medusa/[...path]">,
+): Promise<Response> {
+  const startedAt = performance.now();
+  const { path } = await context.params;
+
+  // Next.js resolves "." and ".." (including %2e%2e) before routing, so such a
+  // request arrives here already normalised and meets the prefix check below.
+  // This guard is defence in depth, should a dot segment ever reach us intact.
+  if (
+    path.some(
+      (segment) => segment === "" || segment === "." || segment === "..",
+    )
+  ) {
+    return Response.json({ message: "Invalid path." }, { status: 400 });
+  }
+
+  if (path[0] !== "store") {
+    return Response.json({ message: "Not found." }, { status: 404 });
+  }
+
+  if (request.method !== "GET" && !isSameOrigin(request)) {
+    return crossOriginRefused();
+  }
+
+  const segments = [...path];
+  const usesCurrentCart =
+    segments[1] === "carts" && segments[2] === CURRENT_CART_ID;
+
+  if (usesCurrentCart) {
+    const cartId = await getCartId();
+
+    if (!cartId) {
+      return Response.json({ message: "No active cart." }, { status: 404 });
+    }
+
+    segments[2] = cartId;
+  }
+
+  const target = new URL(
+    `/${segments.map(encodeURIComponent).join("/")}${request.nextUrl.search}`,
+    MEDUSA_BACKEND_URL,
+  );
+
+  // Belt and braces for the traversal check above.
+  if (!target.pathname.startsWith("/store/")) {
+    return Response.json({ message: "Not found." }, { status: 404 });
+  }
+
+  const headers = new Headers();
+
+  for (const name of FORWARDED_REQUEST_HEADERS) {
+    const value = request.headers.get(name);
+
+    if (value) {
+      headers.set(name, value);
+    }
+  }
+
+  const token = await getAuthToken();
+
+  if (token) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
+
+  let upstream: Response;
+
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers,
+      body: hasBody ? await request.arrayBuffer() : undefined,
+      cache: "no-store",
+      redirect: "manual",
+    });
+  } catch (error) {
+    // Medusa is unreachable: down, restarting, or MEDUSA_BACKEND_URL is wrong.
+    // Answer like an API, so the SDK throws a normal FetchError, instead of
+    // letting Next.js turn the exception into a bare 500.
+    console.error(
+      `Medusa proxy: ${request.method} ${target.pathname} could not reach the backend`,
+      error,
+    );
+
+    return Response.json(
+      { message: "The store is temporarily unavailable. Please try again." },
+      { status: 502, headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  const responseHeaders = new Headers({
+    "cache-control": "no-store",
+    // Shows up in the browser's Network tab: how long Medusa took to answer.
+    "server-timing": `medusa;dur=${(performance.now() - startedAt).toFixed(1)}`,
+  });
+  const contentType = upstream.headers.get("content-type");
+
+  if (contentType) {
+    responseHeaders.set("content-type", contentType);
+  }
+
+  const isCartCreate =
+    request.method === "POST" &&
+    segments.length === 2 &&
+    segments[1] === "carts";
+  const isCartComplete =
+    usesCurrentCart && segments[3] === "complete" && request.method === "POST";
+
+  // The two responses that change which cart the cookie should point at are
+  // read here; every other response streams straight through.
+  if (upstream.ok && (isCartCreate || isCartComplete)) {
+    const body = (await upstream.json()) as {
+      type?: "order" | "cart";
+      cart?: { id: string };
+    };
+
+    if (isCartCreate && body.cart?.id) {
+      await setCartId(body.cart.id);
+    }
+
+    // A completed cart became an order; the next add-to-cart starts afresh.
+    if (isCartComplete && body.type === "order") {
+      await clearCartId();
+    }
+
+    return Response.json(body, {
+      status: upstream.status,
+      headers: responseHeaders,
+    });
+  }
+
+  // The cookie points at a cart that was completed or deleted elsewhere.
+  if (usesCurrentCart && upstream.status === 404) {
+    await clearCartId();
+  }
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: responseHeaders,
+  });
+}
+
+export { proxy as DELETE, proxy as GET, proxy as POST };

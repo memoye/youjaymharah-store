@@ -36,10 +36,26 @@ Facts about this backend that shape almost every screen:
 
 **Goal:** an empty but correct shell that can talk to the backend.
 
-Build: project setup, environment variables (backend URL, publishable key), a
-single shared SDK client, the region/currency lookup, base layout with header
-and footer, 404 and error pages, and your design tokens (type scale, colour,
-spacing).
+Build: environment variables (see `apps/storefront/.env.template`), the
+region/currency lookup, base layout with header and footer, 404 and error
+pages, and your design tokens (type scale, colour, spacing).
+
+**Already in place: how data flows.** Deployment details are in
+`apps/storefront/DEPLOY.md`.
+
+- **Server Components** call Medusa directly with the server SDK
+  (`lib/medusa/server.ts`). Use them for everything public: product lists,
+  product pages, categories.
+- **Client Components** use `getBrowserSdk()` (`lib/medusa/browser.ts`). It goes
+  through this app's `/api/medusa` proxy, which attaches the customer's token
+  from an httpOnly cookie, so no token ever reaches browser JavaScript. Pass
+  `"current"` as the cart id; the proxy fills in the real one.
+- **Sign-in** goes through `/api/auth/login`, `/register`, `/logout` and
+  `/google`. Never call `sdk.auth.*` from the browser.
+- **React Query** keys live in `lib/query/keys.ts`. Include the region and
+  locale in any key whose response has prices or translated text.
+  `features/cart` and `features/customer` are worked examples, including an
+  optimistic quantity change with rollback and prefetching on the server.
 
 Backend: `GET /store/regions`.
 
@@ -232,20 +248,13 @@ Build, in this order:
 Backend: `/auth/customer/emailpass` (login, register), `/store/customers`,
 `/store/customers/me`, `/store/customers/me/addresses`, `/store/orders`.
 
-**Google sign-in** is wired up on the backend and switches on as soon as
-`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_CALLBACK_URL` are set.
-The storefront side is three steps:
-
-1. `GET /auth/customer/google` returns `{ location }` — send the browser there.
-2. Google returns the customer to `GOOGLE_CALLBACK_URL`, a storefront page that
-   forwards the `code` and `state` query parameters to
-   `GET /auth/customer/google/callback` on the backend, which answers with a
-   JWT.
-3. Call `POST /store/customers/social` with that token (not
-   `POST /store/customers`). If the Google email already has an account, the
-   sign-in is attached to it and you get that customer back with
-   `linked: true`; otherwise a new customer is created. Then treat the token
-   like any other session.
+**Google sign-in** is wired up end to end and switches on once
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_CALLBACK_URL` are set on
+the backend. Set `GOOGLE_CALLBACK_URL` to
+`https://<storefront>/api/auth/google/callback`. The storefront then only needs
+a "Continue with Google" link to `/api/auth/google`: the callback route links
+the sign-in to an existing account with the same email, or creates one, and
+signs the customer in.
 
 Linking only happens for providers that verify the email, which is why a
 Google sign-in can join an existing password account but a password signup can
