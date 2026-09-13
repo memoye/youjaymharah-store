@@ -84,14 +84,16 @@ export function EmailLayout({
   );
 }
 
-export default () => (
-  <EmailLayout
-    preview="Layout preview"
-    heading="Heading"
-    intro="Supporting line under the heading."
-  >
-    <Container className="px-6">
-      <Text className="text-gray-600">Body content goes here.</Text>
-    </Container>
-  </EmailLayout>
-);
+export default function EmailLayoutPreview() {
+  return (
+    <EmailLayout
+      preview="Layout preview"
+      heading="Heading"
+      intro="Supporting line under the heading."
+    >
+      <Container className="px-6">
+        <Text className="text-gray-600">Body content goes here.</Text>
+      </Container>
+    </EmailLayout>
+  );
+};

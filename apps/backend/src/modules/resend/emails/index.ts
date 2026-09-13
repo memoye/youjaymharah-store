@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
 
 import { STORE_NAME } from "./constants";
+import { emailVerificationEmail } from "./email-verification";
 import { inviteUserEmail } from "./invite-user";
 import { newsletterConfirmEmail } from "./newsletter-confirm";
 import { newsletterWelcomeEmail } from "./newsletter-welcome";
 import { orderCanceledEmail } from "./order-canceled";
+import { orderDeliveredEmail } from "./order-delivered";
 import { orderPlacedEmail } from "./order-placed";
 import { orderShippedEmail } from "./order-shipped";
 import { passwordResetEmail } from "./password-reset";
+import { refundIssuedEmail } from "./refund-issued";
+import { returnReceivedEmail } from "./return-received";
+import { returnRequestedEmail } from "./return-requested";
 
 /**
  * Template identifiers. These are the values a subscriber passes as
@@ -17,8 +22,13 @@ import { passwordResetEmail } from "./password-reset";
 export const EmailTemplates = {
   ORDER_PLACED: "order-placed",
   ORDER_SHIPPED: "order-shipped",
+  ORDER_DELIVERED: "order-delivered",
   ORDER_CANCELED: "order-canceled",
+  REFUND_ISSUED: "refund-issued",
+  RETURN_REQUESTED: "return-requested",
+  RETURN_RECEIVED: "return-received",
   PASSWORD_RESET: "password-reset",
+  EMAIL_VERIFICATION: "email-verification",
   INVITE_USER: "invite-user",
   NEWSLETTER_CONFIRM: "newsletter-confirm",
   NEWSLETTER_WELCOME: "newsletter-welcome",
@@ -53,13 +63,65 @@ const registry: Record<EmailTemplate, TemplateEntry> = {
     subject: `Your order ${orderNumber(data)} has shipped`.trim(),
     react: orderShippedEmail(data as Parameters<typeof orderShippedEmail>[0]),
   }),
+  [EmailTemplates.ORDER_DELIVERED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `Your order ${number} has been delivered`
+        : "Your order has been delivered",
+      react: orderDeliveredEmail(
+        data as Parameters<typeof orderDeliveredEmail>[0],
+      ),
+    };
+  },
   [EmailTemplates.ORDER_CANCELED]: (data) => ({
     subject: `Your order ${orderNumber(data)} was canceled`.trim(),
     react: orderCanceledEmail(data as Parameters<typeof orderCanceledEmail>[0]),
   }),
+  [EmailTemplates.REFUND_ISSUED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `Your refund for order ${number} is on its way`
+        : "Your refund is on its way",
+      react: refundIssuedEmail(data as Parameters<typeof refundIssuedEmail>[0]),
+    };
+  },
+  [EmailTemplates.RETURN_REQUESTED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `Your return for order ${number} is booked`
+        : "Your return is booked",
+      react: returnRequestedEmail(
+        data as Parameters<typeof returnRequestedEmail>[0],
+      ),
+    };
+  },
+  [EmailTemplates.RETURN_RECEIVED]: (data) => {
+    const number = orderNumber(data);
+
+    return {
+      subject: number
+        ? `We have received your return for order ${number}`
+        : "We have received your return",
+      react: returnReceivedEmail(
+        data as Parameters<typeof returnReceivedEmail>[0],
+      ),
+    };
+  },
   [EmailTemplates.PASSWORD_RESET]: (data) => ({
     subject: `Reset your ${STORE_NAME} password`,
     react: passwordResetEmail(data as Parameters<typeof passwordResetEmail>[0]),
+  }),
+  [EmailTemplates.EMAIL_VERIFICATION]: (data) => ({
+    subject: brandName(data, `Confirm your email address for ${STORE_NAME}`),
+    react: emailVerificationEmail(
+      data as Parameters<typeof emailVerificationEmail>[0],
+    ),
   }),
   [EmailTemplates.INVITE_USER]: (data) => ({
     subject: `You have been invited to ${STORE_NAME}`,

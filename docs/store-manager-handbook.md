@@ -41,8 +41,9 @@ The store manager can't do these; whoever deploys must.
 6. **Image storage.** Fill the `S3_*` variables for Cloudflare R2 (see
    `apps/backend/.env.template`), or product image uploads will fail.
 7. **Email.** Set `RESEND_API_KEY` and a `RESEND_FROM_EMAIL` on a domain
-   verified in Resend. Order confirmation, shipping and cancellation emails,
-   team invites and password resets all depend on it.
+   verified in Resend. Every email depends on it: order confirmation,
+   shipping, delivery and cancellation; returns and refunds; email
+   verification and password resets; and team invites.
 
 ## 2. What already exists on day one
 
@@ -145,8 +146,9 @@ Every order task starts from `Orders` → open the order.
 3. When delivered: **Mark as delivered** (can't be undone).
 
 With "Send notifications" on, **Mark as shipped** emails the customer the
-tracking number and link. The customer's account page shows "Shipped" but not
-the link, so point them to the email.
+tracking number and link, and **Mark as delivered** emails a delivery
+confirmation. The customer's account page shows "Shipped" but not the link, so
+point them to the email.
 Guide: <https://docs.medusajs.com/user-guide/orders/fulfillments>
 
 ### Refunds
@@ -161,6 +163,10 @@ Check the order's **Payments** section for the provider.
 - **Manual Payment / transfer:** send the money back, then record it with the
   refund form.
 
+Recording a refund here (Paystack or manual) emails the customer the amount and
+reason, never your note. A refund made in the Credo dashboard sends nothing, so
+tell the customer yourself.
+
 Refunds are final. Guide: <https://docs.medusajs.com/user-guide/orders/payments>
 
 ### Returns, size exchanges and damaged-item claims
@@ -169,7 +175,9 @@ Customers can't request these on the website yet; they contact you.
 
 - **Return:** Summary `⋯ › Create Return`, add items, reason, location,
   **Confirm Return**. On arrival, **Receive items** (mark damaged pieces), then
-  refund the outstanding amount.
+  refund the outstanding amount. The customer is emailed at each stage: what to
+  send back and where (the return location's address, so keep it complete),
+  that it arrived, and the refund.
 - **Exchange:** return one item and send another (size swap); the difference
   is charged or refunded.
 - **Claim:** wrong or damaged item sent; replace or refund without waiting for
@@ -263,7 +271,7 @@ check `Settings › Workflows` for the failed send.
 | Area                                     | Status        | Meanwhile                                        |
 | ---------------------------------------- | ------------- | ------------------------------------------------ |
 | Tracking on customer's order page        | Status only   | The shipping email carries the tracking link     |
-| Return, refund and exchange emails       | Not built     | Confirm to the customer yourself                 |
+| Exchange and claim emails                | Not built     | Confirm to the customer yourself                 |
 | Credo refunds                            | Manual        | Refund in the Credo dashboard; log the reference |
 | Customer self-service returns            | Not built     | Customers contact support; you create the return |
 | POS app                                  | Workaround    | Draft orders with a separate shop location       |

@@ -48,6 +48,6 @@ export const newsletterConfirmEmail = (props: NewsletterConfirmEmailProps) => (
   <NewsletterConfirmEmailComponent {...props} />
 );
 
-export default () => (
-  <NewsletterConfirmEmailComponent confirm_url="https://example.com/newsletter/confirm?token=abc123" />
-);
+export default function NewsletterConfirmEmailPreview()  { 
+  return <NewsletterConfirmEmailComponent confirm_url="https://example.com/newsletter/confirm?token=abc123" />
+ };

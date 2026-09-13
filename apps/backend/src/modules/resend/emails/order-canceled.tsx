@@ -37,7 +37,7 @@ function OrderCanceledEmailComponent({
     }
 
     if (typeof price === "string") {
-      return formatter.format(parseFloat(price));
+      return formatter.format(Number.parseFloat(price));
     }
 
     return price?.toString() || "";
@@ -119,5 +119,7 @@ const mockProps = {
   reason: "Cancelled at your request.",
 };
 
-// @ts-ignore -- preview-only mock, not the full OrderDTO
-export default () => <OrderCanceledEmailComponent {...mockProps} />;
+export default function OrderCancelledEmailPreview() {
+  // @ts-ignore -- preview-only mock, not the full OrderDTO
+  return <OrderCanceledEmailComponent {...mockProps} />;
+}

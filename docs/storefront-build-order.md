@@ -213,7 +213,12 @@ email matches the order rather than treating the id alone as proof.
 Build, in this order:
 
 1. Register, log in, log out
-2. Email verification landing page (the backend emails a link)
+2. **Email verification.** After registering, call
+   `POST /auth/verification/request` with the token registration returned and
+   `{ "entity_id": "<email>", "entity_type": "email" }`. The backend emails a
+   link to `/account/verify?token=...`, valid for 15 minutes. Build that page to
+   post `{ "code": "<token>" }` to `POST /auth/verification/confirm`, or change
+   the link in `apps/backend/src/workflows/steps/send-verification-email.ts`.
 3. **Password reset: both the request form and the reset page.** The backend
    already sends customers to `/account/reset-password?token=...&email=...`, so
    build that exact route or change the link in
@@ -252,6 +257,21 @@ form in the account area that posts to `POST /store/customers/me/password`
 with `{ password }`. They must be signed in; the email comes from their
 account. If they already have a password the call is refused — that case is a
 reset, not a set.
+
+**Requiring verification.** Nothing forces it today, so an unverified customer
+can still sign in. To require it, add this to `projectConfig.http` in
+`medusa-config.ts`:
+
+```ts
+authVerificationsPerActor: {
+  customer: [{ auth_provider: "emailpass", entity_type: "email" }],
+},
+```
+
+Login and registration then answer `verification_required: true` with a
+limited token until the link is confirmed, so handle that response before
+switching it on. Google sign-ins are unaffected, because only `emailpass` is
+listed.
 
 **Done when:** a customer can register, verify, log out, reset a forgotten
 password, and see a past order.

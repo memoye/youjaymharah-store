@@ -131,5 +131,7 @@ const mockProps = {
   },
 };
 
-// @ts-ignore -- preview-only mock, not the full OrderDTO
-export default () => <OrderShippedEmailComponent {...mockProps} />;
+export default function OrderShippedEmailPreview() {
+  // @ts-ignore -- preview-only mock, not the full OrderDTO
+  return <OrderShippedEmailComponent {...mockProps} />;
+}

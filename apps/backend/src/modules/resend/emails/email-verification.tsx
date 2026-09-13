@@ -4,31 +4,33 @@ import { EmailLayout } from "./components/layout";
 import type { BrandSummary } from "./constants";
 import { STORE_NAME } from "./constants";
 
-export type PasswordResetEmailProps = {
-  /** Fully-formed reset link. The subscriber builds it from the reset token. */
+export type EmailVerificationEmailProps = {
+  /** Fully-formed verification link. The sending step builds it from the token. */
   url: string;
   email?: string;
   /** How long the link stays valid, for the copy only. */
   expires_in?: string;
-  /** Live store branding, supplied by the sending subscriber. */
+  /** Live store branding, supplied by the sending step. */
   brand?: BrandSummary;
 };
 
-function PasswordResetEmailComponent({
+function EmailVerificationEmailComponent({
   url,
   email,
   expires_in,
   brand,
-}: PasswordResetEmailProps) {
+}: EmailVerificationEmailProps) {
+  const storeName = brand?.name || STORE_NAME;
+
   return (
     <EmailLayout
       brand={brand}
-      preview={`Reset your ${STORE_NAME} password`}
-      heading="Reset your password"
+      preview={`Confirm your email address for ${storeName}`}
+      heading="Confirm your email address"
       intro={
         email
-          ? `A password reset was requested for ${email}.`
-          : "A password reset was requested for your account."
+          ? `Confirm that ${email} belongs to you to finish setting up your ${storeName} account.`
+          : `Confirm your email address to finish setting up your ${storeName} account.`
       }
     >
       <Container className="px-6">
@@ -37,7 +39,7 @@ function PasswordResetEmailComponent({
             href={url}
             className="bg-[#27272a] text-white rounded-lg px-6 py-3 font-semibold"
           >
-            Choose a new password
+            Confirm email address
           </Button>
         </Section>
 
@@ -50,24 +52,23 @@ function PasswordResetEmailComponent({
         <Text className="text-sm text-blue-600 break-all">{url}</Text>
 
         <Text className="text-gray-600 mt-6">
-          If you did not ask to reset your password, you can ignore this email
-          and nothing will change.
+          If you did not create an account, you can ignore this email.
         </Text>
       </Container>
     </EmailLayout>
   );
 }
 
-export const passwordResetEmail = (props: PasswordResetEmailProps) => (
-  <PasswordResetEmailComponent {...props} />
+export const emailVerificationEmail = (props: EmailVerificationEmailProps) => (
+  <EmailVerificationEmailComponent {...props} />
 );
 
-export default function PasswordResetEmailPreview() {
+export default function EmailVerificationEmailPreview() {
   return (
-    <PasswordResetEmailComponent
-      url="https://example.com/reset-password?token=abc123"
+    <EmailVerificationEmailComponent
+      url="https://example.com/account/verify?token=abc123"
       email="ada@example.com"
       expires_in="15 minutes"
     />
   );
-};
+}

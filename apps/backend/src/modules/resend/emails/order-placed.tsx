@@ -52,7 +52,7 @@ function OrderPlacedEmailComponent({
     }
 
     if (typeof price === "string") {
-      return formatter.format(parseFloat(price));
+      return formatter.format(Number.parseFloat(price));
     }
 
     return price?.toString() || "";
@@ -233,5 +233,7 @@ const mockProps = {
   },
 };
 
-// @ts-ignore -- preview-only mock, not the full OrderDTO
-export default () => <OrderPlacedEmailComponent {...mockProps} />;
+export default function OrderPlacedEmailPreview() {
+  // @ts-ignore -- preview-only mock, not the full OrderDTO
+  return <OrderPlacedEmailComponent {...mockProps} />;
+}

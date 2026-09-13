@@ -65,10 +65,12 @@ export const inviteUserEmail = (props: InviteUserEmailProps) => (
   <InviteUserEmailComponent {...props} />
 );
 
-export default () => (
-  <InviteUserEmailComponent
-    url="https://example.com/app/invite?token=abc123"
-    email="ada@example.com"
-    invited_by="Memoye"
-  />
-);
+export default function InviteUserEmailPreview() {
+  return (
+    <InviteUserEmailComponent
+      url="https://example.com/app/invite?token=abc123"
+      email="ada@example.com"
+      invited_by="Memoye"
+    />
+  );
+};
