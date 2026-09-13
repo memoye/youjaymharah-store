@@ -61,6 +61,10 @@ module.exports = defineConfig({
       authCors: process.env.AUTH_CORS!,
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
+      authMethodsPerActor: {
+        user: ["emailpass"],
+        customer: ["emailpass", "google"],
+      },
     },
   },
   featureFlags: {
