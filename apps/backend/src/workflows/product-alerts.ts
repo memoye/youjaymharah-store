@@ -102,10 +102,13 @@ export const setProductComingSoonWorkflow = createWorkflow(
       };
     });
 
-    const updateInput = transform({ input, metadata }, ({ input, metadata }) => ({
-      selector: { id: input.product_id },
-      update: { metadata },
-    }));
+    const updateInput = transform(
+      { input, metadata },
+      ({ input, metadata }) => ({
+        selector: { id: input.product_id },
+        update: { metadata },
+      }),
+    );
 
     updateProductsWorkflow.runAsStep({ input: updateInput });
 
