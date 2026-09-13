@@ -72,6 +72,43 @@ const ProductAlertsWidget = ({
 
   const alerts = data?.alerts;
 
+  function renderAlerts() {
+    if (!alerts?.waiting) {
+      return (
+        <Text size="small" leading="compact" className="text-ui-fg-subtle">
+          Nobody is waiting on this product.
+          {alerts?.sent ? ` ${alerts.sent} already notified.` : ""}
+        </Text>
+      );
+    }
+    return (
+      <>
+        <Text size="small" leading="compact" weight="plus">
+          {alerts.waiting} waiting
+          {alerts.sent ? ` · ${alerts.sent} already notified` : ""}
+        </Text>
+        {alerts.by_variant.map(({ variant_id, count }) => (
+          <div
+            key={variant_id ?? "any"}
+            className="flex items-center justify-between"
+          >
+            <Text size="small" leading="compact" className="text-ui-fg-subtle">
+              {variantTitle(variant_id)}
+            </Text>
+            <Text size="small" leading="compact">
+              {count}
+            </Text>
+          </div>
+        ))}
+        <Text size="small" leading="compact" className="text-ui-fg-muted">
+          They're emailed automatically within 10 minutes of the item being in
+          stock
+          {comingSoon ? " and coming soon being turned off" : ""}.
+        </Text>
+      </>
+    );
+  }
+
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
@@ -101,40 +138,8 @@ const ProductAlertsWidget = ({
           <Text size="small" leading="compact" className="text-ui-fg-subtle">
             Loading…
           </Text>
-        ) : !alerts?.waiting ? (
-          <Text size="small" leading="compact" className="text-ui-fg-subtle">
-            Nobody is waiting on this product.
-            {alerts?.sent ? ` ${alerts.sent} already notified.` : ""}
-          </Text>
         ) : (
-          <>
-            <Text size="small" leading="compact" weight="plus">
-              {alerts.waiting} waiting
-              {alerts.sent ? ` · ${alerts.sent} already notified` : ""}
-            </Text>
-            {alerts.by_variant.map(({ variant_id, count }) => (
-              <div
-                key={variant_id ?? "any"}
-                className="flex items-center justify-between"
-              >
-                <Text
-                  size="small"
-                  leading="compact"
-                  className="text-ui-fg-subtle"
-                >
-                  {variantTitle(variant_id)}
-                </Text>
-                <Text size="small" leading="compact">
-                  {count}
-                </Text>
-              </div>
-            ))}
-            <Text size="small" leading="compact" className="text-ui-fg-muted">
-              They're emailed automatically within 10 minutes of the item being
-              in stock
-              {comingSoon ? " and coming soon being turned off" : ""}.
-            </Text>
-          </>
+          renderAlerts()
         )}
       </div>
     </Container>

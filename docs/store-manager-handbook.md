@@ -264,7 +264,12 @@ Guides: [Inventory](https://docs.medusajs.com/user-guide/inventory/inventory) ·
   be bought. Keep it **Published**: a draft product is hidden from the website
   completely, so nobody can ask to be notified.
 - **Launching:** add stock, then turn **Coming soon** off. Everyone waiting gets
-  an "It's here" email within about 10 minutes.
+  an "It's here" email within about 10 minutes, and the product shows a
+  **New** badge on the website for 30 days from that moment.
+- **The New badge is automatic:** 30 days from launch for coming-soon
+  products, otherwise 30 days from when the product was created in the admin.
+  Publishing a draft does not restart it, so create products close to their
+  release date, or use **Coming soon** to launch them.
 - **Restocks:** just add stock. Everyone waiting on that size gets a "Back in
   stock" email within about 10 minutes. Each shopper is emailed once.
 - The **Notify me** box shows how many people are waiting on each size, which

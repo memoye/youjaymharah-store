@@ -358,14 +358,19 @@ export const ROUTES: RouteDoc[] = [
     tag: "Product alerts",
     summary: "Turn coming soon on or off",
     description:
-      "Sets `metadata.coming_soon` without touching other metadata. While on, the product stays published, can't be added to a cart or checked out, and shoppers can ask to be notified. Turning it off emails waiting shoppers on the next alert run once the product has stock.",
+      "Sets `metadata.coming_soon` without touching other metadata. While on, the product stays published, can't be added to a cart or checked out, and shoppers can ask to be notified. Turning it off emails waiting shoppers on the next alert run once the product has stock. Turning it off on a product that was coming soon is its launch: `metadata.launched_at` is set to now (ISO 8601), which the storefront's \"New\" badge counts from.",
     auth: "admin",
     policies: ["product:update"],
     body: AdminSetProductComingSoon,
     response: {
-      description: "The new setting.",
+      description:
+        "The new setting, and the launch date if the product has ever been launched from coming soon.",
       schema: z.object({
-        product: z.object({ id: z.string(), coming_soon: z.boolean() }),
+        product: z.object({
+          id: z.string(),
+          coming_soon: z.boolean(),
+          launched_at: z.string().nullable(),
+        }),
       }),
     },
     errors: [{ status: 404, description: "No such product." }],

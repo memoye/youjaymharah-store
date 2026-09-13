@@ -82,6 +82,11 @@ Component instead.
 
 Prices are stored as-is: ₦49.99 comes back as `49.99`. Never divide by 100.
 
+For the "New" badge, call `isNew(product)` from `lib/medusa/product.ts` here,
+in the Server Component, and pass the boolean to the card. It needs
+`+metadata` in `fields`, and counts 30 days from the launch date (or creation
+date).
+
 ### 2. Client-side data with React Query
 
 For anything that changes as the customer interacts, like search-as-you-type.
@@ -474,4 +479,4 @@ with how long Medusa took to answer.
 | `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch           |
 | `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                 |
 | `features/marketing/`               | The account's marketing email setting                           |
-| `lib/medusa/product.ts`             | `isComingSoon`                                                  |
+| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                          |
