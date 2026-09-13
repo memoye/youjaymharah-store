@@ -67,11 +67,9 @@ function ClaimCreatedEmailComponent({
 
   const getRefundAmount = () => {
     if (!isRefund) return "";
-    if (claim.refund_amount && claim.refund_amount > 0) {
+    if (claim.refund_amount && claim.refund_amount > 0)
       return formatMoney(claim.refund_amount, order.currency_code);
-    } else if (balance.direction === "store_owes") {
-      return balance.amount;
-    }
+    if (balance.direction === "store_owes") return balance.amount;
     return "";
   };
 
