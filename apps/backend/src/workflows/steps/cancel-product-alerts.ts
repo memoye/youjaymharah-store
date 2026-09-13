@@ -78,7 +78,11 @@ export const cancelOrphanedProductAlertsStep = createStep(
     const now = new Date();
 
     await service.updateProductAlerts(
-      input.ids.map((id) => ({ id, status: "cancelled" as const, cancelled_at: now })),
+      input.ids.map((id) => ({
+        id,
+        status: "cancelled" as const,
+        cancelled_at: now,
+      })),
     );
 
     return new StepResponse({ cancelled: input.ids.length }, input.ids);

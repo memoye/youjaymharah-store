@@ -254,6 +254,26 @@ available count can be lower than the shelf. Adjust under
 Guides: [Inventory](https://docs.medusajs.com/user-guide/inventory/inventory) ·
 [Reservations](https://docs.medusajs.com/user-guide/inventory/reservations)
 
+### Coming soon and "Notify me"
+
+- **Notify me** shows on the website for sold-out sizes and for products marked
+  coming soon. Guests leave their email; signed-in customers just tap. Nobody
+  is emailed until the item can actually be bought.
+- **Coming soon:** open the product and turn on **Coming soon** in the
+  **Notify me** box on the right. The product stays on the website but can't
+  be bought. Keep it **Published**: a draft product is hidden from the website
+  completely, so nobody can ask to be notified.
+- **Launching:** add stock, then turn **Coming soon** off. Everyone waiting gets
+  an "It's here" email within about 10 minutes.
+- **Restocks:** just add stock. Everyone waiting on that size gets a "Back in
+  stock" email within about 10 minutes. Each shopper is emailed once.
+- The **Notify me** box shows how many people are waiting on each size, which
+  helps decide what to reorder.
+- Ticking "send me offers" when asking to be notified is the newsletter signup:
+  they get the usual confirmation email and appear under
+  `Settings › Newsletter` once they confirm. Customers can also switch offers
+  on or off from their account.
+
 ### Customers, groups and exports
 
 Customers and guest orders are under `Customers`. Use groups (VIP, stylists,
@@ -272,14 +292,15 @@ check `Settings › Workflows` for the failed send.
 
 ## 6. Known gaps
 
-| Area                                     | Status        | Meanwhile                                        |
-| ---------------------------------------- | ------------- | ------------------------------------------------ |
-| Tracking on customer's order page        | Status only   | The shipping email carries the tracking link     |
-| Credo refunds                            | Manual        | Refund in the Credo dashboard; log the reference |
-| Customer self-service returns            | Not built     | Customers contact support; you create the return |
-| POS app                                  | Workaround    | Draft orders with a separate shop location       |
-| Gift cards, store credit, loyalty points | Not available | One-off promo codes as a substitute              |
-| Abandoned-cart reminders                 | Not built     | —                                                |
+| Area                                     | Status        | Meanwhile                                                                                            |
+| ---------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------- |
+| Tracking on customer's order page        | Status only   | The shipping email carries the tracking link                                                         |
+| Credo refunds                            | Manual        | Refund in the Credo dashboard; log the reference                                                     |
+| Customer self-service returns            | Not built     | Customers contact support; you create the return                                                     |
+| POS app                                  | Workaround    | Draft orders with a separate shop location                                                           |
+| Gift cards, store credit, loyalty points | Not available | One-off promo codes as a substitute                                                                  |
+| Abandoned-cart reminders                 | Not built     | —                                                                                                    |
+| Newsletter checkbox at checkout          | Not built     | The "Show opt-in at checkout" setting has no effect yet; the site's signup form and "Notify me" work |
 
 ## 7. Medusa guides
 

@@ -1,14 +1,17 @@
 import { z } from "@medusajs/framework/zod";
 
 import {
+  AdminSetProductComingSoon,
   AdminUpdateBranding,
   AdminUpdateNewsletterSettings,
   StoreAddWishlistItem,
+  StoreCreateProductAlert,
   StoreCreateSocialCustomer,
   StoreMergeWishlist,
   StoreNewsletterSubscribe,
   StoreNewsletterToken,
   StoreSetCustomerPassword,
+  StoreSetMarketingPreference,
 } from "../src/api/middlewares";
 
 /**
@@ -106,6 +109,33 @@ const Customer = z.object({
   created_at: z.string(),
 });
 
+const ProductAlert = z.object({
+  id: z.string(),
+  product_id: z.string(),
+  variant_id: z.string().nullable(),
+  reason: z.enum(["restock", "launch"]),
+  status: z.enum(["waiting", "sent", "cancelled"]),
+  created_at: z.string(),
+});
+
+const CustomerProductAlert = ProductAlert.extend({
+  notified_at: z.string().nullable(),
+});
+
+const MarketingPreference = z.object({
+  status: z.enum(["none", "pending", "subscribed", "unsubscribed"]),
+  available: z.boolean(),
+  consent_text: z.string().nullable(),
+});
+
+const ProductAlertSummary = z.object({
+  waiting: z.number(),
+  sent: z.number(),
+  by_variant: z.array(
+    z.object({ variant_id: z.string().nullable(), count: z.number() }),
+  ),
+});
+
 /** Group descriptions, shown as section intros by API viewers. */
 /**
  * One hit from the product index. These are the index' own fields, not a
@@ -159,6 +189,10 @@ export const TAGS: Record<string, string> = {
     "Full-text product search over the Search Module's index, with counted facets for refining a results page.",
   Wishlist:
     "Products a shopper has saved. One entry per product, optionally remembering the colour and size they chose. Signed-in customers use /store/customers/me/wishlist; guests use /store/wishlists, where the wishlist ID works like a guest cart's ID, and the guest list is merged into the customer's at sign-in.",
+  "Product alerts":
+    '"Notify me" for sold-out sizes and coming-soon products. One email per alert, sent within about 10 minutes of the item becoming buyable, then the alert is done. Asking for an alert is not marketing consent.',
+  Marketing:
+    "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in.",
   Scaffolding:
     "Placeholder routes left by the Medusa starter. They return 200 with no body and can be deleted.",
 };
@@ -264,11 +298,173 @@ export const TYPES: {
     schema: z.object({ success: z.boolean() }),
     io: "output",
   },
+  { name: "ProductAlert", schema: CustomerProductAlert, io: "output" },
+  { name: "MarketingPreference", schema: MarketingPreference, io: "output" },
+  {
+    name: "StoreCreateProductAlertBody",
+    schema: StoreCreateProductAlert,
+    io: "input",
+  },
+  {
+    name: "StoreCreateProductAlertResponse",
+    schema: z.object({
+      success: z.boolean(),
+      alert: ProductAlert.nullable(),
+    }),
+    io: "output",
+  },
+  {
+    name: "StoreProductAlertsResponse",
+    schema: z.object({ alerts: z.array(CustomerProductAlert) }),
+    io: "output",
+  },
+  {
+    name: "StoreSetMarketingPreferenceBody",
+    schema: StoreSetMarketingPreference,
+    io: "input",
+  },
+  {
+    name: "StoreMarketingPreferenceResponse",
+    schema: z.object({ marketing: MarketingPreference }),
+    io: "output",
+  },
+  {
+    name: "AdminSetProductComingSoonBody",
+    schema: AdminSetProductComingSoon,
+    io: "input",
+  },
   { name: "StoreSearchProduct", schema: SearchProduct, io: "output" },
   { name: "StoreSearchResponse", schema: SearchResult, io: "output" },
 ];
 
 export const ROUTES: RouteDoc[] = [
+  {
+    method: "GET",
+    path: "/admin/products/{id}/alerts",
+    tag: "Product alerts",
+    summary: "Count shoppers waiting on a product",
+    description:
+      "Counts only, per variant; a null `variant_id` counts alerts for any size.",
+    auth: "admin",
+    policies: ["product:read"],
+    response: {
+      description: "Waiting and already-notified counts.",
+      schema: z.object({ alerts: ProductAlertSummary }),
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/products/{id}/coming-soon",
+    tag: "Product alerts",
+    summary: "Turn coming soon on or off",
+    description:
+      "Sets `metadata.coming_soon` without touching other metadata. While on, the product stays published, can't be added to a cart or checked out, and shoppers can ask to be notified. Turning it off emails waiting shoppers on the next alert run once the product has stock.",
+    auth: "admin",
+    policies: ["product:update"],
+    body: AdminSetProductComingSoon,
+    response: {
+      description: "The new setting.",
+      schema: z.object({
+        product: z.object({ id: z.string(), coming_soon: z.boolean() }),
+      }),
+    },
+    errors: [{ status: 404, description: "No such product." }],
+  },
+  {
+    method: "POST",
+    path: "/store/products/{id}/alerts",
+    tag: "Product alerts",
+    summary: "Ask to be notified when a product can be bought",
+    description:
+      "For a sold-out variant (or product) or a coming-soon product. Signed in, the account's email is used and any `email` in the body is ignored; as a guest, `email` is required. Nothing is emailed until the item can be bought. Asking again for the same item returns the waiting alert. `marketing_opt_in` also signs the address up for the newsletter, with its confirmation email; a closed newsletter does not fail the request. Guests always get `alert: null`, so the response does not reveal existing alerts.",
+    auth: "public",
+    body: StoreCreateProductAlert,
+    response: {
+      description: "The alert was recorded.",
+      schema: z.object({
+        success: z.boolean(),
+        alert: ProductAlert.nullable(),
+      }),
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "Validation failed, no email for a guest, the variant is not part of the product, the item can be bought now, or the address is waiting on 50 items already.",
+      },
+      { status: 404, description: "No such published product." },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/store/customers/me/product-alerts",
+    tag: "Product alerts",
+    summary: "List the customer's alerts",
+    description:
+      "Waiting and sent alerts, newest first, up to 100. IDs only: load products through /store/products.",
+    auth: "customer",
+    response: {
+      description: "The alerts.",
+      schema: z.object({ alerts: z.array(CustomerProductAlert) }),
+    },
+    errors: [{ status: 401, description: "No customer is logged in." }],
+  },
+  {
+    method: "DELETE",
+    path: "/store/customers/me/product-alerts/{id}",
+    tag: "Product alerts",
+    summary: "Cancel one of the customer's alerts",
+    description: "Cancelling an alert that was already sent does nothing.",
+    auth: "customer",
+    response: {
+      description: "The alert is cancelled.",
+      schema: z.object({
+        id: z.string(),
+        object: z.literal("product_alert"),
+        deleted: z.boolean(),
+      }),
+    },
+    errors: [
+      { status: 401, description: "No customer is logged in." },
+      {
+        status: 404,
+        description:
+          "No such alert for this customer. Another customer's alert reads as not found.",
+      },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/store/customers/me/marketing",
+    tag: "Marketing",
+    summary: "Get the customer's marketing email preference",
+    description:
+      "The newsletter status of the account's email address. `pending` means a confirmation email was sent and not yet clicked. `available` is false while signup is switched off in the admin.",
+    auth: "customer",
+    response: {
+      description: "The preference.",
+      schema: z.object({ marketing: MarketingPreference }),
+    },
+    errors: [{ status: 401, description: "No customer is logged in." }],
+  },
+  {
+    method: "POST",
+    path: "/store/customers/me/marketing",
+    tag: "Marketing",
+    summary: "Turn marketing email on or off",
+    description:
+      "On runs the newsletter signup for the account's email, including the double opt-in confirmation email when that is enabled, so the status becomes `pending` first. Off unsubscribes the address straight away.",
+    auth: "customer",
+    body: StoreSetMarketingPreference,
+    response: {
+      description: "The preference after the change.",
+      schema: z.object({ marketing: MarketingPreference }),
+    },
+    errors: [
+      { status: 400, description: "Newsletter signup is switched off." },
+      { status: 401, description: "No customer is logged in." },
+    ],
+  },
   {
     method: "GET",
     path: "/admin/branding",

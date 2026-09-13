@@ -16,7 +16,11 @@ import {
 import { findDueProductAlertsStep } from "./steps/find-due-product-alerts";
 import { retrieveProductMetadataStep } from "./steps/retrieve-product-metadata";
 import { sendProductAlertEmailsStep } from "./steps/send-product-alert-emails";
-import { COMING_SOON_METADATA_KEY } from "./utils/product-availability";
+import {
+  COMING_SOON_METADATA_KEY,
+  isComingSoon,
+  LAUNCHED_AT_METADATA_KEY,
+} from "./utils/product-availability";
 
 export const createProductAlertWorkflow = createWorkflow(
   "create-product-alert",
@@ -73,6 +77,11 @@ export type SetProductComingSoonInput = {
 /**
  * Turns "coming soon" on or off. Off does not email anyone directly: the next
  * alert run sends launch emails once the product also has stock.
+ *
+ * Switching from on to off is the launch, so it also stamps
+ * `metadata.launched_at`, which restarts the storefront's "New" badge.
+ * Switching off a product that was not coming soon changes nothing, and a
+ * relaunch (on, then off again) stamps the new date.
  */
 export const setProductComingSoonWorkflow = createWorkflow(
   "set-product-coming-soon",
@@ -81,21 +90,34 @@ export const setProductComingSoonWorkflow = createWorkflow(
       product_id: input.product_id,
     });
 
-    const updateInput = transform({ input, product }, ({ input, product }) => ({
+    const metadata = transform({ input, product }, ({ input, product }) => {
+      const launching = isComingSoon(product.metadata) && !input.coming_soon;
+
+      return {
+        ...product.metadata,
+        [COMING_SOON_METADATA_KEY]: input.coming_soon,
+        ...(launching
+          ? { [LAUNCHED_AT_METADATA_KEY]: new Date().toISOString() }
+          : {}),
+      };
+    });
+
+    const updateInput = transform({ input, metadata }, ({ input, metadata }) => ({
       selector: { id: input.product_id },
-      update: {
-        metadata: {
-          ...product.metadata,
-          [COMING_SOON_METADATA_KEY]: input.coming_soon,
-        },
-      },
+      update: { metadata },
     }));
 
     updateProductsWorkflow.runAsStep({ input: updateInput });
 
-    return new WorkflowResponse({
+    const result = transform({ input, metadata }, ({ input, metadata }) => ({
       id: input.product_id,
       coming_soon: input.coming_soon,
-    });
+      launched_at:
+        typeof metadata[LAUNCHED_AT_METADATA_KEY] === "string"
+          ? (metadata[LAUNCHED_AT_METADATA_KEY] as string)
+          : null,
+    }));
+
+    return new WorkflowResponse(result);
   },
 );

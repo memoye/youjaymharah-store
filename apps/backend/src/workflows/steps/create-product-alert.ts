@@ -26,10 +26,7 @@ export type ProductAlertSummary = {
   created_at: Date | string;
 };
 
-type Compensation =
-  | { created: string }
-  | { claimed: string }
-  | null;
+type Compensation = { created: string } | { claimed: string } | null;
 
 /**
  * Nobody is emailed at signup, so one address cannot pile up alerts to flood

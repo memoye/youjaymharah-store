@@ -13,6 +13,15 @@ import {
  */
 export const COMING_SOON_METADATA_KEY = "coming_soon";
 
+/**
+ * When a coming-soon product was launched (ISO 8601), stamped by
+ * setProductComingSoonWorkflow. The storefront's "New" badge counts from
+ * here, falling back to the product's `created_at`: Medusa has no publish
+ * date, and a product created weeks before launch would otherwise be "old" on
+ * the day it goes on sale.
+ */
+export const LAUNCHED_AT_METADATA_KEY = "launched_at";
+
 export function isComingSoon(
   metadata: Record<string, unknown> | null | undefined,
 ): boolean {

@@ -3,7 +3,8 @@
 ## This project's custom routes
 
 `openapi.json` in this folder documents the endpoints this project adds on top
-of Medusa: branding, newsletter and wishlist.
+of Medusa: branding, newsletter, wishlist, "notify me" product alerts and
+customer marketing preferences.
 
 It is generated, not hand-written:
 

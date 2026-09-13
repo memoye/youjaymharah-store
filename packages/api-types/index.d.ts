@@ -187,6 +187,68 @@ export type StoreSetCustomerPasswordResponse = {
   success: boolean;
 };
 
+export type ProductAlert = {
+  id: string;
+  product_id: string;
+  variant_id: string | null;
+  reason: "restock" | "launch";
+  status: "waiting" | "sent" | "cancelled";
+  created_at: string;
+  notified_at: string | null;
+};
+
+export type MarketingPreference = {
+  status: "none" | "pending" | "subscribed" | "unsubscribed";
+  available: boolean;
+  consent_text: string | null;
+};
+
+export type StoreCreateProductAlertBody = {
+  email?: string;
+  variant_id?: string | null;
+  marketing_opt_in?: boolean;
+};
+
+export type StoreCreateProductAlertResponse = {
+  success: boolean;
+  alert: {
+    id: string;
+    product_id: string;
+    variant_id: string | null;
+    reason: "restock" | "launch";
+    status: "waiting" | "sent" | "cancelled";
+    created_at: string;
+  } | null;
+};
+
+export type StoreProductAlertsResponse = {
+  alerts: {
+    id: string;
+    product_id: string;
+    variant_id: string | null;
+    reason: "restock" | "launch";
+    status: "waiting" | "sent" | "cancelled";
+    created_at: string;
+    notified_at: string | null;
+  }[];
+};
+
+export type StoreSetMarketingPreferenceBody = {
+  subscribed: boolean;
+};
+
+export type StoreMarketingPreferenceResponse = {
+  marketing: {
+    status: "none" | "pending" | "subscribed" | "unsubscribed";
+    available: boolean;
+    consent_text: string | null;
+  };
+};
+
+export type AdminSetProductComingSoonBody = {
+  coming_soon: boolean;
+};
+
 export type StoreSearchProduct = {
   id: string;
   title: string;

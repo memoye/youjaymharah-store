@@ -128,6 +128,12 @@ photos follow the choice, and sold-out combinations are visibly unavailable.
   `inventory_quantity` is 0.
 - Product `metadata` holds `fit` and `care` copy; `material` holds the
   composition.
+- **Notify me** (already built): show it instead of "Add to bag" for a sold-out
+  size, and for the whole product when `metadata.coming_soon` is `true`
+  (`isComingSoon` in `lib/medusa/product.ts`). Guests enter an email plus an
+  optional "send me offers" box; signed-in customers only tap. Hooks and rules
+  are in `DATA-LAYER.md` recipe 5. The backend refuses to sell a coming-soon
+  product, so a stale page cannot check one out.
 
 ---
 
@@ -245,6 +251,11 @@ Build, in this order:
 5. Order history and order detail, reusing Phase 5's components
 6. Claiming a guest order into an account (`/store/orders/:id/transfer/request`)
 7. Google sign-in, once credentials are set (see below)
+8. **Notifications settings:** an "Email me offers" switch
+   (`useMarketingPreference`, `useSetMarketingPreference`) and the list of
+   "Notify me" alerts with a cancel button (`useProductAlerts`,
+   `useCancelProductAlert`). Turning offers on sends a confirmation email
+   first, so show the `pending` status as "Check your inbox to confirm".
 
 Backend: `/auth/customer/emailpass` (login, register), `/store/customers`,
 `/store/customers/me`, `/store/customers/me/addresses`, `/store/orders`.
@@ -335,11 +346,21 @@ Backend (custom, already built): `POST /store/newsletter/subscribe`,
 **Done when:** a signup produces a confirmation email, and the confirm link
 lands on a page that says what happened.
 
-**Watch out:** the consent wording, success message and checkout opt-in label
-live in admin-only settings, so the storefront cannot read them today. Either
-hardcode the copy or add a small public endpoint that exposes those few fields.
-Subscribe always answers the same way whether or not the address is already on
-the list, so never infer membership from the response.
+**Also already built:** the "send me offers" box on "Notify me" and the account
+switch from Phase 6 go through this same signup and double opt-in.
+
+**Watch out:**
+
+- The consent wording, success message and checkout opt-in label live in
+  admin-only settings. Signed-in customers can read the consent wording from
+  `GET /store/customers/me/marketing`; for guests, hardcode the copy or add a
+  small public endpoint that exposes those few fields.
+- The checkout opt-in is not wired up on the backend yet: the admin setting
+  saves, but nothing subscribes the address when an order is placed. Until it
+  is, call `POST /store/newsletter/subscribe` from the checkout page when the
+  box is ticked.
+- Subscribe always answers the same way whether or not the address is already
+  on the list, so never infer membership from the response.
 
 ---
 

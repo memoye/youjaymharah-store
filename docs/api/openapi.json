@@ -22,6 +22,14 @@
   ],
   "tags": [
     {
+      "name": "Product alerts",
+      "description": "\"Notify me\" for sold-out sizes and coming-soon products. One email per alert, sent within about 10 minutes of the item becoming buyable, then the alert is done. Asking for an alert is not marketing consent."
+    },
+    {
+      "name": "Marketing",
+      "description": "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in."
+    },
+    {
       "name": "Branding",
       "description": "The store's name, logo and support email, used across customer emails and the storefront."
     },
@@ -47,6 +55,730 @@
     }
   ],
   "paths": {
+    "/admin/products/{id}/alerts": {
+      "get": {
+        "operationId": "getAdminProductsIdAlerts",
+        "tags": [
+          "Product alerts"
+        ],
+        "summary": "Count shoppers waiting on a product",
+        "description": "Counts only, per variant; a null `variant_id` counts alerts for any size.",
+        "x-required-policies": [
+          "product:read"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The id of the resource.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Waiting and already-notified counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alerts": {
+                      "type": "object",
+                      "properties": {
+                        "waiting": {
+                          "type": "number"
+                        },
+                        "sent": {
+                          "type": "number"
+                        },
+                        "by_variant": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "variant_id": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "count": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "variant_id",
+                              "count"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "waiting",
+                        "sent",
+                        "by_variant"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "alerts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products/{id}/coming-soon": {
+      "post": {
+        "operationId": "postAdminProductsIdComingSoon",
+        "tags": [
+          "Product alerts"
+        ],
+        "summary": "Turn coming soon on or off",
+        "description": "Sets `metadata.coming_soon` without touching other metadata. While on, the product stays published, can't be added to a cart or checked out, and shoppers can ask to be notified. Turning it off emails waiting shoppers on the next alert run once the product has stock.",
+        "x-required-policies": [
+          "product:update"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The id of the resource.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "coming_soon": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "coming_soon"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The new setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "product": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "coming_soon": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "coming_soon"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "product"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/products/{id}/alerts": {
+      "post": {
+        "operationId": "postStoreProductsIdAlerts",
+        "tags": [
+          "Product alerts"
+        ],
+        "summary": "Ask to be notified when a product can be bought",
+        "description": "For a sold-out variant (or product) or a coming-soon product. Signed in, the account's email is used and any `email` in the body is ignored; as a guest, `email` is required. Nothing is emailed until the item can be bought. Asking again for the same item returns the waiting alert. `marketing_opt_in` also signs the address up for the newsletter, with its confirmation email; a closed newsletter does not fail the request. Guests always get `alert: null`, so the response does not reveal existing alerts.",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The id of the resource.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "variant_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "marketing_opt_in": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The alert was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "alert": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "product_id": {
+                              "type": "string"
+                            },
+                            "variant_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "reason": {
+                              "type": "string",
+                              "enum": [
+                                "restock",
+                                "launch"
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "waiting",
+                                "sent",
+                                "cancelled"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "product_id",
+                            "variant_id",
+                            "reason",
+                            "status",
+                            "created_at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "alert"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, no email for a guest, the variant is not part of the product, the item can be bought now, or the address is waiting on 50 items already.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such published product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/customers/me/product-alerts": {
+      "get": {
+        "operationId": "getStoreCustomersMeProductAlerts",
+        "tags": [
+          "Product alerts"
+        ],
+        "summary": "List the customer's alerts",
+        "description": "Waiting and sent alerts, newest first, up to 100. IDs only: load products through /store/products.",
+        "security": [
+          {
+            "publishableKey": [],
+            "customerJwt": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The alerts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alerts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "product_id": {
+                            "type": "string"
+                          },
+                          "variant_id": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "restock",
+                              "launch"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "sent",
+                              "cancelled"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "notified_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "product_id",
+                          "variant_id",
+                          "reason",
+                          "status",
+                          "created_at",
+                          "notified_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "alerts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No customer is logged in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/customers/me/product-alerts/{id}": {
+      "delete": {
+        "operationId": "deleteStoreCustomersMeProductAlertsId",
+        "tags": [
+          "Product alerts"
+        ],
+        "summary": "Cancel one of the customer's alerts",
+        "description": "Cancelling an alert that was already sent does nothing.",
+        "security": [
+          {
+            "publishableKey": [],
+            "customerJwt": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The id of the resource.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The alert is cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string",
+                      "const": "product_alert"
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "object",
+                    "deleted"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No customer is logged in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such alert for this customer. Another customer's alert reads as not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/customers/me/marketing": {
+      "get": {
+        "operationId": "getStoreCustomersMeMarketing",
+        "tags": [
+          "Marketing"
+        ],
+        "summary": "Get the customer's marketing email preference",
+        "description": "The newsletter status of the account's email address. `pending` means a confirmation email was sent and not yet clicked. `available` is false while signup is switched off in the admin.",
+        "security": [
+          {
+            "publishableKey": [],
+            "customerJwt": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The preference.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "marketing": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "pending",
+                            "subscribed",
+                            "unsubscribed"
+                          ]
+                        },
+                        "available": {
+                          "type": "boolean"
+                        },
+                        "consent_text": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "available",
+                        "consent_text"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "marketing"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No customer is logged in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postStoreCustomersMeMarketing",
+        "tags": [
+          "Marketing"
+        ],
+        "summary": "Turn marketing email on or off",
+        "description": "On runs the newsletter signup for the account's email, including the double opt-in confirmation email when that is enabled, so the status becomes `pending` first. Off unsubscribes the address straight away.",
+        "security": [
+          {
+            "publishableKey": [],
+            "customerJwt": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subscribed": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "subscribed"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The preference after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "marketing": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "pending",
+                            "subscribed",
+                            "unsubscribed"
+                          ]
+                        },
+                        "available": {
+                          "type": "boolean"
+                        },
+                        "consent_text": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "available",
+                        "consent_text"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "marketing"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Newsletter signup is switched off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No customer is logged in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/branding": {
       "get": {
         "operationId": "getAdminBranding",

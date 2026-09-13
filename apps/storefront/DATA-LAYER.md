@@ -301,6 +301,45 @@ export function HeartButton({ productId }: { productId: string }) {
   days from the last save. The backend deletes guest lists after the same 90
   days.
 
+**"Notify me" and marketing email** (`features/product-alerts/hooks.ts`,
+`features/marketing/hooks.ts`). Show "Notify me" instead of "Add to bag" when
+`isComingSoon(product)` (from `lib/medusa/product.ts`; request `+metadata`) or
+the chosen size is sold out.
+
+```tsx
+"use client";
+
+import { useCustomer } from "@/features/customer/hooks";
+import {
+  useCreateProductAlert,
+  useWaitingProductAlert,
+} from "@/features/product-alerts/hooks";
+
+const { data: customer } = useCustomer();
+const notify = useCreateProductAlert();
+const waiting = useWaitingProductAlert(productId, variantId); // signed in only
+
+notify.mutate({
+  product_id: productId,
+  variant_id: variantId, // omit to wait on any size
+  email: customer ? undefined : email, // guests only; ignored when signed in
+  marketing_opt_in: wantsOffers, // the separate "send me offers" box
+});
+```
+
+- Nobody is emailed at signup. One email goes out within about 10 minutes of
+  the item becoming buyable, then the alert is done.
+- A guest's response has `alert: null`, so show "We'll email you" on success.
+  A signed-in customer's alert appears in `useProductAlerts()`; cancel with
+  `useCancelProductAlert()`.
+- A 400 "This item is available to buy now." means stock came back: refetch
+  the product and show "Add to bag".
+- The offers box and the account setting (`useMarketingPreference()`,
+  `useSetMarketingPreference()`) use the newsletter's double opt-in: turning it
+  on usually returns `status: "pending"`, so say "Check your inbox to confirm".
+- Adding a coming-soon product to a cart fails with a 400 whose message says
+  so.
+
 ### 6. Signing in and out
 
 ```tsx
@@ -355,6 +394,10 @@ Call them with `sdk.client.fetch` and type the responses from
 | `GET /store/wishlists/current`                   | `StoreWishlistResponse`            |
 | `POST /store/wishlists/current/items`            | `StoreWishlistResponse`            |
 | `DELETE /store/wishlists/current/items/{id}`     | `StoreWishlistResponse`            |
+| `POST /store/products/{id}/alerts`               | `StoreCreateProductAlertResponse`  |
+| `GET /store/customers/me/product-alerts`         | `StoreProductAlertsResponse`       |
+| `DELETE /store/customers/me/product-alerts/{id}` | `{ id, object, deleted }`          |
+| `GET`, `POST /store/customers/me/marketing`      | `StoreMarketingPreferenceResponse` |
 | `POST /store/customers/me/password`              | `StoreSetCustomerPasswordResponse` |
 | `POST /store/newsletter/subscribe`               | `StoreNewsletterAckResponse`       |
 | `POST /store/newsletter/confirm`, `/unsubscribe` | `StoreNewsletterAckResponse`       |
@@ -429,3 +472,6 @@ with how long Medusa took to answer.
 | `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)        |
 | `features/customer/`                | Customer query, auth hooks and server prefetch (worked example) |
 | `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch           |
+| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                 |
+| `features/marketing/`               | The account's marketing email setting                           |
+| `lib/medusa/product.ts`             | `isComingSoon`                                                  |

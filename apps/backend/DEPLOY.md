@@ -58,6 +58,12 @@ courier pricing), and any publishable key beyond the first.
   a later day; nothing breaks. The 90 days must match the storefront's
   wishlist cookie (`WISHLIST_MAX_AGE_SECONDS` in
   `apps/storefront/lib/medusa/session.ts`) -- change both together.
+- **"Notify me" emails.** A scheduled job
+  (`src/jobs/send-product-alerts.ts`) checks waiting alerts against stock every
+  10 minutes and emails the ones whose item can be bought. Like the cleanup
+  job it only runs while the service is awake, so on a sleeping free tier the
+  emails go out after the next wake-up. The "Shop now" link is built from
+  `STOREFRONT_URL` plus `/products/<handle>`.
 - **Resend audience picker.** Settings -> Newsletter needs `RESEND_API_KEY`;
   if it is missing the picker shows an error but settings can still be saved.
 
