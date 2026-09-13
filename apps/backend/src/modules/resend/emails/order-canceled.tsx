@@ -1,11 +1,4 @@
-import {
-  Column,
-  Container,
-  Heading,
-  Row,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Column, Container, Heading, Row, Section, Text } from "react-email";
 import type {
   BigNumberValue,
   CustomerDTO,

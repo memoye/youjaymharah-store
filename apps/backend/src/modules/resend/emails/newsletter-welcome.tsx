@@ -1,4 +1,4 @@
-import { Container, Link, Text } from "@react-email/components";
+import { Container, Link, Text } from "react-email";
 
 import { EmailLayout } from "./components/layout";
 import type { BrandSummary } from "./constants";

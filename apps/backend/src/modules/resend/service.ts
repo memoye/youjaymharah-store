@@ -7,7 +7,7 @@ import {
   ProviderSendNotificationDTO,
   ProviderSendNotificationResultsDTO,
 } from "@medusajs/framework/types";
-import { render } from "@react-email/render";
+import { render } from "react-email";
 import { Resend } from "resend";
 
 import { resolveEmailTemplate } from "./emails";
@@ -91,11 +91,12 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
       })),
     };
 
-    // Templates are rendered here rather than handed to Resend as `react`.
-    // Resend resolves its own @react-email/render (2.x), which only calls
-    // renderToReadableStream and therefore needs React 19; this project is on
-    // React 18 because @medusajs/dashboard pins it. Rendering with our own
-    // pinned render@1.3.2 keeps the whole thing on React 18.
+    // Templates are rendered here rather than handed to Resend as `react`, so
+    // the HTML and plain-text parts come from the same render and nothing
+    // depends on Resend resolving its optional @react-email/render peer. This
+    // project is on React 18 because @medusajs/dashboard pins it; react-email's
+    // `render` supports that (its Node build renders with
+    // renderToPipeableStream), so no React 19 is needed.
     const rendered = resolved
       ? {
           html: await render(resolved.react),

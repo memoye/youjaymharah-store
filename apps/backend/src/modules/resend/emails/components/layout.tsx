@@ -9,7 +9,7 @@ import {
   Section,
   Tailwind,
   Text,
-} from "@react-email/components";
+} from "react-email";
 import type { ReactNode } from "react";
 
 import { STORE_NAME, SUPPORT_EMAIL, type BrandSummary } from "../constants";

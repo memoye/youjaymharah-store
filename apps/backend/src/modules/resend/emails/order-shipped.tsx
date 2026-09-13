@@ -6,7 +6,7 @@ import {
   Row,
   Section,
   Text,
-} from "@react-email/components";
+} from "react-email";
 import type { CustomerDTO, OrderDTO } from "@medusajs/framework/types";
 
 import { EmailLayout } from "./components/layout";
