@@ -1,13 +1,20 @@
 import type { NextRequest } from "next/server";
 
 import { crossOriginRefused, isSameOrigin } from "@/lib/http/same-origin";
-import { CURRENT_CART_ID } from "@/lib/medusa/constants";
+import {
+  CURRENT_CART_ID,
+  CURRENT_WISHLIST_ID,
+  EMPTY_WISHLIST,
+} from "@/lib/medusa/constants";
 import { MEDUSA_BACKEND_URL } from "@/lib/medusa/server";
 import {
   clearCartId,
+  clearWishlistId,
   getAuthToken,
   getCartId,
+  getWishlistId,
   setCartId,
+  setWishlistId,
 } from "@/lib/medusa/session";
 
 /**
@@ -20,6 +27,9 @@ import {
  * This forwards requests verbatim with fetch rather than the SDK: it must pass
  * Medusa's status codes and bodies through untouched, while the SDK parses
  * responses and throws on errors.
+ *
+ * Two addresses are rewritten, so browser code never handles their ids:
+ * `/store/carts/current/...` and `/store/wishlists/current/...`.
  */
 
 /** Only these request headers reach Medusa -- never the browser's cookies. */
@@ -30,6 +40,62 @@ const FORWARDED_REQUEST_HEADERS = [
   "x-medusa-locale",
   "x-forwarded-for",
 ];
+
+type WishlistTarget =
+  /** The signed-in customer's own list. */
+  | { kind: "customer"; segments: string[] }
+  /** The guest list in the cookie. */
+  | { kind: "guest"; segments: string[] }
+  /** A guest's first save, which creates their list. */
+  | { kind: "create"; segments: string[] };
+
+/**
+ * Maps `/store/wishlists/current/...` onto the backend's two wishlist APIs.
+ * Returns a Response when the answer is known without asking Medusa, and null
+ * for any other path.
+ */
+async function resolveCurrentWishlist(
+  segments: string[],
+  method: string,
+): Promise<WishlistTarget | Response | null> {
+  if (segments[1] !== "wishlists" || segments[2] !== CURRENT_WISHLIST_ID) {
+    return null;
+  }
+
+  // [] for the list, ["items"] to save, ["items", id] to remove.
+  const rest = segments.slice(3);
+
+  if (await getAuthToken()) {
+    return {
+      kind: "customer",
+      segments: ["store", "customers", "me", "wishlist", ...rest],
+    };
+  }
+
+  const wishlistId = await getWishlistId();
+
+  if (wishlistId) {
+    return {
+      kind: "guest",
+      segments: ["store", "wishlists", wishlistId, ...rest],
+    };
+  }
+
+  // A guest who has never saved anything: the same empty list a new customer
+  // gets, rather than an error.
+  if (method === "GET" && rest.length === 0) {
+    return Response.json(
+      { wishlist: EMPTY_WISHLIST },
+      { headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  if (method === "POST" && rest.length === 1 && rest[0] === "items") {
+    return { kind: "create", segments: ["store", "wishlists"] };
+  }
+
+  return Response.json({ message: "No active wishlist." }, { status: 404 });
+}
 
 async function proxy(
   request: NextRequest,
@@ -57,7 +123,7 @@ async function proxy(
     return crossOriginRefused();
   }
 
-  const segments = [...path];
+  let segments = [...path];
   const usesCurrentCart =
     segments[1] === "carts" && segments[2] === CURRENT_CART_ID;
 
@@ -69,6 +135,16 @@ async function proxy(
     }
 
     segments[2] = cartId;
+  }
+
+  const wishlist = await resolveCurrentWishlist(segments, request.method);
+
+  if (wishlist instanceof Response) {
+    return wishlist;
+  }
+
+  if (wishlist) {
+    segments = wishlist.segments;
   }
 
   const target = new URL(
@@ -133,6 +209,40 @@ async function proxy(
 
   if (contentType) {
     responseHeaders.set("content-type", contentType);
+  }
+
+  if (wishlist?.kind === "create" && upstream.ok) {
+    const body = (await upstream.json()) as { wishlist?: { id: string } };
+
+    if (body.wishlist?.id) {
+      await setWishlistId(body.wishlist.id);
+    }
+
+    return Response.json(body, {
+      status: upstream.status,
+      headers: responseHeaders,
+    });
+  }
+
+  if (wishlist?.kind === "guest") {
+    const readsList = request.method === "GET" && segments.length === 3;
+
+    // The guest list was merged into an account, or cleaned up after 90 days
+    // without a save. Only the plain read is unambiguous: a save can also 404
+    // because the product was unpublished.
+    if (readsList && upstream.status === 404) {
+      await clearWishlistId();
+
+      return Response.json(
+        { wishlist: EMPTY_WISHLIST },
+        { headers: responseHeaders },
+      );
+    }
+
+    // Each change renews the cookie, so an active list never expires.
+    if (request.method !== "GET" && upstream.ok) {
+      await setWishlistId(segments[2]);
+    }
   }
 
   const isCartCreate =

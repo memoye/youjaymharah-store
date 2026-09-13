@@ -17,6 +17,10 @@ export const queryKeys = {
     all: ["cart"] as const,
     current: () => [...queryKeys.cart.all, "current"] as const,
   },
+  wishlist: {
+    all: ["wishlist"] as const,
+    current: () => [...queryKeys.wishlist.all, "current"] as const,
+  },
   products: {
     all: ["products"] as const,
     list: (params: Record<string, unknown>, context: CatalogContext) =>
@@ -33,4 +37,5 @@ export const queryKeys = {
 export const privateQueryRoots = [
   queryKeys.customer.all,
   queryKeys.cart.all,
+  queryKeys.wishlist.all,
 ] as const;

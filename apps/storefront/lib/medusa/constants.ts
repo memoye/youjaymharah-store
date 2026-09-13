@@ -4,6 +4,8 @@
  * lib/medusa/server.ts for that reason.
  */
 
+import type { Wishlist } from "@youjaymharah/api-types";
+
 /** The storefront's own route that forwards Store API calls to Medusa. */
 export const MEDUSA_PROXY_PATH = "/api/medusa";
 
@@ -25,3 +27,18 @@ export const CART_COOKIE = "_medusa_cart_id";
  * the real id, so the browser never needs to know it.
  */
 export const CURRENT_CART_ID = "current";
+
+/**
+ * A guest's wishlist id, httpOnly for the same reason as the cart's. Signed-in
+ * customers don't need it: their list is found through their account.
+ */
+export const WISHLIST_COOKIE = "_medusa_wishlist_id";
+
+/**
+ * The id browser code passes for "this shopper's wishlist": the customer's own
+ * list when signed in, otherwise the guest list in WISHLIST_COOKIE.
+ */
+export const CURRENT_WISHLIST_ID = "current";
+
+/** What a shopper who has never saved anything has. */
+export const EMPTY_WISHLIST: Wishlist = { id: null, items: [] };

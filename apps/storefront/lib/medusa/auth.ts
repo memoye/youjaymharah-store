@@ -1,21 +1,40 @@
 import "server-only";
 
 import { FetchError } from "@medusajs/js-sdk";
+import type { StoreWishlistResponse } from "@youjaymharah/api-types";
 
+import { isNotFound } from "./errors";
 import { sdk } from "./server";
-import { clearCartId, getCartId, setAuthToken } from "./session";
+import {
+  clearCartId,
+  clearWishlistId,
+  getCartId,
+  getWishlistId,
+  setAuthToken,
+} from "./session";
 
 /**
- * Finishes any sign-in: stores the customer's token, then hands a guest cart
- * to the customer so items added before signing in are kept.
- *
- * A cart that cannot be transferred (completed, deleted, or already another
- * customer's) is dropped rather than kept, so nobody carries on editing a cart
- * that is not theirs. Signing in still succeeds.
+ * Finishes any sign-in: stores the customer's token, then hands what the
+ * shopper built up as a guest -- cart and wishlist -- to the customer.
+ * Signing in succeeds even when either handover fails.
  */
 export async function completeSignIn(token: string): Promise<void> {
   await setAuthToken(token);
 
+  const authorization = `Bearer ${token}`;
+
+  await Promise.all([
+    transferGuestCart(authorization),
+    mergeGuestWishlist(authorization),
+  ]);
+}
+
+/**
+ * A cart that cannot be transferred (completed, deleted, or already another
+ * customer's) is dropped rather than kept, so nobody carries on editing a cart
+ * that is not theirs.
+ */
+async function transferGuestCart(authorization: string): Promise<void> {
   const cartId = await getCartId();
 
   if (!cartId) {
@@ -23,13 +42,40 @@ export async function completeSignIn(token: string): Promise<void> {
   }
 
   try {
-    await sdk.store.cart.transferCart(
-      cartId,
-      {},
-      { authorization: `Bearer ${token}` },
-    );
+    await sdk.store.cart.transferCart(cartId, {}, { authorization });
   } catch {
     await clearCartId();
+  }
+}
+
+/**
+ * The cookie goes whatever happens: once signed in, the proxy uses the
+ * customer's own list, so a guest list left in the cookie would sit unseen and
+ * resurface for whoever uses this browser after they sign out.
+ */
+async function mergeGuestWishlist(authorization: string): Promise<void> {
+  const wishlistId = await getWishlistId();
+
+  if (!wishlistId) {
+    return;
+  }
+
+  try {
+    await sdk.client.fetch<StoreWishlistResponse>(
+      "/store/customers/me/wishlist/merge",
+      {
+        method: "POST",
+        body: { wishlist_id: wishlistId },
+        headers: { authorization },
+      },
+    );
+  } catch (error) {
+    // A 404 is routine: the list was merged or cleaned up already.
+    if (!isNotFound(error)) {
+      console.error("Could not merge the guest wishlist at sign-in", error);
+    }
+  } finally {
+    await clearWishlistId();
   }
 }
 

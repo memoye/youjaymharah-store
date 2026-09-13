@@ -3,7 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http";
 
-import { retrieveCustomerWishlist } from "./helpers";
+import { retrieveCustomerWishlist } from "../../../wishlists/helpers";
 
 // /store/customers/me/* requires a logged-in customer by default.
 export const GET = async (

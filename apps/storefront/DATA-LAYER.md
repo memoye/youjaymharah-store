@@ -254,29 +254,52 @@ refuses (for example, out of stock).
 - Do not make prices or totals optimistic. Medusa calculates tax and
   promotions, so a guess would disagree with the real number.
 
-Example: saving to the wishlist through this project's custom routes, and
-writing the response into the cache. It assumes a `wishlist` entry in
-`lib/query/keys.ts` (`all` and `current()`), added the same way as the orders
-keys in recipe 3.
+`features/wishlist/hooks.ts` is a second worked example, calling this project's
+custom routes with `sdk.client.fetch` (plain object body, no `JSON.stringify`).
 
-```ts
-import type { StoreWishlistResponse } from "@youjaymharah/api-types";
+**Using the wishlist hooks.** They work the same for guests and signed-in
+customers; there is nothing to check first.
 
-export function useSaveToWishlist() {
-  const queryClient = useQueryClient();
+```tsx
+"use client";
 
-  return useMutation({
-    mutationKey: ["wishlist"],
-    mutationFn: (productId: string) =>
-      getBrowserSdk().client.fetch<StoreWishlistResponse>(
-        "/store/customers/me/wishlist/items",
-        { method: "POST", body: { product_id: productId } }, // no JSON.stringify
-      ),
-    onSuccess: ({ wishlist }) =>
-      queryClient.setQueryData(queryKeys.wishlist.current(), wishlist),
-  });
+import {
+  useRemoveFromWishlist,
+  useSaveToWishlist,
+  useWishlistItem,
+} from "@/features/wishlist/hooks";
+
+export function HeartButton({ productId }: { productId: string }) {
+  const { item, isSaved, isPending } = useWishlistItem(productId);
+  const save = useSaveToWishlist();
+  const remove = useRemoveFromWishlist();
+
+  return (
+    <button
+      aria-pressed={isSaved}
+      disabled={isPending}
+      onClick={() =>
+        item ? remove.mutate(item) : save.mutate({ product_id: productId })
+      }
+    >
+      {isSaved ? "Saved" : "Save"}
+    </button>
+  );
 }
 ```
+
+- On the product page, pass the chosen variant:
+  `save.mutate({ product_id, variant_id })`. Saving an already-saved product
+  with a `variant_id` updates it to that colour and size.
+- Both hooks update the heart immediately and roll back on failure. Keep the
+  button disabled while `isPending`: a just-saved item has no real id to remove
+  yet.
+- `useWishlist()` returns the whole list as ids, newest first. Load the products
+  with the regular product queries, so region pricing applies and unpublished
+  products drop out.
+- A guest's first save creates their list, kept in an httpOnly cookie for 90
+  days from the last save. The backend deletes guest lists after the same 90
+  days.
 
 ### 6. Signing in and out
 
@@ -291,10 +314,13 @@ const logout = useLogout();
 logout.mutate();
 ```
 
-- After signing in, a guest cart moves to the customer, private queries
-  refetch, and Server Components re-render (`router.refresh()`).
-- Logging out deletes the auth and cart cookies and removes private queries
-  from the cache, so nothing from the previous customer is left on screen.
+- After signing in, a guest cart moves to the customer, a guest wishlist is
+  merged into the customer's, private queries refetch, and Server Components
+  re-render (`router.refresh()`). Where both lists hold a product, the
+  customer's saved colour and size win.
+- Logging out deletes the auth, cart and wishlist cookies and removes private
+  queries from the cache, so nothing from the previous customer is left on
+  screen.
 - Wrong credentials come back as Medusa's message ("Invalid email or
   password") in `error.message`.
 - Sessions last one day, then the customer signs in again (see `DEPLOY.md`).
@@ -326,12 +352,17 @@ Call them with `sdk.client.fetch` and type the responses from
 | Route                                            | Response type                      |
 | ------------------------------------------------ | ---------------------------------- |
 | `GET /store/search`                              | `StoreSearchResponse`              |
-| `GET /store/customers/me/wishlist`               | `StoreWishlistResponse`            |
-| `POST /store/customers/me/wishlist/items`        | `StoreWishlistResponse`            |
-| `DELETE /store/customers/me/wishlist/items/{id}` | `StoreWishlistResponse`            |
+| `GET /store/wishlists/current`                   | `StoreWishlistResponse`            |
+| `POST /store/wishlists/current/items`            | `StoreWishlistResponse`            |
+| `DELETE /store/wishlists/current/items/{id}`     | `StoreWishlistResponse`            |
 | `POST /store/customers/me/password`              | `StoreSetCustomerPasswordResponse` |
 | `POST /store/newsletter/subscribe`               | `StoreNewsletterAckResponse`       |
 | `POST /store/newsletter/confirm`, `/unsubscribe` | `StoreNewsletterAckResponse`       |
+
+`/store/wishlists/current` exists only in the proxy. It becomes the customer's
+list (`/store/customers/me/wishlist`) when signed in, and the guest list in the
+cookie (`/store/wishlists/{id}`) otherwise, so browser code never picks between
+them or handles a wishlist id. Use the hooks rather than calling it directly.
 
 ### 9. When to add a Route Handler
 
@@ -385,7 +416,7 @@ with how long Medusa took to answer.
 | ----------------------------------- | --------------------------------------------------------------- |
 | `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                  |
 | `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                 |
-| `lib/medusa/session.ts`             | Reading and writing the auth and cart cookies                   |
+| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies         |
 | `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`  |
 | `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                        |
 | `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                        |
@@ -397,3 +428,4 @@ with how long Medusa took to answer.
 | `app/api/auth/*`                    | Login, register, logout, Google                                 |
 | `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)        |
 | `features/customer/`                | Customer query, auth hooks and server prefetch (worked example) |
+| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch           |

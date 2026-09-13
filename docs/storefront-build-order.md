@@ -299,24 +299,26 @@ auth-identity flow deliberately.
 Build: a heart on product cards and the product page, and an account wishlist
 page showing the saved colour and size with a link back to that variant.
 
-Backend (custom, already built):
+Backend and data layer (already built): guests and customers both have
+wishlists. Use the hooks in `apps/storefront/features/wishlist/hooks.ts`
+(`useWishlist`, `useWishlistItem`, `useSaveToWishlist`,
+`useRemoveFromWishlist`); `DATA-LAYER.md` recipe 5 has a heart button.
 
-- `GET /store/customers/me/wishlist`
-- `POST /store/customers/me/wishlist/items` (`product_id`, optional
-  `variant_id`)
-- `DELETE /store/customers/me/wishlist/items/:id`
-
-**Done when:** saving from a card and from the product page both work, and the
-list survives logging out and back in.
+**Done when:** saving from a card and from the product page both work for a
+guest and a customer, a guest's saves appear in their account after signing
+in, and the list survives logging out and back in.
 
 **Watch out:**
 
 - It returns IDs only. Load the products through `/store/products` so region
   pricing applies and unpublished products drop out.
-- One entry per product: posting again with a `variant_id` updates that entry to
+- One entry per product: saving again with a `variant_id` updates that entry to
   the chosen colour and size.
-- Requires a logged-in customer. Decide what a guest's heart does — prompt to
-  sign in, or keep saves in the browser and merge them on login.
+- A guest's list lives in one browser until they sign in. It is kept for 90
+  days after their last save. Say so on the wishlist page, next to a sign-in
+  link.
+- Any later "tell me when it's on sale" feature needs an email address, so
+  offer it to signed-in customers only.
 
 ---
 

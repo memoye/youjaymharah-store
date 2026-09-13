@@ -5,6 +5,7 @@ import {
   AdminUpdateNewsletterSettings,
   StoreAddWishlistItem,
   StoreCreateSocialCustomer,
+  StoreMergeWishlist,
   StoreNewsletterSubscribe,
   StoreNewsletterToken,
   StoreSetCustomerPassword,
@@ -157,7 +158,7 @@ export const TAGS: Record<string, string> = {
   Search:
     "Full-text product search over the Search Module's index, with counted facets for refining a results page.",
   Wishlist:
-    "Products a logged-in customer has saved. One entry per product, optionally remembering the colour and size they chose.",
+    "Products a shopper has saved. One entry per product, optionally remembering the colour and size they chose. Signed-in customers use /store/customers/me/wishlist; guests use /store/wishlists, where the wishlist ID works like a guest cart's ID, and the guest list is merged into the customer's at sign-in.",
   Scaffolding:
     "Placeholder routes left by the Medusa starter. They return 200 with no body and can be deleted.",
 };
@@ -213,6 +214,11 @@ export const TYPES: {
   {
     name: "StoreAddWishlistItemBody",
     schema: StoreAddWishlistItem,
+    io: "input",
+  },
+  {
+    name: "StoreMergeWishlistBody",
+    schema: StoreMergeWishlist,
     io: "input",
   },
 
@@ -505,7 +511,113 @@ export const ROUTES: RouteDoc[] = [
       {
         status: 404,
         description:
-          "No such item on this customer's wishlist. Another customer's item reads as not found, so item IDs cannot be probed.",
+          "No such item on this customer's wishlist. An item on any other list reads as not found, so item IDs cannot be probed.",
+      },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/store/customers/me/wishlist/merge",
+    tag: "Wishlist",
+    summary: "Merge a guest wishlist into the customer's",
+    description:
+      "Call right after sign-in. Products only on the guest list are added; where both lists hold a product the customer's entry stays, taking the guest's colour/size only if it had none. The guest list is then deleted, so its ID stops working.",
+    auth: "customer",
+    body: StoreMergeWishlist,
+    response: {
+      description: "The customer's wishlist after the merge.",
+      schema: z.object({ wishlist: Wishlist }),
+    },
+    errors: [
+      { status: 401, description: "No customer is logged in." },
+      {
+        status: 404,
+        description:
+          "No such guest wishlist: never created, already merged, cleaned up, or it belongs to a customer.",
+      },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/store/wishlists",
+    tag: "Wishlist",
+    summary: "Start a guest wishlist",
+    description:
+      "Creates a guest wishlist holding its first item; there is no way to create an empty one. Keep the returned ID private (an httpOnly cookie): anyone holding it can read and change the list. Guest lists with no saves for 90 days are deleted.",
+    auth: "public",
+    body: StoreAddWishlistItem,
+    response: {
+      description: "The new wishlist.",
+      schema: z.object({ wishlist: Wishlist }),
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "Validation failed, or the variant is not part of the product.",
+      },
+      { status: 404, description: "No such published product." },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/store/wishlists/{id}",
+    tag: "Wishlist",
+    summary: "Get a guest wishlist",
+    description:
+      "IDs only, as for the customer's wishlist. A customer's list reads as not found.",
+    auth: "public",
+    response: {
+      description: "The wishlist.",
+      schema: z.object({ wishlist: Wishlist }),
+    },
+    errors: [
+      {
+        status: 404,
+        description:
+          "No such guest wishlist: never created, merged at sign-in, cleaned up, or it belongs to a customer.",
+      },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/store/wishlists/{id}/items",
+    tag: "Wishlist",
+    summary: "Save a product to a guest wishlist",
+    description: "Same one-entry-per-product rules as the customer's wishlist.",
+    auth: "public",
+    body: StoreAddWishlistItem,
+    response: {
+      description: "The updated wishlist.",
+      schema: z.object({ wishlist: Wishlist }),
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "Validation failed, or the variant is not part of the product.",
+      },
+      {
+        status: 404,
+        description: "No such guest wishlist, or no such published product.",
+      },
+    ],
+  },
+  {
+    method: "DELETE",
+    path: "/store/wishlists/{id}/items/{item_id}",
+    tag: "Wishlist",
+    summary: "Remove an item from a guest wishlist",
+    auth: "public",
+    response: {
+      description: "The updated wishlist.",
+      schema: z.object({ wishlist: Wishlist }),
+    },
+    errors: [
+      {
+        status: 404,
+        description:
+          "No such guest wishlist, or no such item on it. An item on any other list reads as not found.",
       },
     ],
   },

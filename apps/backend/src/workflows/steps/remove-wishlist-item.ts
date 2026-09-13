@@ -1,17 +1,17 @@
 import { MedusaError } from "@medusajs/framework/utils";
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
-
 import { WISHLIST_MODULE } from "../../modules/wishlist";
 import type WishlistModuleService from "../../modules/wishlist/service";
 
 export type RemoveWishlistItemInput = {
-  customer_id: string;
+  /** The list the caller owns; null when they have none yet. */
+  wishlist_id: string | null;
   item_id: string;
 };
 
 /**
- * Removes an item from the customer's own wishlist. An item on someone
- * else's list is reported as not found, so item IDs can't be probed.
+ * Removes an item from the caller's own wishlist. An item on any other list is
+ * reported as not found, so item IDs can't be probed.
  */
 export const removeWishlistItemStep = createStep(
   "remove-wishlist-item",
@@ -23,7 +23,11 @@ export const removeWishlistItemStep = createStep(
       { relations: ["wishlist"] },
     );
 
-    if (!item || item.wishlist?.customer_id !== input.customer_id) {
+    if (
+      !item ||
+      !input.wishlist_id ||
+      item.wishlist?.id !== input.wishlist_id
+    ) {
       throw new MedusaError(
         MedusaError.Types.NOT_FOUND,
         `Wishlist item ${input.item_id} was not found.`,
@@ -38,7 +42,9 @@ export const removeWishlistItemStep = createStep(
     if (!itemId) {
       return;
     }
+
     const service: WishlistModuleService = container.resolve(WISHLIST_MODULE);
+
     await service.restoreWishlistItems(itemId);
   },
 );

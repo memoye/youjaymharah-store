@@ -4,7 +4,7 @@ import type {
 } from "@medusajs/framework/http";
 
 import { removeFromWishlistWorkflow } from "../../../../../../../workflows/wishlist";
-import { retrieveCustomerWishlist } from "../../helpers";
+import { retrieveCustomerWishlist } from "../../../../../wishlists/helpers";
 
 export const DELETE = async (
   req: AuthenticatedMedusaRequest,

@@ -99,6 +99,10 @@ export type StoreAddWishlistItemBody = {
   variant_id?: string | null;
 };
 
+export type StoreMergeWishlistBody = {
+  wishlist_id: string;
+};
+
 export type AdminBrandingResponse = {
   branding: {
     id: string;

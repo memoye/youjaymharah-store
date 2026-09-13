@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { AUTH_COOKIE, CART_COOKIE } from "./constants";
+import { AUTH_COOKIE, CART_COOKIE, WISHLIST_COOKIE } from "./constants";
 
 /**
  * Must not outlive the token inside it. Medusa signs customer tokens for its
@@ -12,6 +12,13 @@ const AUTH_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 /** A basket is worth keeping for longer than a login. */
 const CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+/**
+ * Renewed on every save. The backend deletes guest wishlists after the same
+ * 90 days without a save (jobs/delete-stale-guest-wishlists.ts), so change
+ * both together.
+ */
+const WISHLIST_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
 
 const baseCookie = {
   httpOnly: true,
@@ -53,4 +60,19 @@ export async function setCartId(cartId: string): Promise<void> {
 
 export async function clearCartId(): Promise<void> {
   (await cookies()).delete(CART_COOKIE);
+}
+
+export async function getWishlistId(): Promise<string | undefined> {
+  return (await cookies()).get(WISHLIST_COOKIE)?.value;
+}
+
+export async function setWishlistId(wishlistId: string): Promise<void> {
+  (await cookies()).set(WISHLIST_COOKIE, wishlistId, {
+    ...baseCookie,
+    maxAge: WISHLIST_MAX_AGE_SECONDS,
+  });
+}
+
+export async function clearWishlistId(): Promise<void> {
+  (await cookies()).delete(WISHLIST_COOKIE);
 }

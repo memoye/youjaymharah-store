@@ -2,20 +2,19 @@ import type {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http";
-
-import type { StoreAddWishlistItemType } from "../../../../../middlewares";
-import { addToWishlistWorkflow } from "../../../../../../workflows/wishlist";
+import type { StoreMergeWishlistType } from "../../../../../middlewares";
+import { mergeGuestWishlistWorkflow } from "../../../../../../workflows/wishlist";
 import { retrieveCustomerWishlist } from "../../../../wishlists/helpers";
 
+/** Moves a guest wishlist's saves onto the customer's own list, then deletes it. */
 export const POST = async (
-  req: AuthenticatedMedusaRequest<StoreAddWishlistItemType>,
+  req: AuthenticatedMedusaRequest<StoreMergeWishlistType>,
   res: MedusaResponse,
 ) => {
-  await addToWishlistWorkflow(req.scope).run({
+  await mergeGuestWishlistWorkflow(req.scope).run({
     input: {
       customer_id: req.auth_context.actor_id,
-      product_id: req.validatedBody.product_id,
-      product_variant_id: req.validatedBody.variant_id ?? null,
+      guest_wishlist_id: req.validatedBody.wishlist_id,
     },
   });
 

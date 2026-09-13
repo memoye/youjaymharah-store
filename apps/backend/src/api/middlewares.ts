@@ -70,6 +70,13 @@ export const StoreAddWishlistItem = z.object({
 
 export type StoreAddWishlistItemType = z.infer<typeof StoreAddWishlistItem>;
 
+export const StoreMergeWishlist = z.object({
+  /** The guest wishlist to fold into the signed-in customer's list. */
+  wishlist_id: z.string().min(1),
+});
+
+export type StoreMergeWishlistType = z.infer<typeof StoreMergeWishlist>;
+
 /**
  * A repeatable query parameter: Express hands over a string for one
  * occurrence and an array for several, so both are normalized to an array.
@@ -159,6 +166,23 @@ export default defineMiddlewares({
     // restricts to logged-in customers; only the body needs validating.
     {
       matcher: "/store/customers/me/wishlist/items",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreAddWishlistItem)],
+    },
+    {
+      matcher: "/store/customers/me/wishlist/merge",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreMergeWishlist)],
+    },
+    // Guest wishlists are public, like guest carts: the wishlist ID is the
+    // credential, and the workflows refuse any list that belongs to a customer.
+    {
+      matcher: "/store/wishlists",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreAddWishlistItem)],
+    },
+    {
+      matcher: "/store/wishlists/:id/items",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreAddWishlistItem)],
     },
