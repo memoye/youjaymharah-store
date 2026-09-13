@@ -169,6 +169,15 @@ export const AdminSetSizeGuide = z.object({
 
 export type AdminSetSizeGuideType = z.infer<typeof AdminSetSizeGuide>;
 
+export const AdminUpdateStorefrontSettings = z.object({
+  /** Whole days, from 1 to a year. */
+  new_badge_days: z.number().int().min(1).max(365).optional(),
+});
+
+export type AdminUpdateStorefrontSettingsType = z.infer<
+  typeof AdminUpdateStorefrontSettings
+>;
+
 /**
  * A repeatable query parameter: Express hands over a string for one
  * occurrence and an array for several, so both are normalized to an array.
@@ -359,6 +368,17 @@ export default defineMiddlewares({
       method: ["POST"],
       middlewares: [validateAndTransformBody(AdminSetSizeGuide)],
       policies: [{ resource: "product_category", operation: "update" }],
+    },
+    {
+      matcher: "/admin/storefront-settings",
+      method: ["GET"],
+      policies: [{ resource: "storefront_settings", operation: "read" }],
+    },
+    {
+      matcher: "/admin/storefront-settings",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminUpdateStorefrontSettings)],
+      policies: [{ resource: "storefront_settings", operation: "update" }],
     },
     // Search reads its arguments from the query string, so the schema gates
     // the paging limits as well -- an unbounded `limit` would let one request

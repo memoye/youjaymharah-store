@@ -1,9 +1,6 @@
-import type { HttpTypes } from "@medusajs/types";
+import type { HttpTypes } from "@medusajs/types"
 
-/** How long a product shows the "New" badge after it goes on sale. */
-const NEW_FOR_DAYS = 30;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
  * A "coming soon" product: show "Notify me" instead of "Add to bag". The
@@ -15,7 +12,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export function isComingSoon(
   product: Pick<HttpTypes.StoreProduct, "metadata">,
 ): boolean {
-  return product.metadata?.coming_soon === true;
+  return product.metadata?.coming_soon === true
 }
 
 /**
@@ -27,18 +24,18 @@ export function isComingSoon(
 export function onSaleSince(
   product: Pick<HttpTypes.StoreProduct, "metadata" | "created_at">,
 ): Date | null {
-  const launchedAt = product.metadata?.launched_at;
-  const value =
-    typeof launchedAt === "string" ? launchedAt : product.created_at;
-  const date = value ? new Date(value) : null;
+  const launchedAt = product.metadata?.launched_at
+  const value = typeof launchedAt === "string" ? launchedAt : product.created_at
+  const date = value ? new Date(value) : null
 
-  return date && !Number.isNaN(date.getTime()) ? date : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
 /**
- * Whether to show the "New" badge. Work it out on the server and pass the
- * result down: calling it in a Client Component compares against the
- * browser's clock, which can disagree with the server's render.
+ * Whether to show the "New" badge. `newBadgeDays` is the admin setting (from
+ * `getStorefrontSettings()` in `lib/medusa/storefront-settings.ts`). Work it
+ * out on the server and pass the result down: calling it in a Client Component
+ * compares against the browser's clock, which can disagree with the render.
  *
  * A "New in" page sorts by `created_at` (`order: "-created_at"`), because the
  * Store API cannot sort by metadata. A product launched from coming soon may
@@ -46,13 +43,14 @@ export function onSaleSince(
  */
 export function isNew(
   product: Pick<HttpTypes.StoreProduct, "metadata" | "created_at">,
+  newBadgeDays: number,
   now: number = Date.now(),
 ): boolean {
   if (isComingSoon(product)) {
-    return false;
+    return false
   }
 
-  const since = onSaleSince(product);
+  const since = onSaleSince(product)
 
-  return since !== null && now - since.getTime() < NEW_FOR_DAYS * DAY_MS;
+  return since !== null && now - since.getTime() < newBadgeDays * DAY_MS
 }

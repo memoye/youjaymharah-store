@@ -22,6 +22,10 @@
   ],
   "tags": [
     {
+      "name": "Storefront",
+      "description": "Merchandising settings the storefront renders with, edited from Settings › Storefront. Currently how many days a product shows the New badge."
+    },
+    {
       "name": "Size guides",
       "description": "Measurement tables for product pages. A product shows its own guide, else the nearest category's (walking up the category tree), else the store default. Measurements are stored in cm; the storefront converts to inches for display."
     },
@@ -59,6 +63,216 @@
     }
   ],
   "paths": {
+    "/admin/storefront-settings": {
+      "get": {
+        "operationId": "getAdminStorefrontSettings",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Get storefront settings",
+        "description": "Created with defaults (a 30-day New badge) on first read.",
+        "x-required-policies": [
+          "storefront_settings:read"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The storefront settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "new_badge_days": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "new_badge_days"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postAdminStorefrontSettings",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Update storefront settings",
+        "description": "Only the fields sent change.",
+        "x-required-policies": [
+          "storefront_settings:update"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "new_badge_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "new_badge_days": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "new_badge_days"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed: `new_badge_days` must be a whole number from 1 to 365.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/storefront-settings": {
+      "get": {
+        "operationId": "getStoreStorefrontSettings",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Get the settings the storefront renders with",
+        "description": "Public and identical for every shopper, so it is safe to read from cached pages.",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The public storefront settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "new_badge_days": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "new_badge_days"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid publishable API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/size-guides": {
       "get": {
         "operationId": "getAdminSizeGuides",

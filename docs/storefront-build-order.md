@@ -100,8 +100,10 @@ colour, sort, and page through results.
 - Sale prices arrive as `calculated_price.calculated_amount` with
   `original_amount` and `price_list_type: "sale"` — show the original struck
   through.
-- **"New" badge:** a date rule, not a flag staff maintain. Use `isNew(product)`
-  from `lib/medusa/product.ts` (request `+metadata`): 30 days from
+- **"New" badge:** a date rule, not a flag staff maintain. Use
+  `isNew(product, newBadgeDays)` from `lib/medusa/product.ts` (request
+  `+metadata`), with the number of days from `getStorefrontSettings()` (staff
+  set it under Settings › Storefront; 30 by default). It counts from
   `metadata.launched_at`, which is stamped when a product is launched from
   coming soon, otherwise from `created_at`. Work it out on the server and pass a
   boolean to the card, so the browser's clock can't disagree with the render.

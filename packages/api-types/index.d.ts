@@ -364,6 +364,28 @@ export type AdminSetSizeGuideBody = {
   size_guide_id: string | null;
 };
 
+export type StorefrontSettings = {
+  id: string;
+  new_badge_days: number;
+};
+
+export type AdminUpdateStorefrontSettingsBody = {
+  new_badge_days?: number;
+};
+
+export type AdminStorefrontSettingsResponse = {
+  settings: {
+    id: string;
+    new_badge_days: number;
+  };
+};
+
+export type StoreStorefrontSettingsResponse = {
+  settings: {
+    new_badge_days: number;
+  };
+};
+
 export type StoreSearchProduct = {
   id: string;
   title: string;

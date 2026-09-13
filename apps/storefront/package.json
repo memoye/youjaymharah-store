@@ -2,6 +2,7 @@
   "name": "@youjaymharah/storefront",
   "version": "0.0.1",
   "private": true,
+  "packageManager": "pnpm@11.12.0",
   "author": "Brown Memoye <memoyebrown@gmail.com>",
   "scripts": {
     "dev": "next dev -p 8000",
@@ -36,6 +37,5 @@
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "packageManager": "pnpm@11.12.0"
+  }
 }

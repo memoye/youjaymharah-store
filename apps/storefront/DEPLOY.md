@@ -31,10 +31,11 @@ backend**. Proxied calls then travel over Render's private network.
 Environment variables (see `.env.template`). **Set them before the first build:**
 `NEXT_PUBLIC_*` values are baked into the build, not read at runtime.
 
-| Variable                             | Value                                                               |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| `MEDUSA_BACKEND_URL`                 | The backend's internal address, from its service's **Connect** menu |
-| `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | The "Web Storefront" key from `Settings › Publishable API Keys`     |
+| Variable                             | Value                                                                                                                |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `MEDUSA_BACKEND_URL`                 | The backend's internal address, from its service's **Connect** menu                                                  |
+| `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | The "Web Storefront" key from `Settings › Publishable API Keys`                                                      |
+| `NEXT_PUBLIC_BASE_URL`               | The storefront's public address, e.g. `https://<storefront>` (no trailing slash), for absolute URLs in link previews |
 
 **Free tier:** like the backend, a free storefront service sleeps after 15
 minutes idle, and the first visitor waits for it to start. The speed of the

@@ -43,35 +43,35 @@ changing one.
 ### 1. Public page data (Server Component)
 
 Product lists, product pages and categories render on the server. Prices only
-come back when you pass a region.
+come back when you pass a region: get it from `getStoreRegion()`.
 
 ```tsx
-// app/products/[handle]/page.tsx
-import { notFound } from "next/navigation";
+// app/(main)/products/[handle]/page.tsx
+import { notFound } from "next/navigation"
 
-import { sdk } from "@/lib/medusa/server";
+import { getStoreRegion } from "@/lib/medusa/region"
+import { sdk } from "@/lib/medusa/server"
 
 export default async function ProductPage({
   params,
 }: PageProps<"/products/[handle]">) {
-  const { handle } = await params;
+  const { handle } = await params
 
-  const { regions } = await sdk.store.region.list();
-  const region = regions[0]; // one region (Nigeria) today
+  const region = await getStoreRegion() // fetched once per request
 
   const { products } = await sdk.store.product.list({
     handle,
     region_id: region.id,
     fields: "*variants.calculated_price",
-  });
+  })
 
-  const product = products[0];
+  const product = products[0]
 
   if (!product) {
-    notFound();
+    notFound()
   }
 
-  return <h1>{product.title}</h1>;
+  return <h1>{product.title}</h1>
 }
 ```
 
@@ -82,9 +82,11 @@ Component instead.
 
 Prices are stored as-is: ₦49.99 comes back as `49.99`. Never divide by 100.
 
-For the "New" badge, call `isNew(product)` from `lib/medusa/product.ts` here,
-in the Server Component, and pass the boolean to the card. It needs
-`+metadata` in `fields`, and counts 30 days from the launch date (or creation
+For the "New" badge, call `isNew(product, newBadgeDays)` from
+`lib/medusa/product.ts` here, in the Server Component, and pass the boolean to
+the card. `newBadgeDays` is staff's setting under Settings › Storefront:
+`(await getStorefrontSettings()).new_badge_days`, fetched once per request. It
+needs `+metadata` in `fields`, and counts from the launch date (or creation
 date).
 
 ### 2. Client-side data with React Query
@@ -105,11 +107,11 @@ search: {
 `features/<feature>/queries.ts`:
 
 ```ts
-import type { StoreSearchResponse } from "@youjaymharah/api-types";
-import { queryOptions } from "@tanstack/react-query";
+import type { StoreSearchResponse } from "@youjaymharah/api-types"
+import { queryOptions } from "@tanstack/react-query"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { type CatalogContext, queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { type CatalogContext, queryKeys } from "@/lib/query/keys"
 
 export const searchQueries = {
   results: (q: string, context: CatalogContext) =>
@@ -121,17 +123,17 @@ export const searchQueries = {
         }),
       enabled: q.trim().length > 1,
     }),
-};
+}
 ```
 
 **Step 3: use it** in a Client Component:
 
 ```tsx
-"use client";
+"use client"
 
 const { data, isPending, error } = useQuery(
   searchQueries.results(term, context),
-);
+)
 ```
 
 ### 3. Customer-only data
@@ -161,13 +163,13 @@ export const orderQueries = {
         getBrowserSdk().store.order.list({ limit: 10, offset: page * 10 }),
       meta: { private: true },
     }),
-};
+}
 ```
 
 To know whether someone is signed in, use `useCustomer()`:
 
 ```tsx
-const { data: customer } = useCustomer();
+const { data: customer } = useCustomer()
 // undefined: still loading · null: guest · object: signed in
 ```
 
@@ -179,27 +181,27 @@ then renders immediately and React Query takes over.
 
 ```tsx
 // app/cart/page.tsx
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
-import { cartQueries } from "@/features/cart/queries";
-import { fetchCartOnServer } from "@/features/cart/server";
-import { getQueryClient } from "@/lib/query/client";
+import { cartQueries } from "@/features/cart/queries"
+import { fetchCartOnServer } from "@/features/cart/server"
+import { getQueryClient } from "@/lib/query/client"
 
-import { CartView } from "./cart-view"; // a Client Component using useCart()
+import { CartView } from "./cart-view" // a Client Component using useCart()
 
 export default async function CartPage() {
-  const queryClient = getQueryClient();
+  const queryClient = getQueryClient()
 
   await queryClient.prefetchQuery({
     ...cartQueries.current(),
     queryFn: fetchCartOnServer, // same key, server-side fetch
-  });
+  })
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <CartView />
     </HydrationBoundary>
-  );
+  )
 }
 ```
 
@@ -220,12 +222,12 @@ export default async function CartPage() {
 **Using the cart hooks** (`features/cart/hooks.ts`):
 
 ```tsx
-"use client";
+"use client"
 
-import { useAddToCart } from "@/features/cart/hooks";
+import { useAddToCart } from "@/features/cart/hooks"
 
 export function AddToCartButton({ variantId }: { variantId: string }) {
-  const addToCart = useAddToCart();
+  const addToCart = useAddToCart()
 
   return (
     <>
@@ -237,7 +239,7 @@ export function AddToCartButton({ variantId }: { variantId: string }) {
       </button>
       {addToCart.error && <p>{addToCart.error.message}</p>}
     </>
-  );
+  )
 }
 ```
 
@@ -266,18 +268,18 @@ custom routes with `sdk.client.fetch` (plain object body, no `JSON.stringify`).
 customers; there is nothing to check first.
 
 ```tsx
-"use client";
+"use client"
 
 import {
   useRemoveFromWishlist,
   useSaveToWishlist,
   useWishlistItem,
-} from "@/features/wishlist/hooks";
+} from "@/features/wishlist/hooks"
 
 export function HeartButton({ productId }: { productId: string }) {
-  const { item, isSaved, isPending } = useWishlistItem(productId);
-  const save = useSaveToWishlist();
-  const remove = useRemoveFromWishlist();
+  const { item, isSaved, isPending } = useWishlistItem(productId)
+  const save = useSaveToWishlist()
+  const remove = useRemoveFromWishlist()
 
   return (
     <button
@@ -289,7 +291,7 @@ export function HeartButton({ productId }: { productId: string }) {
     >
       {isSaved ? "Saved" : "Save"}
     </button>
-  );
+  )
 }
 ```
 
@@ -312,24 +314,24 @@ export function HeartButton({ productId }: { productId: string }) {
 the chosen size is sold out.
 
 ```tsx
-"use client";
+"use client"
 
-import { useCustomer } from "@/features/customer/hooks";
+import { useCustomer } from "@/features/customer/hooks"
 import {
   useCreateProductAlert,
   useWaitingProductAlert,
-} from "@/features/product-alerts/hooks";
+} from "@/features/product-alerts/hooks"
 
-const { data: customer } = useCustomer();
-const notify = useCreateProductAlert();
-const waiting = useWaitingProductAlert(productId, variantId); // signed in only
+const { data: customer } = useCustomer()
+const notify = useCreateProductAlert()
+const waiting = useWaitingProductAlert(productId, variantId) // signed in only
 
 notify.mutate({
   product_id: productId,
   variant_id: variantId, // omit to wait on any size
   email: customer ? undefined : email, // guests only; ignored when signed in
   marketing_opt_in: wantsOffers, // the separate "send me offers" box
-});
+})
 ```
 
 - Nobody is emailed at signup. One email goes out within about 10 minutes of
@@ -350,25 +352,25 @@ on the server with the product. It reads no cookies, so the page stays cached.
 
 ```tsx
 // In the product page's Server Component
-const { size_guide } = await fetchSizeGuideOnServer(product.id);
+const { size_guide } = await fetchSizeGuideOnServer(product.id)
 // null when no guide applies: hide the "Size guide" link.
 ```
 
 ```tsx
-"use client";
+"use client"
 
-import { useMeasurementUnit } from "@/features/size-guide/use-measurement-unit";
+import { useMeasurementUnit } from "@/features/size-guide/use-measurement-unit"
 import {
   findSizeGuideRow,
   formatSizeGuideCell,
   sizeGuideColumnHeading,
-} from "@/lib/medusa/size-guide";
+} from "@/lib/medusa/size-guide"
 
-const [unit, setUnit] = useMeasurementUnit(); // "cm" | "in", remembered
-const selectedRow = findSizeGuideRow(guide, selectedSize);
+const [unit, setUnit] = useMeasurementUnit() // "cm" | "in", remembered
+const selectedRow = findSizeGuideRow(guide, selectedSize)
 
-sizeGuideColumnHeading(column, unit); // "Bust (cm)" or "UK size"
-formatSizeGuideCell(column, row.values[column.key], unit); // "86–90" or "34–35.5"
+sizeGuideColumnHeading(column, unit) // "Bust (cm)" or "UK size"
+formatSizeGuideCell(column, row.values[column.key], unit) // "86–90" or "34–35.5"
 ```
 
 - Measurements arrive in cm. In inches they round to the nearest half inch.
@@ -382,14 +384,14 @@ formatSizeGuideCell(column, row.values[column.key], unit); // "86–90" or "34�
 ### 6. Signing in and out
 
 ```tsx
-const login = useLogin();
-login.mutate({ email, password }); // login.error.message on failure
+const login = useLogin()
+login.mutate({ email, password }) // login.error.message on failure
 
-const register = useRegister();
-register.mutate({ email, password, first_name, last_name });
+const register = useRegister()
+register.mutate({ email, password, first_name, last_name })
 
-const logout = useLogout();
-logout.mutate();
+const logout = useLogout()
+logout.mutate()
 ```
 
 - After signing in, a guest cart moves to the customer, a guest wishlist is
@@ -469,7 +471,7 @@ or from the storefront's own routes. Check it with the helpers in
 `lib/medusa/errors.ts`:
 
 ```ts
-import { errorStatus, isNotFound, isUnauthorized } from "@/lib/medusa/errors";
+import { errorStatus, isNotFound, isUnauthorized } from "@/lib/medusa/errors"
 ```
 
 - `error.message` is safe to show: it is Medusa's own message, or a generic one
@@ -495,25 +497,27 @@ with how long Medusa took to answer.
 
 ## File map
 
-| File                                | What it is                                                      |
-| ----------------------------------- | --------------------------------------------------------------- |
-| `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                  |
-| `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                 |
-| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies         |
-| `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`  |
-| `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                        |
-| `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                        |
-| `lib/query/client.ts`               | Query client defaults                                           |
-| `lib/query/provider.tsx`            | Provider and devtools, mounted in `app/layout.tsx`              |
-| `lib/http/post-json.ts`             | `postJson` for the storefront's own routes                      |
-| `lib/http/same-origin.ts`           | CSRF check for Route Handlers                                   |
-| `app/api/medusa/[...path]/route.ts` | The proxy                                                       |
-| `app/api/auth/*`                    | Login, register, logout, Google                                 |
-| `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)        |
-| `features/customer/`                | Customer query, auth hooks and server prefetch (worked example) |
-| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch           |
-| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                 |
-| `features/marketing/`               | The account's marketing email setting                           |
-| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                          |
-| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook           |
-| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                     |
+| File                                | What it is                                                       |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                   |
+| `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                  |
+| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies          |
+| `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`   |
+| `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                         |
+| `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                         |
+| `lib/query/client.ts`               | Query client defaults                                            |
+| `lib/query/provider.tsx`            | Provider and devtools, mounted in `app/layout.tsx`               |
+| `lib/http/post-json.ts`             | `postJson` for the storefront's own routes                       |
+| `lib/http/same-origin.ts`           | CSRF check for Route Handlers                                    |
+| `app/api/medusa/[...path]/route.ts` | The proxy                                                        |
+| `app/api/auth/*`                    | Login, register, logout, Google                                  |
+| `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)         |
+| `features/customer/`                | Customer query, auth hooks and server prefetch (worked example)  |
+| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch            |
+| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                  |
+| `features/marketing/`               | The account's marketing email setting                            |
+| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                           |
+| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: staff settings such as New badge days |
+| `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                  |
+| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook            |
+| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                      |

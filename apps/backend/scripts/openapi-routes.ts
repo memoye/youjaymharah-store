@@ -7,6 +7,7 @@ import {
   AdminUpdateBranding,
   AdminUpdateNewsletterSettings,
   AdminUpdateSizeGuide,
+  AdminUpdateStorefrontSettings,
   SizeGuideTable,
   StoreAddWishlistItem,
   StoreCreateProductAlert,
@@ -181,6 +182,15 @@ const AdminCategorySizeGuide = z.object({
   inherited: z.object({ size_guide: NamedRef, category: NamedRef }).nullable(),
 });
 
+const StorefrontSettings = z.object({
+  id: z.string(),
+  new_badge_days: z.number(),
+});
+
+const PublicStorefrontSettings = z.object({
+  new_badge_days: z.number(),
+});
+
 /** Group descriptions, shown as section intros by API viewers. */
 /**
  * One hit from the product index. These are the index' own fields, not a
@@ -238,6 +248,8 @@ export const TAGS: Record<string, string> = {
     '"Notify me" for sold-out sizes and coming-soon products. One email per alert, sent within about 10 minutes of the item becoming buyable, then the alert is done. Asking for an alert is not marketing consent.',
   Marketing:
     "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in.",
+  Storefront:
+    "Merchandising settings the storefront renders with, edited from Settings › Storefront. Currently how many days a product shows the New badge.",
   "Size guides":
     "Measurement tables for product pages. A product shows its own guide, else the nearest category's (walking up the category tree), else the store default. Measurements are stored in cm; the storefront converts to inches for display.",
   Scaffolding:
@@ -402,11 +414,74 @@ export const TYPES: {
     io: "input",
   },
   { name: "AdminSetSizeGuideBody", schema: AdminSetSizeGuide, io: "input" },
+  { name: "StorefrontSettings", schema: StorefrontSettings, io: "output" },
+  {
+    name: "AdminUpdateStorefrontSettingsBody",
+    schema: AdminUpdateStorefrontSettings,
+    io: "input",
+  },
+  {
+    name: "AdminStorefrontSettingsResponse",
+    schema: z.object({ settings: StorefrontSettings }),
+    io: "output",
+  },
+  {
+    name: "StoreStorefrontSettingsResponse",
+    schema: z.object({ settings: PublicStorefrontSettings }),
+    io: "output",
+  },
   { name: "StoreSearchProduct", schema: SearchProduct, io: "output" },
   { name: "StoreSearchResponse", schema: SearchResult, io: "output" },
 ];
 
 export const ROUTES: RouteDoc[] = [
+  {
+    method: "GET",
+    path: "/admin/storefront-settings",
+    tag: "Storefront",
+    summary: "Get storefront settings",
+    description: "Created with defaults (a 30-day New badge) on first read.",
+    auth: "admin",
+    policies: ["storefront_settings:read"],
+    response: {
+      description: "The storefront settings.",
+      schema: z.object({ settings: StorefrontSettings }),
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/storefront-settings",
+    tag: "Storefront",
+    summary: "Update storefront settings",
+    description: "Only the fields sent change.",
+    auth: "admin",
+    policies: ["storefront_settings:update"],
+    body: AdminUpdateStorefrontSettings,
+    response: {
+      description: "The updated settings.",
+      schema: z.object({ settings: StorefrontSettings }),
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "Validation failed: `new_badge_days` must be a whole number from 1 to 365.",
+      },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/store/storefront-settings",
+    tag: "Storefront",
+    summary: "Get the settings the storefront renders with",
+    description:
+      "Public and identical for every shopper, so it is safe to read from cached pages.",
+    auth: "public",
+    response: {
+      description: "The public storefront settings.",
+      schema: z.object({ settings: PublicStorefrontSettings }),
+    },
+  },
   {
     method: "GET",
     path: "/admin/size-guides",

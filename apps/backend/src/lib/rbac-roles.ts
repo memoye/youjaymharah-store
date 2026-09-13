@@ -103,6 +103,7 @@ const ROLES: RoleDefinition[] = [
       { resources: TAX, operations: FULL },
       { resources: REGIONS, operations: FULL },
       { resources: FILES, operations: WRITE },
+      { resources: ["storefront_settings"], operations: [READ, "update"] },
       // Read-only on the store record: they can see currencies and defaults
       // but changing store identity stays with the owner.
       { resources: ["store", "store_locale"], operations: [READ] },
@@ -132,6 +133,7 @@ const ROLES: RoleDefinition[] = [
       // never touch pricing or the catalog.
       { resources: CATALOG, operations: [READ] },
       { resources: ["region", "sales_channel"], operations: [READ] },
+      { resources: ["storefront_settings"], operations: [READ] },
     ],
   },
   {
@@ -152,6 +154,8 @@ const ROLES: RoleDefinition[] = [
       { resources: ["customer_group"], operations: [READ] },
       // Newsletter settings and the subscriber list.
       { resources: ["newsletter"], operations: [READ, "update"] },
+      // Merchandising settings, such as how long products count as new.
+      { resources: ["storefront_settings"], operations: [READ, "update"] },
       { resources: ["file"], operations: WRITE },
     ],
   },
