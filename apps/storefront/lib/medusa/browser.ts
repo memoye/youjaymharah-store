@@ -21,7 +21,7 @@ let browserSdk: Medusa | undefined;
  */
 export function getBrowserSdk(): Medusa {
   if (typeof window === "undefined") {
-    throw new Error(
+    throw new TypeError(
       "getBrowserSdk() is browser-only. Use the SDK from lib/medusa/server.ts on the server.",
     );
   }

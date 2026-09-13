@@ -29,7 +29,7 @@ export async function GET(request: NextRequest): Promise<never> {
       });
 
       if (typeof callbackToken !== "string") {
-        throw new Error("Google sign-in asked for an extra step.");
+        throw new TypeError("Google sign-in asked for an extra step.");
       }
 
       const authorization = { authorization: `Bearer ${callbackToken}` };
