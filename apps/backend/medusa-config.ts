@@ -67,6 +67,12 @@ module.exports = defineConfig({
     // The dashboard gates all RBAC UI (role picker on invites, role settings
     // pages) behind this flag; the module alone does not reveal them.
     rbac: true,
+    // Multi-language content. Gates the admin translation screens and the
+    // /admin/translations routes, and lets store routes return translated
+    // fields when a request carries `?locale=` or an `x-medusa-locale` header.
+    // Needs the Translation module below as well: the flag alone exposes
+    // routes that have no service behind them.
+    translation: true,
   },
   modules: [
     // Durable infrastructure: with REDIS_URL set, events survive restarts and
@@ -214,6 +220,13 @@ module.exports = defineConfig({
     },
     {
       resolve: "@medusajs/medusa/rbac",
+    },
+    {
+      // Not one of Medusa's defaults, so the `translation` flag above does not
+      // load it. On boot it marks every translatable entity type (products,
+      // variants, categories, collections, types, tags) as translatable, and
+      // anything left untranslated falls back to the original text.
+      resolve: "@medusajs/medusa/translation",
     },
     {
       resolve: "./src/modules/branding",
