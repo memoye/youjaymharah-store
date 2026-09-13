@@ -63,7 +63,7 @@ export const sendRefundIssuedEmailStep = createStep(
     // read the newer one; staff issue refunds one at a time, so that is
     // accepted rather than tracked.
     const [refund] = (payment.refunds ?? [])
-      .filter((candidate) => Boolean(candidate))
+      .filter(Boolean)
       .sort(
         (a, b) =>
           new Date(b!.created_at).getTime() - new Date(a!.created_at).getTime(),

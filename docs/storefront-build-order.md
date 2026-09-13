@@ -26,7 +26,7 @@ Facts about this backend that shape almost every screen:
   returns rather than adding tax yourself.
 - **Custom endpoints** added by this project (wishlist, newsletter, branding)
   are documented in `docs/api/openapi.json` — see `docs/api/README.md`.
-- Local backend: `pnpm run backend:dev` (http://localhost:9000, admin at
+- Local backend: `pnpm run backend:dev` (<http://localhost:9000>, admin at
   `/app`). Demo catalogue: `pnpm run seed:demo` from `apps/backend`, or
   `pnpm run seed:demo reset` to rebuild it.
 
