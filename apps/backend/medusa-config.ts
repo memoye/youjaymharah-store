@@ -133,6 +133,27 @@ module.exports = defineConfig({
         ]
       : []),
     {
+      // Storefront and admin product search. The Search Module is not one of
+      // Medusa's defaults, so declaring it here is what turns it on; the
+      // indexes themselves are declared under src/search.
+      //
+      // The local provider keeps its index in this process's memory (Orama),
+      // so it is rebuilt from each index' `seed` on every boot and never
+      // shared between instances. That is a deliberate fit for a single
+      // service: no engine to run and nothing to pay for. Swapping in a
+      // hosted engine later is a change to this block alone -- the index
+      // definitions stay as they are.
+      resolve: "@medusajs/medusa/search",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/search-local",
+            id: "local",
+          },
+        ],
+      },
+    },
+    {
       // Declaring this module replaces the default provider list, so emailpass
       // has to be named explicitly -- drop it and password login stops working.
       // MFA and email-verification providers are registered by the module

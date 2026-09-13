@@ -182,3 +182,45 @@ export type StoreSocialCustomerResponse = {
 export type StoreSetCustomerPasswordResponse = {
   success: boolean;
 };
+
+export type StoreSearchProduct = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  handle: string;
+  thumbnail: string | null;
+  status: string;
+  created_at: string;
+  type: string | null;
+  collection: string | null;
+  collection_handle: string | null;
+  categories: string[];
+  category_handles: string[];
+  tags: string[];
+  sales_channel_ids: string[];
+};
+
+export type StoreSearchResponse = {
+  products: {
+    id: string;
+    title: string;
+    subtitle: string | null;
+    description: string | null;
+    handle: string;
+    thumbnail: string | null;
+    status: string;
+    created_at: string;
+    type: string | null;
+    collection: string | null;
+    collection_handle: string | null;
+    categories: string[];
+    category_handles: string[];
+    tags: string[];
+    sales_channel_ids: string[];
+  }[];
+  count: number;
+  limit: number;
+  offset: number;
+  facets: Record<string, unknown>;
+};

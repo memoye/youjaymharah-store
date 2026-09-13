@@ -2,7 +2,9 @@ import {
   authenticate,
   defineMiddlewares,
   validateAndTransformBody,
+  validateAndTransformQuery,
 } from "@medusajs/framework/http";
+import type { BaseEntity } from "@medusajs/framework/types";
 import { z } from "@medusajs/framework/zod";
 
 export const AdminUpdateBranding = z.object({
@@ -67,6 +69,27 @@ export const StoreAddWishlistItem = z.object({
 });
 
 export type StoreAddWishlistItemType = z.infer<typeof StoreAddWishlistItem>;
+
+/**
+ * A repeatable query parameter: Express hands over a string for one
+ * occurrence and an array for several, so both are normalized to an array.
+ */
+const repeatable = z
+  .union([z.string(), z.array(z.string())])
+  .transform((value) => (Array.isArray(value) ? value : [value]))
+  .optional();
+
+export const StoreSearchProducts = z.object({
+  q: z.string().trim().min(1).max(128).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(24),
+  offset: z.coerce.number().int().min(0).default(0),
+  category: repeatable,
+  type: repeatable,
+  collection: repeatable,
+  tag: repeatable,
+});
+
+export type StoreSearchProductsType = z.infer<typeof StoreSearchProducts>;
 
 export default defineMiddlewares({
   routes: [
@@ -138,6 +161,27 @@ export default defineMiddlewares({
       matcher: "/store/customers/me/wishlist/items",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreAddWishlistItem)],
+    },
+    // Search reads its arguments from the query string, so the schema gates
+    // the paging limits as well -- an unbounded `limit` would let one request
+    // pull the whole index.
+    {
+      matcher: "/store/search",
+      method: ["GET"],
+      middlewares: [
+        // The type argument is not optional in practice: the helper's `TEntity`
+        // is not referenced by either parameter, so nothing infers it, and the
+        // call's return type degrades to one that no longer satisfies
+        // `MiddlewareRoute["middlewares"]`. TypeScript then re-infers the whole
+        // `routes` array against a different shape and reports the *other*
+        // entries' `policies` as unknown properties -- errors nowhere near the
+        // real cause. There is no entity behind this route, so the base type is
+        // the honest argument.
+        validateAndTransformQuery<BaseEntity>(StoreSearchProducts, {
+          isList: true,
+          defaultLimit: 24,
+        }),
+      ],
     },
   ],
 });

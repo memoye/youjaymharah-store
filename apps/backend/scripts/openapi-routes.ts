@@ -106,6 +106,47 @@ const Customer = z.object({
 });
 
 /** Group descriptions, shown as section intros by API viewers. */
+/**
+ * One hit from the product index. These are the index' own fields, not a
+ * product row: prices are absent because they depend on region, currency and
+ * any active price list, none of which an index can resolve.
+ */
+const SearchProduct = z.object({
+  id: z.string(),
+  title: z.string(),
+  subtitle: z.string().nullable(),
+  description: z.string().nullable(),
+  handle: z.string(),
+  thumbnail: z.string().nullable(),
+  status: z.string(),
+  created_at: z.string(),
+  type: z.string().nullable(),
+  collection: z.string().nullable(),
+  collection_handle: z.string().nullable(),
+  categories: z.array(z.string()),
+  category_handles: z.array(z.string()),
+  tags: z.array(z.string()),
+  sales_channel_ids: z.array(z.string()),
+});
+
+/**
+ * Every facet requested by the search route is a keyword field, so each one
+ * comes back as counted values rather than ranges or stats.
+ */
+const SearchFacet = z.object({
+  type: z.literal("value"),
+  values: z.array(z.object({ value: z.string(), count: z.number() })),
+  other_count: z.number().optional(),
+});
+
+const SearchResult = z.object({
+  products: z.array(SearchProduct),
+  count: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+  facets: z.record(z.string(), SearchFacet),
+});
+
 export const TAGS: Record<string, string> = {
   Accounts:
     "Customer accounts beyond Medusa's built-in routes: finishing a social sign-in so one person keeps one customer record.",
@@ -113,6 +154,8 @@ export const TAGS: Record<string, string> = {
     "The store's name, logo and support email, used across customer emails and the storefront.",
   Newsletter:
     "Signup, double opt-in confirmation and unsubscribe, plus the admin side: settings, subscribers and the Resend audiences they sync to.",
+  Search:
+    "Full-text product search over the Search Module's index, with counted facets for refining a results page.",
   Wishlist:
     "Products a logged-in customer has saved. One entry per product, optionally remembering the colour and size they chose.",
   Scaffolding:
@@ -215,6 +258,8 @@ export const TYPES: {
     schema: z.object({ success: z.boolean() }),
     io: "output",
   },
+  { name: "StoreSearchProduct", schema: SearchProduct, io: "output" },
+  { name: "StoreSearchResponse", schema: SearchResult, io: "output" },
 ];
 
 export const ROUTES: RouteDoc[] = [
@@ -461,6 +506,64 @@ export const ROUTES: RouteDoc[] = [
         status: 404,
         description:
           "No such item on this customer's wishlist. Another customer's item reads as not found, so item IDs cannot be probed.",
+      },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/store/search",
+    tag: "Search",
+    summary: "Search products",
+    description:
+      "Full-text search over published products in the sales channels the publishable key allows, with counted facets for refining the results. Returns the index' own fields rather than product rows: prices depend on region, currency and any active price list, so fetch /store/products with the returned ids to show them. Repeat a filter parameter to pass several values; values within one filter are OR-ed, and separate filters are AND-ed.",
+    auth: "public",
+    query: [
+      {
+        name: "q",
+        description:
+          "The text to match, against title, subtitle, description, type, collection and categories. Omit it to browse the facets alone.",
+        schema: z.string().optional(),
+      },
+      {
+        name: "limit",
+        description: "Page size, 1 to 50 (default 24).",
+        schema: z.coerce.number().optional(),
+      },
+      {
+        name: "offset",
+        description: "Records to skip (default 0).",
+        schema: z.coerce.number().optional(),
+      },
+      {
+        name: "category",
+        description: "Filter by category handle. Repeatable.",
+        schema: z.union([z.string(), z.array(z.string())]).optional(),
+      },
+      {
+        name: "type",
+        description: "Filter by product type. Repeatable.",
+        schema: z.union([z.string(), z.array(z.string())]).optional(),
+      },
+      {
+        name: "collection",
+        description: "Filter by collection handle. Repeatable.",
+        schema: z.union([z.string(), z.array(z.string())]).optional(),
+      },
+      {
+        name: "tag",
+        description: "Filter by tag value. Repeatable.",
+        schema: z.union([z.string(), z.array(z.string())]).optional(),
+      },
+    ],
+    response: {
+      description: "Matching products, with facet counts.",
+      schema: SearchResult,
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "Validation failed, the publishable key is missing, or the Search Module is not configured on this backend.",
       },
     ],
   },

@@ -6,3 +6,5 @@ apps/*/build
 apps/*/.next
 apps/*/static
 .turbo
+
+docs/api/openapi.json
