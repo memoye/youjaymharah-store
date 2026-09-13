@@ -9,6 +9,7 @@ import {
 
 export type DueProductAlert = {
   alert_id: string;
+  failed_attempts: number;
   email: string;
   reason: "restock" | "launch";
   product: { title: string; handle: string; thumbnail: string | null };
@@ -40,6 +41,7 @@ export const findDueProductAlertsStep = createStep(
       variant_id: string | null;
       sales_channel_id: string;
       reason: "restock" | "launch";
+      failed_attempts: number;
     }[] = [];
 
     for (let skip = 0; ; skip += PAGE_SIZE) {
@@ -53,6 +55,7 @@ export const findDueProductAlertsStep = createStep(
             "variant_id",
             "sales_channel_id",
             "reason",
+            "failed_attempts",
           ],
           take: PAGE_SIZE,
           skip,
@@ -116,6 +119,7 @@ export const findDueProductAlertsStep = createStep(
 
         output.due.push({
           alert_id: alert.id,
+          failed_attempts: alert.failed_attempts,
           email: alert.email,
           reason: alert.reason,
           product: {

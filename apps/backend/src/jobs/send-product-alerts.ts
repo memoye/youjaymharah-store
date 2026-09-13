@@ -13,7 +13,7 @@ export default async function sendProductAlerts(container: MedusaContainer) {
 
   if (result.sent || result.failed || result.cancelled) {
     logger.info(
-      `product-alerts: sent ${result.sent}, failed ${result.failed}, cancelled ${result.cancelled} (product or size deleted).`,
+      `product-alerts: sent ${result.sent}, failed ${result.failed} (${result.given_up} given up after repeated failures), cancelled ${result.cancelled} (product or size deleted).`,
     );
   }
 }

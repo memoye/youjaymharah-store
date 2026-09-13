@@ -28,7 +28,8 @@ export function onSaleSince(
   product: Pick<HttpTypes.StoreProduct, "metadata" | "created_at">,
 ): Date | null {
   const launchedAt = product.metadata?.launched_at;
-  const value = typeof launchedAt === "string" ? launchedAt : product.created_at;
+  const value =
+    typeof launchedAt === "string" ? launchedAt : product.created_at;
   const date = value ? new Date(value) : null;
 
   return date && !Number.isNaN(date.getTime()) ? date : null;

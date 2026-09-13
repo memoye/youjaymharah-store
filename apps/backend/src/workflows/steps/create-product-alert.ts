@@ -22,7 +22,7 @@ export type ProductAlertSummary = {
   product_id: string;
   variant_id: string | null;
   reason: "restock" | "launch";
-  status: "waiting" | "sent" | "cancelled";
+  status: "waiting" | "sent" | "cancelled" | "failed";
   created_at: Date | string;
 };
 

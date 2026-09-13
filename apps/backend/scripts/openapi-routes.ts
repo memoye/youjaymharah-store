@@ -1,9 +1,13 @@
 import { z } from "@medusajs/framework/zod";
 
 import {
+  AdminCreateSizeGuide,
   AdminSetProductComingSoon,
+  AdminSetSizeGuide,
   AdminUpdateBranding,
   AdminUpdateNewsletterSettings,
+  AdminUpdateSizeGuide,
+  SizeGuideTable,
   StoreAddWishlistItem,
   StoreCreateProductAlert,
   StoreCreateSocialCustomer,
@@ -114,7 +118,7 @@ const ProductAlert = z.object({
   product_id: z.string(),
   variant_id: z.string().nullable(),
   reason: z.enum(["restock", "launch"]),
-  status: z.enum(["waiting", "sent", "cancelled"]),
+  status: z.enum(["waiting", "sent", "cancelled", "failed"]),
   created_at: z.string(),
 });
 
@@ -134,6 +138,47 @@ const ProductAlertSummary = z.object({
   by_variant: z.array(
     z.object({ variant_id: z.string().nullable(), count: z.number() }),
   ),
+});
+
+const StoreSizeGuide = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  diagram_url: z.string().nullable(),
+  unit: z.literal("cm"),
+  columns: SizeGuideTable.shape.columns,
+  rows: SizeGuideTable.shape.rows,
+});
+
+const SizeGuideSource = z.enum(["product", "category", "default"]).nullable();
+
+const NamedRef = z.object({ id: z.string(), name: z.string() });
+
+const AdminSizeGuide = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  diagram_url: z.string().nullable(),
+  table: SizeGuideTable,
+  is_default: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  product_count: z.number(),
+  categories: z.array(NamedRef),
+});
+
+const AdminProductSizeGuide = z.object({
+  size_guide_id: z.string().nullable(),
+  resolved: z.object({
+    size_guide: NamedRef.nullable(),
+    source: SizeGuideSource,
+    category: NamedRef.nullable(),
+  }),
+});
+
+const AdminCategorySizeGuide = z.object({
+  size_guide_id: z.string().nullable(),
+  inherited: z.object({ size_guide: NamedRef, category: NamedRef }).nullable(),
 });
 
 /** Group descriptions, shown as section intros by API viewers. */
@@ -193,6 +238,8 @@ export const TAGS: Record<string, string> = {
     '"Notify me" for sold-out sizes and coming-soon products. One email per alert, sent within about 10 minutes of the item becoming buyable, then the alert is done. Asking for an alert is not marketing consent.',
   Marketing:
     "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in.",
+  "Size guides":
+    "Measurement tables for product pages. A product shows its own guide, else the nearest category's (walking up the category tree), else the store default. Measurements are stored in cm; the storefront converts to inches for display.",
   Scaffolding:
     "Placeholder routes left by the Medusa starter. They return 200 with no body and can be deleted.",
 };
@@ -333,11 +380,199 @@ export const TYPES: {
     schema: AdminSetProductComingSoon,
     io: "input",
   },
+  { name: "SizeGuideTable", schema: SizeGuideTable, io: "output" },
+  { name: "StoreSizeGuide", schema: StoreSizeGuide, io: "output" },
+  {
+    name: "StoreSizeGuideResponse",
+    schema: z.object({
+      size_guide: StoreSizeGuide.nullable(),
+      source: SizeGuideSource,
+    }),
+    io: "output",
+  },
+  { name: "AdminSizeGuide", schema: AdminSizeGuide, io: "output" },
+  {
+    name: "AdminCreateSizeGuideBody",
+    schema: AdminCreateSizeGuide,
+    io: "input",
+  },
+  {
+    name: "AdminUpdateSizeGuideBody",
+    schema: AdminUpdateSizeGuide,
+    io: "input",
+  },
+  { name: "AdminSetSizeGuideBody", schema: AdminSetSizeGuide, io: "input" },
   { name: "StoreSearchProduct", schema: SearchProduct, io: "output" },
   { name: "StoreSearchResponse", schema: SearchResult, io: "output" },
 ];
 
 export const ROUTES: RouteDoc[] = [
+  {
+    method: "GET",
+    path: "/admin/size-guides",
+    tag: "Size guides",
+    summary: "List size guides",
+    description:
+      "All guides, sorted by name, with the categories that use each as their default and how many products use it as an override.",
+    auth: "admin",
+    policies: ["size_guide:read"],
+    response: {
+      description: "The size guides.",
+      schema: z.object({ size_guides: z.array(AdminSizeGuide) }),
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/size-guides",
+    tag: "Size guides",
+    summary: "Create a size guide",
+    description:
+      "Measurement cells are cm numbers or [min, max] ranges; text columns hold strings. Every row's `size` must be a value of the shared Size option. `is_default: true` makes this the store default and clears the previous one.",
+    auth: "admin",
+    policies: ["size_guide:create"],
+    body: AdminCreateSizeGuide,
+    response: {
+      description: "The new size guide.",
+      schema: z.object({ size_guide: AdminSizeGuide }),
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "Validation failed: a duplicate column or size, a cell that does not match its column type, a backwards range, or a size that is not a Size option value. The message lists every problem.",
+      },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/admin/size-guides/{id}",
+    tag: "Size guides",
+    summary: "Get a size guide",
+    auth: "admin",
+    policies: ["size_guide:read"],
+    response: {
+      description: "The size guide.",
+      schema: z.object({ size_guide: AdminSizeGuide }),
+    },
+    errors: [{ status: 404, description: "No such size guide." }],
+  },
+  {
+    method: "POST",
+    path: "/admin/size-guides/{id}",
+    tag: "Size guides",
+    summary: "Update a size guide",
+    description:
+      "Only the fields sent change. A `table` replaces the whole table and is validated like on create.",
+    auth: "admin",
+    policies: ["size_guide:update"],
+    body: AdminUpdateSizeGuide,
+    response: {
+      description: "The updated size guide.",
+      schema: z.object({ size_guide: AdminSizeGuide }),
+    },
+    errors: [
+      { status: 400, description: "Validation failed; see create." },
+      { status: 404, description: "No such size guide." },
+    ],
+  },
+  {
+    method: "DELETE",
+    path: "/admin/size-guides/{id}",
+    tag: "Size guides",
+    summary: "Delete a size guide",
+    description:
+      "Also removes it from the products and categories using it; they fall back to their category's guide or the store default.",
+    auth: "admin",
+    policies: ["size_guide:delete"],
+    response: {
+      description: "The size guide is deleted.",
+      schema: z.object({
+        id: z.string(),
+        object: z.literal("size_guide"),
+        deleted: z.boolean(),
+      }),
+    },
+    errors: [{ status: 404, description: "No such size guide." }],
+  },
+  {
+    method: "GET",
+    path: "/admin/products/{id}/size-guide",
+    tag: "Size guides",
+    summary: "Get a product's size guide",
+    description:
+      "`size_guide_id` is the product's own override (null when it inherits). `resolved` is the guide the product page actually shows and where it comes from.",
+    auth: "admin",
+    policies: ["product:read"],
+    response: {
+      description: "The product's guide.",
+      schema: AdminProductSizeGuide,
+    },
+    errors: [{ status: 404, description: "No such product." }],
+  },
+  {
+    method: "POST",
+    path: "/admin/products/{id}/size-guide",
+    tag: "Size guides",
+    summary: "Set or clear a product's size guide",
+    description:
+      "`size_guide_id: null` removes the override, so the product uses its category's guide again.",
+    auth: "admin",
+    policies: ["product:update"],
+    body: AdminSetSizeGuide,
+    response: {
+      description: "The product's guide after the change.",
+      schema: AdminProductSizeGuide,
+    },
+    errors: [{ status: 404, description: "No such product or size guide." }],
+  },
+  {
+    method: "GET",
+    path: "/admin/product-categories/{id}/size-guide",
+    tag: "Size guides",
+    summary: "Get a category's size guide",
+    description:
+      "`size_guide_id` is the category's own guide. `inherited` is the nearest parent category's guide, which its products use while it has none.",
+    auth: "admin",
+    policies: ["product_category:read"],
+    response: {
+      description: "The category's guide.",
+      schema: AdminCategorySizeGuide,
+    },
+    errors: [{ status: 404, description: "No such category." }],
+  },
+  {
+    method: "POST",
+    path: "/admin/product-categories/{id}/size-guide",
+    tag: "Size guides",
+    summary: "Set or clear a category's size guide",
+    description:
+      "Applies to the category's products and to subcategories without their own guide. `size_guide_id: null` removes it.",
+    auth: "admin",
+    policies: ["product_category:update"],
+    body: AdminSetSizeGuide,
+    response: {
+      description: "The category's guide after the change.",
+      schema: AdminCategorySizeGuide,
+    },
+    errors: [{ status: 404, description: "No such category or size guide." }],
+  },
+  {
+    method: "GET",
+    path: "/store/products/{id}/size-guide",
+    tag: "Size guides",
+    summary: "Get the size guide for a product page",
+    description:
+      "The product's own guide, else the nearest category's, else the store default. `size_guide` is null when none applies: hide the size guide link. Measurements are in cm; convert for an inches view. Reads no customer data, so it is safe for cached pages.",
+    auth: "public",
+    response: {
+      description: "The guide, and where it comes from.",
+      schema: z.object({
+        size_guide: StoreSizeGuide.nullable(),
+        source: SizeGuideSource,
+      }),
+    },
+    errors: [{ status: 404, description: "No such published product." }],
+  },
   {
     method: "GET",
     path: "/admin/products/{id}/alerts",

@@ -14,7 +14,7 @@ import {
   type CreateProductAlertInput,
 } from "./steps/create-product-alert";
 import { findDueProductAlertsStep } from "./steps/find-due-product-alerts";
-import { retrieveProductMetadataStep } from "./steps/retrieve-product-metadata";
+import { prepareComingSoonMetadataStep } from "./steps/prepare-coming-soon-metadata";
 import { sendProductAlertEmailsStep } from "./steps/send-product-alert-emails";
 import {
   COMING_SOON_METADATA_KEY,
@@ -64,6 +64,7 @@ export const sendDueProductAlertsWorkflow = createWorkflow(
     return new WorkflowResponse({
       sent: result.sent,
       failed: result.failed,
+      given_up: result.given_up,
       cancelled: cancelled.cancelled,
     });
   },
@@ -86,39 +87,22 @@ export type SetProductComingSoonInput = {
 export const setProductComingSoonWorkflow = createWorkflow(
   "set-product-coming-soon",
   function (input: SetProductComingSoonInput) {
-    const product = retrieveProductMetadataStep({
-      product_id: input.product_id,
-    });
-
-    const metadata = transform({ input, product }, ({ input, product }) => {
-      const launching = isComingSoon(product.metadata) && !input.coming_soon;
-
-      return {
-        ...product.metadata,
-        [COMING_SOON_METADATA_KEY]: input.coming_soon,
-        ...(launching
-          ? { [LAUNCHED_AT_METADATA_KEY]: new Date().toISOString() }
-          : {}),
-      };
-    });
+    const prepared = prepareComingSoonMetadataStep(input);
 
     const updateInput = transform(
-      { input, metadata },
-      ({ input, metadata }) => ({
+      { input, prepared },
+      ({ input, prepared }) => ({
         selector: { id: input.product_id },
-        update: { metadata },
+        update: { metadata: prepared.metadata },
       }),
     );
 
     updateProductsWorkflow.runAsStep({ input: updateInput });
 
-    const result = transform({ input, metadata }, ({ input, metadata }) => ({
+    const result = transform({ input, prepared }, ({ input, prepared }) => ({
       id: input.product_id,
       coming_soon: input.coming_soon,
-      launched_at:
-        typeof metadata[LAUNCHED_AT_METADATA_KEY] === "string"
-          ? (metadata[LAUNCHED_AT_METADATA_KEY] as string)
-          : null,
+      launched_at: prepared.launched_at,
     }));
 
     return new WorkflowResponse(result);

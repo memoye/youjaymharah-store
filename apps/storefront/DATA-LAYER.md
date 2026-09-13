@@ -345,6 +345,40 @@ notify.mutate({
 - Adding a coming-soon product to a cart fails with a 400 whose message says
   so.
 
+**Size guide** (`features/size-guide/`, `lib/medusa/size-guide.ts`). Fetch it
+on the server with the product. It reads no cookies, so the page stays cached.
+
+```tsx
+// In the product page's Server Component
+const { size_guide } = await fetchSizeGuideOnServer(product.id);
+// null when no guide applies: hide the "Size guide" link.
+```
+
+```tsx
+"use client";
+
+import { useMeasurementUnit } from "@/features/size-guide/use-measurement-unit";
+import {
+  findSizeGuideRow,
+  formatSizeGuideCell,
+  sizeGuideColumnHeading,
+} from "@/lib/medusa/size-guide";
+
+const [unit, setUnit] = useMeasurementUnit(); // "cm" | "in", remembered
+const selectedRow = findSizeGuideRow(guide, selectedSize);
+
+sizeGuideColumnHeading(column, unit); // "Bust (cm)" or "UK size"
+formatSizeGuideCell(column, row.values[column.key], unit); // "86–90" or "34–35.5"
+```
+
+- Measurements arrive in cm. In inches they round to the nearest half inch.
+- Rows use the shared Size option's values, so the chosen variant's size
+  matches a row exactly: highlight `selectedRow`.
+- Show `description` (how to measure) and `diagram_url` above the table when
+  present.
+- The toggle renders "cm" on the server, then switches to the shopper's saved
+  choice after hydration.
+
 ### 6. Signing in and out
 
 ```tsx
@@ -403,6 +437,7 @@ Call them with `sdk.client.fetch` and type the responses from
 | `GET /store/customers/me/product-alerts`         | `StoreProductAlertsResponse`       |
 | `DELETE /store/customers/me/product-alerts/{id}` | `{ id, object, deleted }`          |
 | `GET`, `POST /store/customers/me/marketing`      | `StoreMarketingPreferenceResponse` |
+| `GET /store/products/{id}/size-guide`            | `StoreSizeGuideResponse`           |
 | `POST /store/customers/me/password`              | `StoreSetCustomerPasswordResponse` |
 | `POST /store/newsletter/subscribe`               | `StoreNewsletterAckResponse`       |
 | `POST /store/newsletter/confirm`, `/unsubscribe` | `StoreNewsletterAckResponse`       |
@@ -480,3 +515,5 @@ with how long Medusa took to answer.
 | `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                 |
 | `features/marketing/`               | The account's marketing email setting                           |
 | `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                          |
+| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook           |
+| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                     |

@@ -129,8 +129,24 @@
           "scale": null,
           "default": "'waiting'",
           "comment": null,
-          "enumItems": ["waiting", "sent", "cancelled"],
+          "enumItems": ["waiting", "sent", "cancelled", "failed"],
           "mappedType": "enum"
+        },
+        "failed_attempts": {
+          "name": "failed_attempts",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
         },
         "notified_at": {
           "name": "notified_at",

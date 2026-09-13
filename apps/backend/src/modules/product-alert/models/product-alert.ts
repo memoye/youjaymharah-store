@@ -19,7 +19,12 @@ export const ProductAlert = model
     sales_channel_id: model.text(),
     /** Decided at signup, so the email says "back in stock" or "it's here". */
     reason: model.enum(["restock", "launch"]),
-    status: model.enum(["waiting", "sent", "cancelled"]).default("waiting"),
+    /** "failed": the email kept bouncing or erroring, so sending stopped. */
+    status: model
+      .enum(["waiting", "sent", "cancelled", "failed"])
+      .default("waiting"),
+    /** Send attempts that errored. Part of each email's idempotency key. */
+    failed_attempts: model.number().default(0),
     notified_at: model.dateTime().nullable(),
     cancelled_at: model.dateTime().nullable(),
   })

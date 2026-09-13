@@ -254,6 +254,25 @@ available count can be lower than the shelf. Adjust under
 Guides: [Inventory](https://docs.medusajs.com/user-guide/inventory/inventory) ·
 [Reservations](https://docs.medusajs.com/user-guide/inventory/reservations)
 
+### Size guides
+
+- **Where:** `Products › Size guides`. A guide is a table of sizes and their
+  measurements, typed in centimetres or inches. Shoppers can switch between
+  cm and inches on the website.
+- **Sizes** come from the shared **Size** option, so pick them from the list.
+  A size that isn't a Size value is refused, which catches typos.
+- **Set guides on categories**, not product by product: open the category and
+  choose the guide in its **Size guide** box. Subcategories without their own
+  guide use it too. Use a product's **Size guide** box only for exceptions.
+- **Which guide a product shows**, in order: the one set on the product, then
+  its category's (or the nearest parent category's), then the guide marked
+  **Store default**. With none, the website hides the size guide link.
+- **How to measure** text and an optional diagram appear above the table.
+- Deleting a guide removes it from every product and category using it; they
+  fall back as above.
+- Store Managers can create and edit guides; Support and Marketing can view
+  them.
+
 ### Coming soon and "Notify me"
 
 - **Notify me** shows on the website for sold-out sizes and for products marked

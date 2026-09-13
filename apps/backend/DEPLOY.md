@@ -7,13 +7,13 @@ gotchas that are easy to hit exactly once.
 
 Copy `.env.template` and fill in every key. Notes on the non-obvious ones:
 
-| Variable | Notes |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL 15+. Neon free tier works; make sure the URL is URL-encoded if the password contains special characters. |
-| `REDIS_URL` | Optional but recommended (Upstash, standard TCP `rediss://...` URL -- not the REST one). When set, the Redis event bus and workflow engine replace the in-memory defaults: events survive deploys and failed email steps retry durably. Leave unset for local dev. |
-| `STORE_CORS` / `ADMIN_CORS` / `AUTH_CORS` | Comma-separated origins. Include the deployed storefront and admin origins. |
-| `STOREFRONT_URL` / `ADMIN_URL` | Used to build links inside emails (order confirmations, invites, newsletter confirm/unsubscribe). Wrong values here produce dead links in live emails. |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Transactional email. Without these, notification sends fail (they retry, but nothing arrives). |
+| Variable                                  | Notes                                                                                                                                                                                                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                            | PostgreSQL 15+. Neon free tier works; make sure the URL is URL-encoded if the password contains special characters.                                                                                                                                                |
+| `REDIS_URL`                               | Optional but recommended (Upstash, standard TCP `rediss://...` URL -- not the REST one). When set, the Redis event bus and workflow engine replace the in-memory defaults: events survive deploys and failed email steps retry durably. Leave unset for local dev. |
+| `STORE_CORS` / `ADMIN_CORS` / `AUTH_CORS` | Comma-separated origins. Include the deployed storefront and admin origins.                                                                                                                                                                                        |
+| `STOREFRONT_URL` / `ADMIN_URL`            | Used to build links inside emails (order confirmations, invites, newsletter confirm/unsubscribe). Wrong values here produce dead links in live emails.                                                                                                             |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL`    | Transactional email. Without these, notification sends fail (they retry, but nothing arrives).                                                                                                                                                                     |
 
 ## First deploy checklist
 
@@ -63,7 +63,16 @@ courier pricing), and any publishable key beyond the first.
   10 minutes and emails the ones whose item can be bought. Like the cleanup
   job it only runs while the service is awake, so on a sleeping free tier the
   emails go out after the next wake-up. The "Shop now" link is built from
-  `STOREFRONT_URL` plus `/products/<handle>`.
+  `STOREFRONT_URL` plus `/products/<handle>`. A send that errors is retried on
+  the next run; after 5 failures (about 50 minutes, e.g. an address Resend
+  rejects) the alert is marked `failed` and left alone. A Resend outage longer
+  than that fails the alerts that were due during it.
+- **New permissions on an existing environment.** Migration scripts run only
+  once, so existing roles don't pick up policies added later (such as
+  `size_guide`). After deploying a feature that adds policies, run
+  `pnpm exec medusa exec ./src/scripts/seed-rbac-roles.ts` in `apps/backend`;
+  it only adds missing grants. Until then only Super Admins can open
+  **Products › Size guides**.
 - **Resend audience picker.** Settings -> Newsletter needs `RESEND_API_KEY`;
   if it is missing the picker shows an error but settings can still be saved.
 

@@ -107,6 +107,69 @@ export type AdminSetProductComingSoonType = z.infer<
 >;
 
 /**
+ * A size guide's table. Structure only: whether cells match their column's
+ * type and whether sizes exist is checked in the workflow, where the messages
+ * can name the column and size.
+ */
+export const SizeGuideTable = z.object({
+  columns: z
+    .array(
+      z.object({
+        key: z
+          .string()
+          .regex(/^[a-z][a-z0-9_]*$/, "Column keys use a-z, 0-9 and _.")
+          .max(32),
+        label: z.string().trim().min(1).max(40),
+        type: z.enum(["measurement", "text"]),
+      }),
+    )
+    .min(1)
+    .max(12),
+  rows: z
+    .array(
+      z.object({
+        size: z.string().trim().min(1).max(20),
+        values: z.record(
+          z.string(),
+          z.union([
+            // Centimetres. 500 is far past any body or garment measurement.
+            z.number().positive().max(500),
+            z.tuple([
+              z.number().positive().max(500),
+              z.number().positive().max(500),
+            ]),
+            z.string().trim().max(40),
+            z.null(),
+          ]),
+        ),
+      }),
+    )
+    .min(1)
+    .max(40),
+});
+
+export const AdminCreateSizeGuide = z.object({
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(2000).nullable().optional(),
+  diagram_url: z.url().nullable().optional(),
+  table: SizeGuideTable,
+  is_default: z.boolean().optional(),
+});
+
+export type AdminCreateSizeGuideType = z.infer<typeof AdminCreateSizeGuide>;
+
+export const AdminUpdateSizeGuide = AdminCreateSizeGuide.partial();
+
+export type AdminUpdateSizeGuideType = z.infer<typeof AdminUpdateSizeGuide>;
+
+export const AdminSetSizeGuide = z.object({
+  /** null removes the guide, so the product or category inherits again. */
+  size_guide_id: z.string().min(1).nullable(),
+});
+
+export type AdminSetSizeGuideType = z.infer<typeof AdminSetSizeGuide>;
+
+/**
  * A repeatable query parameter: Express hands over a string for one
  * occurrence and an array for several, so both are normalized to an array.
  */
@@ -244,6 +307,58 @@ export default defineMiddlewares({
       method: ["POST"],
       middlewares: [validateAndTransformBody(AdminSetProductComingSoon)],
       policies: [{ resource: "product", operation: "update" }],
+    },
+    // Size guides have their own permission (src/policies/size-guide.ts);
+    // assigning one to a product or category needs edit rights on that
+    // product or category instead.
+    {
+      matcher: "/admin/size-guides",
+      method: ["GET"],
+      policies: [{ resource: "size_guide", operation: "read" }],
+    },
+    {
+      matcher: "/admin/size-guides",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminCreateSizeGuide)],
+      policies: [{ resource: "size_guide", operation: "create" }],
+    },
+    {
+      matcher: "/admin/size-guides/:id",
+      method: ["GET"],
+      policies: [{ resource: "size_guide", operation: "read" }],
+    },
+    {
+      matcher: "/admin/size-guides/:id",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminUpdateSizeGuide)],
+      policies: [{ resource: "size_guide", operation: "update" }],
+    },
+    {
+      matcher: "/admin/size-guides/:id",
+      method: ["DELETE"],
+      policies: [{ resource: "size_guide", operation: "delete" }],
+    },
+    {
+      matcher: "/admin/products/:id/size-guide",
+      method: ["GET"],
+      policies: [{ resource: "product", operation: "read" }],
+    },
+    {
+      matcher: "/admin/products/:id/size-guide",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminSetSizeGuide)],
+      policies: [{ resource: "product", operation: "update" }],
+    },
+    {
+      matcher: "/admin/product-categories/:id/size-guide",
+      method: ["GET"],
+      policies: [{ resource: "product_category", operation: "read" }],
+    },
+    {
+      matcher: "/admin/product-categories/:id/size-guide",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminSetSizeGuide)],
+      policies: [{ resource: "product_category", operation: "update" }],
     },
     // Search reads its arguments from the query string, so the schema gates
     // the paging limits as well -- an unbounded `limit` would let one request

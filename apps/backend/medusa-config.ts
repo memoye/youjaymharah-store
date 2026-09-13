@@ -241,6 +241,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/product-alert",
     },
     {
+      resolve: "./src/modules/size-guide",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [

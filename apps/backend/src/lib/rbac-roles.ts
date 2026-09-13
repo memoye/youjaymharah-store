@@ -33,6 +33,9 @@ const CATALOG = [
   "product_type",
   "product_category",
   "product_collection",
+  // Custom (src/policies/size-guide.ts). Existing environments need
+  // `medusa exec ./src/scripts/seed-rbac-roles.ts` to pick it up.
+  "size_guide",
 ];
 const PRICING = ["price", "price_list", "price_preference", "currency"];
 const INVENTORY = [

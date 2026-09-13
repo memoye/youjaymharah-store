@@ -40,6 +40,13 @@ import {
   SIZE_ORDER,
   type DemoProduct,
 } from "./data/demo-catalog";
+import { DEMO_SIZE_GUIDES } from "./data/demo-size-guides";
+import { SIZE_GUIDE_MODULE } from "../modules/size-guide";
+import type SizeGuideModuleService from "../modules/size-guide/service";
+import {
+  createSizeGuideWorkflow,
+  setCategorySizeGuideWorkflow,
+} from "../workflows/size-guides";
 
 /**
  * Seeds a demo womenswear catalog for storefront development:
@@ -78,6 +85,8 @@ export default async function seedDemoCatalog({ container, args }: ExecArgs) {
   const typeIds = await ensureProductTypes(container);
   const tagIds = await ensureProductTags(container);
   const sharedOptions = await ensureSharedOptions(container);
+  // After the shared options: a guide's sizes are checked against them.
+  await ensureSizeGuides(container, categoryIds);
 
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const { data: existingProducts } = await query.graph({
@@ -493,6 +502,77 @@ async function ensureSharedOptions(container: MedusaContainer) {
   }
 
   return { colour, size };
+}
+
+/**
+ * Creates the demo size guides that are missing (matched by name) and makes
+ * each the default of its categories. A category that already has a guide
+ * keeps it, so guides picked in the dashboard are never replaced.
+ */
+async function ensureSizeGuides(
+  container: MedusaContainer,
+  categoryIds: Map<string, string>,
+) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const query = container.resolve(ContainerRegistrationKeys.QUERY);
+  const service: SizeGuideModuleService = container.resolve(SIZE_GUIDE_MODULE);
+
+  const existing = await service.listSizeGuides(
+    { name: DEMO_SIZE_GUIDES.map((guide) => guide.name) },
+    { select: ["id", "name"] },
+  );
+  const guideIds = new Map(existing.map((guide) => [guide.name, guide.id]));
+
+  for (const guide of DEMO_SIZE_GUIDES) {
+    if (guideIds.has(guide.name)) {
+      continue;
+    }
+
+    const { result } = await createSizeGuideWorkflow(container).run({
+      input: {
+        name: guide.name,
+        description: guide.description,
+        table: guide.table,
+      },
+    });
+    guideIds.set(guide.name, result.id);
+    logger.info(`Created size guide "${guide.name}".`);
+  }
+
+  const wanted = DEMO_SIZE_GUIDES.flatMap((guide) =>
+    guide.categories.map((handle) => ({
+      categoryId: categoryIds.get(handle),
+      guideId: guideIds.get(guide.name)!,
+    })),
+  ).filter((entry): entry is { categoryId: string; guideId: string } =>
+    Boolean(entry.categoryId),
+  );
+
+  const { data: categories } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "size_guide.id"],
+    filters: { id: wanted.map((entry) => entry.categoryId) },
+  });
+  const hasGuide = new Set(
+    (
+      categories as unknown as {
+        id: string;
+        size_guide?: { id: string } | null;
+      }[]
+    )
+      .filter((category) => category.size_guide?.id)
+      .map((category) => category.id),
+  );
+
+  for (const entry of wanted) {
+    if (hasGuide.has(entry.categoryId)) {
+      continue;
+    }
+
+    await setCategorySizeGuideWorkflow(container).run({
+      input: { category_id: entry.categoryId, size_guide_id: entry.guideId },
+    });
+  }
 }
 
 /**

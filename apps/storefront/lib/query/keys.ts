@@ -29,6 +29,11 @@ export const queryKeys = {
     all: ["marketing"] as const,
     preference: () => [...queryKeys.marketing.all, "preference"] as const,
   },
+  sizeGuide: {
+    all: ["size-guide"] as const,
+    product: (productId: string) =>
+      [...queryKeys.sizeGuide.all, "product", productId] as const,
+  },
   products: {
     all: ["products"] as const,
     list: (params: Record<string, unknown>, context: CatalogContext) =>

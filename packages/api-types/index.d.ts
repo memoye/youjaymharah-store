@@ -192,7 +192,7 @@ export type ProductAlert = {
   product_id: string;
   variant_id: string | null;
   reason: "restock" | "launch";
-  status: "waiting" | "sent" | "cancelled";
+  status: "waiting" | "sent" | "cancelled" | "failed";
   created_at: string;
   notified_at: string | null;
 };
@@ -216,7 +216,7 @@ export type StoreCreateProductAlertResponse = {
     product_id: string;
     variant_id: string | null;
     reason: "restock" | "launch";
-    status: "waiting" | "sent" | "cancelled";
+    status: "waiting" | "sent" | "cancelled" | "failed";
     created_at: string;
   } | null;
 };
@@ -227,7 +227,7 @@ export type StoreProductAlertsResponse = {
     product_id: string;
     variant_id: string | null;
     reason: "restock" | "launch";
-    status: "waiting" | "sent" | "cancelled";
+    status: "waiting" | "sent" | "cancelled" | "failed";
     created_at: string;
     notified_at: string | null;
   }[];
@@ -247,6 +247,121 @@ export type StoreMarketingPreferenceResponse = {
 
 export type AdminSetProductComingSoonBody = {
   coming_soon: boolean;
+};
+
+export type SizeGuideTable = {
+  columns: {
+    key: string;
+    label: string;
+    type: "measurement" | "text";
+  }[];
+  rows: {
+    size: string;
+    values: Record<string, unknown>;
+  }[];
+};
+
+export type StoreSizeGuide = {
+  id: string;
+  name: string;
+  description: string | null;
+  diagram_url: string | null;
+  unit: string;
+  columns: {
+    key: string;
+    label: string;
+    type: "measurement" | "text";
+  }[];
+  rows: {
+    size: string;
+    values: Record<string, unknown>;
+  }[];
+};
+
+export type StoreSizeGuideResponse = {
+  size_guide: {
+    id: string;
+    name: string;
+    description: string | null;
+    diagram_url: string | null;
+    unit: string;
+    columns: {
+      key: string;
+      label: string;
+      type: "measurement" | "text";
+    }[];
+    rows: {
+      size: string;
+      values: Record<string, unknown>;
+    }[];
+  } | null;
+  source: "product" | "category" | "default" | null;
+};
+
+export type AdminSizeGuide = {
+  id: string;
+  name: string;
+  description: string | null;
+  diagram_url: string | null;
+  table: {
+    columns: {
+      key: string;
+      label: string;
+      type: "measurement" | "text";
+    }[];
+    rows: {
+      size: string;
+      values: Record<string, unknown>;
+    }[];
+  };
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+  product_count: number;
+  categories: {
+    id: string;
+    name: string;
+  }[];
+};
+
+export type AdminCreateSizeGuideBody = {
+  name: string;
+  description?: string | null;
+  diagram_url?: string | null;
+  table: {
+    columns: {
+      key: string;
+      label: string;
+      type: "measurement" | "text";
+    }[];
+    rows: {
+      size: string;
+      values: Record<string, unknown>;
+    }[];
+  };
+  is_default?: boolean;
+};
+
+export type AdminUpdateSizeGuideBody = {
+  name?: string;
+  description?: string | null;
+  diagram_url?: string | null;
+  table?: {
+    columns: {
+      key: string;
+      label: string;
+      type: "measurement" | "text";
+    }[];
+    rows: {
+      size: string;
+      values: Record<string, unknown>;
+    }[];
+  };
+  is_default?: boolean;
+};
+
+export type AdminSetSizeGuideBody = {
+  size_guide_id: string | null;
 };
 
 export type StoreSearchProduct = {

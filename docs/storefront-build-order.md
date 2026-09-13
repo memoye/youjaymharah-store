@@ -142,6 +142,11 @@ photos follow the choice, and sold-out combinations are visibly unavailable.
   optional "send me offers" box; signed-in customers only tap. Hooks and rules
   are in `DATA-LAYER.md` recipe 5. The backend refuses to sell a coming-soon
   product, so a stale page cannot check one out.
+- **Size guide** (already built): fetch it in the page with
+  `fetchSizeGuideOnServer(product.id)`. Show a "Size guide" link that opens the
+  table in a drawer, hidden when `size_guide` is null, with a cm/in toggle
+  (`useMeasurementUnit`) and the selected size's row highlighted. Helpers and
+  rules are in `DATA-LAYER.md` recipe 5.
 
 ---
 
