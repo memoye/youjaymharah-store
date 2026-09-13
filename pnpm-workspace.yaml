@@ -13,3 +13,8 @@ allowBuilds:
 overrides:
   "@types/react": "19.0.5"
   "@types/react-dom": "19.0.5"
+  # @medusajs/admin-vite-plugin pins fdir to exactly 6.1.1, whose optional
+  # picomatch peer is 3.x, while the workspace resolves picomatch 4. fdir
+  # 6.2.0 and later accept both (^3 || ^4), and the plugin only uses fdir's
+  # directory crawling, not the glob matching picomatch backs. Same 6.x API.
+  "@medusajs/admin-vite-plugin>fdir": "^6.5.0"

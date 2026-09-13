@@ -40,7 +40,8 @@ Build: environment variables (see `apps/storefront/.env.template`), the
 region/currency lookup, base layout with header and footer, 404 and error
 pages, and your design tokens (type scale, colour, spacing).
 
-**Already in place: how data flows.** Deployment details are in
+**Already in place: how data flows.** How to use it, with recipes, is in
+`apps/storefront/DATA-LAYER.md`; deployment details are in
 `apps/storefront/DEPLOY.md`.
 
 - **Server Components** call Medusa directly with the server SDK

@@ -14,6 +14,8 @@
 
 Because of this, the storefront and backend do **not** need to share a domain.
 
+For building features on this setup, see `DATA-LAYER.md`.
+
 ## Render
 
 Create a Web Service from this repository, **in the same region as the

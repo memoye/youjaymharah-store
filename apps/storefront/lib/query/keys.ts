@@ -1,12 +1,4 @@
 /**
- * Every React Query key in the app, in one place. Server prefetches and client
- * hooks import from here, so the two can never drift apart.
- *
- * Keys are hierarchical: invalidating a root (e.g. `queryKeys.cart.all`)
- * invalidates everything beneath it.
- */
-
-/**
  * What changes the content of a catalogue response. Prices depend on the region,
  * and with translations on, text depends on the locale -- a key without either
  * would serve one region's prices or one language's copy to everyone.
