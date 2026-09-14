@@ -407,8 +407,9 @@ admin; see `DATA-LAYER.md` recipe 10):
   `revalidateTag` for each tag. Read Next's `revalidateTag` docs in
   `node_modules/next/dist/docs` first; its signature changed in Next 16.
   Without this route, changes still appear within 5 minutes.
-- **Home-screen manifest:** add `app/manifest.ts` using the brand name and
-  favicon from `getStorefrontSettings()`. No backend work needed.
+- **Home-screen manifest** (built): `app/manifest.ts` serves
+  `/manifest.webmanifest` with the brand name, description and favicon from
+  Settings › Storefront, and Next links it from every page.
 
 **Done when:** a Lighthouse pass is clean enough to launch behind and the site
 is usable on a mid-range Android phone on a slow connection.

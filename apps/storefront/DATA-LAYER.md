@@ -572,6 +572,7 @@ with how long Medusa took to answer.
 | `lib/seo/routes.ts`                 | Public page paths used by the sitemap and structured data          |
 | `components/seo/json-ld.tsx`        | `<JsonLd>`: renders structured data safely                         |
 | `app/robots.ts`, `app/sitemap.ts`   | robots.txt and sitemap.xml                                         |
+| `app/manifest.ts`                   | Home-screen web app manifest (brand name, description, favicon)    |
 | `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                    |
 | `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook              |
 | `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                        |
