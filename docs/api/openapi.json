@@ -23,7 +23,7 @@
   "tags": [
     {
       "name": "Storefront",
-      "description": "Merchandising settings the storefront renders with, edited from Settings › Storefront. Currently how many days a product shows the New badge."
+      "description": "Settings the storefront renders with, edited from Settings › Storefront: sharing & search defaults (title, description, share image, social profiles, indexing, Search Console verification) and product display (New badge days). The public route also includes the brand."
     },
     {
       "name": "Size guides",
@@ -98,11 +98,87 @@
                         },
                         "new_badge_days": {
                           "type": "number"
+                        },
+                        "seo_title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "seo_description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "og_image_url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "twitter_handle": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "social_links": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "allow_indexing": {
+                          "type": "boolean"
+                        },
+                        "google_site_verification": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
                         "id",
-                        "new_badge_days"
+                        "new_badge_days",
+                        "seo_title",
+                        "seo_description",
+                        "og_image_url",
+                        "twitter_handle",
+                        "social_links",
+                        "allow_indexing",
+                        "google_site_verification"
                       ],
                       "additionalProperties": false
                     }
@@ -156,6 +232,135 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 365
+                  },
+                  "seo_title": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 70
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "seo_description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "og_image_url": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "twitter_handle": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^@?[A-Za-z0-9_]{1,15}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "social_links": {
+                    "type": "object",
+                    "properties": {
+                      "instagram": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "facebook": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "tiktok": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "x": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "youtube": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "pinterest": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "allow_indexing": {
+                    "type": "boolean"
+                  },
+                  "google_site_verification": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,100}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 }
               }
@@ -178,11 +383,87 @@
                         },
                         "new_badge_days": {
                           "type": "number"
+                        },
+                        "seo_title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "seo_description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "og_image_url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "twitter_handle": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "social_links": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "allow_indexing": {
+                          "type": "boolean"
+                        },
+                        "google_site_verification": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
                         "id",
-                        "new_badge_days"
+                        "new_badge_days",
+                        "seo_title",
+                        "seo_description",
+                        "og_image_url",
+                        "twitter_handle",
+                        "social_links",
+                        "allow_indexing",
+                        "google_site_verification"
                       ],
                       "additionalProperties": false
                     }
@@ -225,7 +506,7 @@
           "Storefront"
         ],
         "summary": "Get the settings the storefront renders with",
-        "description": "Public and identical for every shopper, so it is safe to read from cached pages.",
+        "description": "Everything the storefront renders its shell with: `brand` (name, logo, favicon, support email), `seo` (defaults for search results and link previews, social profiles, whether search engines may index the store, Search Console code) and `products` (New badge days). Public and identical for every shopper, so it is safe to read from cached pages.",
         "security": [
           {
             "publishableKey": []
@@ -242,12 +523,210 @@
                     "settings": {
                       "type": "object",
                       "properties": {
-                        "new_badge_days": {
-                          "type": "number"
+                        "brand": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "logo_url": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "favicon_url": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "support_email": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "logo_url",
+                            "favicon_url",
+                            "support_email"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "seo": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "description": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "og_image_url": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "twitter_handle": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "social_links": {
+                              "type": "object",
+                              "properties": {
+                                "instagram": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "facebook": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "tiktok": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "x": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "youtube": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "pinterest": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "instagram",
+                                "facebook",
+                                "tiktok",
+                                "x",
+                                "youtube",
+                                "pinterest"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "allow_indexing": {
+                              "type": "boolean"
+                            },
+                            "google_site_verification": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "description",
+                            "og_image_url",
+                            "twitter_handle",
+                            "social_links",
+                            "allow_indexing",
+                            "google_site_verification"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "products": {
+                          "type": "object",
+                          "properties": {
+                            "new_badge_days": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "new_badge_days"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
-                        "new_badge_days"
+                        "brand",
+                        "seo",
+                        "products"
                       ],
                       "additionalProperties": false
                     }
@@ -3171,7 +3650,7 @@
           "Branding"
         ],
         "summary": "Get store branding",
-        "description": "Store name, logo and support email used in customer emails. Created from environment variables on first read.",
+        "description": "Store name, logo, favicon and support email. The name, logo and support email appear in customer emails. Created from environment variables on first read.",
         "x-required-policies": [
           "branding:read"
         ],
@@ -3210,6 +3689,16 @@
                             }
                           ]
                         },
+                        "favicon_url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "support_email": {
                           "anyOf": [
                             {
@@ -3225,6 +3714,7 @@
                         "id",
                         "name",
                         "logo_url",
+                        "favicon_url",
                         "support_email"
                       ],
                       "additionalProperties": false
@@ -3289,6 +3779,17 @@
                       }
                     ]
                   },
+                  "favicon_url": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "support_email": {
                     "anyOf": [
                       {
@@ -3333,6 +3834,16 @@
                             }
                           ]
                         },
+                        "favicon_url": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "support_email": {
                           "anyOf": [
                             {
@@ -3348,6 +3859,7 @@
                         "id",
                         "name",
                         "logo_url",
+                        "favicon_url",
                         "support_email"
                       ],
                       "additionalProperties": false

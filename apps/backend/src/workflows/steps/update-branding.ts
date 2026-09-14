@@ -8,6 +8,7 @@ import BrandingModuleService, {
 export type UpdateBrandingStepInput = {
   name?: string;
   logo_url?: string | null;
+  favicon_url?: string | null;
   support_email?: string | null;
 };
 
@@ -26,6 +27,7 @@ export const updateBrandingStep = createStep(
     return new StepResponse(updated, {
       name: previous.name,
       logo_url: previous.logo_url,
+      favicon_url: previous.favicon_url,
       support_email: previous.support_email,
     });
   },

@@ -85,7 +85,7 @@ Prices are stored as-is: ₦49.99 comes back as `49.99`. Never divide by 100.
 For the "New" badge, call `isNew(product, newBadgeDays)` from
 `lib/medusa/product.ts` here, in the Server Component, and pass the boolean to
 the card. `newBadgeDays` is staff's setting under Settings › Storefront:
-`(await getStorefrontSettings()).new_badge_days`, fetched once per request. It
+`(await getStorefrontSettings()).products.new_badge_days`, fetched once per request. It
 needs `+metadata` in `fields`, and counts from the launch date (or creation
 date).
 
@@ -464,6 +464,55 @@ only when the server must **set or clear a cookie**, or use a **secret**. Then:
 If Medusa needs a request header the proxy does not forward yet, add it to
 `FORWARDED_REQUEST_HEADERS` in `app/api/medusa/[...path]/route.ts`.
 
+### 10. Page metadata and structured data
+
+Site-wide defaults are already set in `app/layout.tsx` from Settings ›
+Storefront. Each page adds what it knows better.
+
+```tsx
+// app/(main)/products/[handle]/page.tsx
+import { JsonLd } from "@/components/seo/json-ld"
+import { getStorefrontSettings } from "@/lib/medusa/storefront-settings"
+import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld"
+import { buildProductMetadata } from "@/lib/seo/metadata"
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[handle]">) {
+  const product = await getProduct((await params).handle) // wrap in React.cache
+  return buildProductMetadata(product, await getStorefrontSettings())
+}
+
+// In the page component:
+;<JsonLd
+  data={[
+    productJsonLd(product, region.currency_code, settings),
+    breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: category.name, path: categoryPath(category.handle) },
+      { name: product.title, path: productPath(product.handle) },
+    ]),
+  ]}
+/>
+```
+
+- Fetch the product with `+metadata` (staff's per-product title and
+  description), `*variants.calculated_price` and `+variants.inventory_quantity`
+  (price and stock for structured data).
+- `generateMetadata` and the page both need the product: wrap the fetch in
+  `React.cache` so it runs once.
+- Category pages: staff can set `seo_title` and `seo_description` in the
+  category's **Search & sharing** box, stored in `category.metadata`. Return
+  `{ title: metadata.seo_title || category.name, description:
+metadata.seo_description || category.description }`, requesting `+metadata`.
+  Collections have no box yet, so use their title. The layout adds " | Store
+  name".
+- Page addresses live in `lib/seo/routes.ts`. The sitemap, canonical links and
+  structured data use them, so change them there if the routes differ.
+- `getStorefrontSettings()` is cached for 5 minutes. If the backend is
+  unreachable it logs and falls back to defaults rather than failing the page.
+- Check pages with Google's Rich Results Test once they are deployed.
+
 ## Errors
 
 Every failed call throws the SDK's `FetchError`, whether it came from Medusa
@@ -497,27 +546,32 @@ with how long Medusa took to answer.
 
 ## File map
 
-| File                                | What it is                                                       |
-| ----------------------------------- | ---------------------------------------------------------------- |
-| `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                   |
-| `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                  |
-| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies          |
-| `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`   |
-| `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                         |
-| `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                         |
-| `lib/query/client.ts`               | Query client defaults                                            |
-| `lib/query/provider.tsx`            | Provider and devtools, mounted in `app/layout.tsx`               |
-| `lib/http/post-json.ts`             | `postJson` for the storefront's own routes                       |
-| `lib/http/same-origin.ts`           | CSRF check for Route Handlers                                    |
-| `app/api/medusa/[...path]/route.ts` | The proxy                                                        |
-| `app/api/auth/*`                    | Login, register, logout, Google                                  |
-| `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)         |
-| `features/customer/`                | Customer query, auth hooks and server prefetch (worked example)  |
-| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch            |
-| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                  |
-| `features/marketing/`               | The account's marketing email setting                            |
-| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                           |
-| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: staff settings such as New badge days |
-| `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                  |
-| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook            |
-| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                      |
+| File                                | What it is                                                         |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                     |
+| `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                    |
+| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies            |
+| `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`     |
+| `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                           |
+| `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                           |
+| `lib/query/client.ts`               | Query client defaults                                              |
+| `lib/query/provider.tsx`            | Provider and devtools, mounted in `app/layout.tsx`                 |
+| `lib/http/post-json.ts`             | `postJson` for the storefront's own routes                         |
+| `lib/http/same-origin.ts`           | CSRF check for Route Handlers                                      |
+| `app/api/medusa/[...path]/route.ts` | The proxy                                                          |
+| `app/api/auth/*`                    | Login, register, logout, Google                                    |
+| `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)           |
+| `features/customer/`                | Customer query, auth hooks and server prefetch (worked example)    |
+| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch              |
+| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                    |
+| `features/marketing/`               | The account's marketing email setting                              |
+| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                             |
+| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: brand, sharing & search, New badge days |
+| `lib/seo/metadata.ts`               | `buildRootMetadata`, `buildProductMetadata`                        |
+| `lib/seo/json-ld.ts`                | Organization, WebSite, Product and breadcrumb structured data      |
+| `lib/seo/routes.ts`                 | Public page paths used by the sitemap and structured data          |
+| `components/seo/json-ld.tsx`        | `<JsonLd>`: renders structured data safely                         |
+| `app/robots.ts`, `app/sitemap.ts`   | robots.txt and sitemap.xml                                         |
+| `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                    |
+| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook              |
+| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                        |

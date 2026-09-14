@@ -10,6 +10,7 @@ import { z } from "@medusajs/framework/zod";
 export const AdminUpdateBranding = z.object({
   name: z.string().min(1).optional(),
   logo_url: z.url().nullable().optional(),
+  favicon_url: z.url().nullable().optional(),
   support_email: z.email().nullable().optional(),
 });
 
@@ -169,9 +170,46 @@ export const AdminSetSizeGuide = z.object({
 
 export type AdminSetSizeGuideType = z.infer<typeof AdminSetSizeGuide>;
 
+/** The store's social profiles, used in structured data and the site footer. */
+export const SocialLinks = z.object({
+  instagram: z.url().nullable().optional(),
+  facebook: z.url().nullable().optional(),
+  tiktok: z.url().nullable().optional(),
+  x: z.url().nullable().optional(),
+  youtube: z.url().nullable().optional(),
+  pinterest: z.url().nullable().optional(),
+});
+
+export type SocialLinksType = z.infer<typeof SocialLinks>;
+
 export const AdminUpdateStorefrontSettings = z.object({
   /** Whole days, from 1 to a year. */
   new_badge_days: z.number().int().min(1).max(365).optional(),
+  /** The home page title, and the fallback for pages without their own. */
+  seo_title: z.string().trim().max(70).nullable().optional(),
+  /** Search engines show about 155 characters; longer text is cut off. */
+  seo_description: z.string().trim().max(200).nullable().optional(),
+  /** The default link preview image; 1200 x 630 works everywhere. */
+  og_image_url: z.url().nullable().optional(),
+  twitter_handle: z
+    .string()
+    .trim()
+    .regex(/^@?[A-Za-z0-9_]{1,15}$/, "Use the X username, like @youjaymharah.")
+    .nullable()
+    .optional(),
+  social_links: SocialLinks.optional(),
+  /** Off asks search engines not to index the store (staging, pre-launch). */
+  allow_indexing: z.boolean().optional(),
+  /** The `content` value of Google Search Console's HTML tag. */
+  google_site_verification: z
+    .string()
+    .trim()
+    .regex(
+      /^[A-Za-z0-9_-]{1,100}$/,
+      "Paste only the code from the tag's content value.",
+    )
+    .nullable()
+    .optional(),
 });
 
 export type AdminUpdateStorefrontSettingsType = z.infer<

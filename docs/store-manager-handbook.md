@@ -47,15 +47,15 @@ The store manager can't do these; whoever deploys must.
 
 ## 2. What already exists on day one
 
-| Record                | Created as                                                         | You still need to                                       |
-| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------- |
-| Store                 | "Youjaymharah", NGN default, USD secondary                         | Check the name; remove USD if you won't sell in dollars |
-| Region                | Nigeria, NGN, payment providers: Manual, Credo, Paystack           | Decide on tax-inclusive pricing; remove Manual Payment  |
-| Tax region            | Nigeria, no rate set (0%)                                          | Set 7.5% VAT                                            |
-| Location              | Lagos Warehouse, city only, manual fulfilment                      | Add the full address; set up delivery options           |
-| Sales channel         | Default Sales Channel, linked to the warehouse and storefront key  | Nothing, but every product must be in it                |
-| Team roles            | Store Manager, Support / Fulfillment, Marketing (plus Super Admin) | Invite people with the right role                       |
-| Branding & newsletter | Filled from environment settings on first open                     | Upload the logo; review the newsletter text             |
+| Record                  | Created as                                                         | You still need to                                                         |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Store                   | "Youjaymharah", NGN default, USD secondary                         | Check the name; remove USD if you won't sell in dollars                   |
+| Region                  | Nigeria, NGN, payment providers: Manual, Credo, Paystack           | Decide on tax-inclusive pricing; remove Manual Payment                    |
+| Tax region              | Nigeria, no rate set (0%)                                          | Set 7.5% VAT                                                              |
+| Location                | Lagos Warehouse, city only, manual fulfilment                      | Add the full address; set up delivery options                             |
+| Sales channel           | Default Sales Channel, linked to the warehouse and storefront key  | Nothing, but every product must be in it                                  |
+| Team roles              | Store Manager, Support / Fulfillment, Marketing (plus Super Admin) | Invite people with the right role                                         |
+| Storefront & newsletter | Brand filled from environment settings on first open               | Upload the logo, browser icon and share image; review the newsletter text |
 
 ## 3. First-day setup
 
@@ -65,8 +65,9 @@ Work through these in order; each relies on the ones before it.
    domain, sign in, change the password and add your name under
    `Settings › Profile`.
 2. **Check store details and branding (Super Admin).** `Settings › Store`:
-   confirm name and currencies (NGN stays the default). `Settings › Branding`:
-   store name, logo and support email. All three appear in customer emails.
+   confirm name and currencies (NGN stays the default). `Settings › Storefront`,
+   **Brand**: store name, logo, browser icon (favicon) and support email. The
+   name, logo and support email also appear in customer emails.
 3. **Invite the team (Super Admin).** `Settings › Users › Invite`: enter the
    email, pick a role (see section 5) and send.
 4. **Set VAT and choose how prices are shown.**
@@ -254,6 +255,30 @@ available count can be lower than the shelf. Adjust under
 Guides: [Inventory](https://docs.medusajs.com/user-guide/inventory/inventory) ·
 [Reservations](https://docs.medusajs.com/user-guide/inventory/reservations)
 
+### Search & sharing
+
+`Settings › Storefront` controls how the store looks in Google and when a link
+is shared on WhatsApp, Instagram or X. Marketing edits **Sharing & search**; the
+store owner edits **Brand**.
+
+- **Home page title** (about 60 characters) and **description** (about 155):
+  what search results show for the store. Other pages show "Page name | Store
+  name".
+- **Share image:** 1200 x 630px, shown when someone shares a link to the store.
+  Product links use the product's photo instead.
+- **Products and categories:** each product and each category has a **Search &
+  sharing** box for its own title and description. Leave it empty to use the
+  product or category name and description.
+- **Social profiles** and **X username:** tell search engines which accounts
+  belong to the store.
+- **Google Search Console:** to prove to Google the site is yours, choose the
+  "HTML tag" method in Search Console and paste the tag here.
+- **Show the store in search engines:** leave on. Turn it off only before
+  launch or on a test copy; while off, search engines are asked not to list
+  any page.
+- Changes reach the website within a few minutes. Search engines take days to
+  weeks to show them.
+
 ### Size guides
 
 - **Where:** `Products › Size guides`. A guide is a table of sizes and their
@@ -309,12 +334,12 @@ check `Settings › Workflows` for the failed send.
 
 ## 5. Team roles
 
-| Role                  | Can                                                                            | Can't                                                            |
-| --------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| Super Admin           | Everything, including users, API keys and branding                             | —                                                                |
-| Store Manager         | Products, prices, stock, orders, customers, promotions, delivery, tax, regions | Invite users, manage API keys, change branding or store identity |
-| Support / Fulfillment | Orders, fulfilment and tracking, returns, refunds, customer details            | Edit products or prices; any settings                            |
-| Marketing             | Promotions, campaigns, price lists, collections and categories, newsletter     | See orders, payments or customer records                         |
+| Role                  | Can                                                                                                                 | Can't                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Super Admin           | Everything, including users, API keys and branding                                                                  | —                                                                |
+| Store Manager         | Products, prices, stock, orders, customers, promotions, delivery, tax, regions                                      | Invite users, manage API keys, change branding or store identity |
+| Support / Fulfillment | Orders, fulfilment and tracking, returns, refunds, customer details                                                 | Edit products or prices; any settings                            |
+| Marketing             | Promotions, campaigns, price lists, collections and categories, newsletter, search & sharing and New badge settings | See orders, payments or customer records; change the brand       |
 
 ## 6. Known gaps
 

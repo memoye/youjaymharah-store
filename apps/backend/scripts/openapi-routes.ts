@@ -52,6 +52,7 @@ const Branding = z.object({
   id: z.string(),
   name: z.string(),
   logo_url: z.string().nullable(),
+  favicon_url: z.string().nullable(),
   support_email: z.string().nullable(),
 });
 
@@ -182,13 +183,46 @@ const AdminCategorySizeGuide = z.object({
   inherited: z.object({ size_guide: NamedRef, category: NamedRef }).nullable(),
 });
 
+const StoredSocialLinks = z.object({
+  instagram: z.string().nullable(),
+  facebook: z.string().nullable(),
+  tiktok: z.string().nullable(),
+  x: z.string().nullable(),
+  youtube: z.string().nullable(),
+  pinterest: z.string().nullable(),
+});
+
 const StorefrontSettings = z.object({
   id: z.string(),
   new_badge_days: z.number(),
+  seo_title: z.string().nullable(),
+  seo_description: z.string().nullable(),
+  og_image_url: z.string().nullable(),
+  twitter_handle: z.string().nullable(),
+  social_links: z.record(z.string(), z.string().nullable()),
+  allow_indexing: z.boolean(),
+  google_site_verification: z.string().nullable(),
 });
 
 const PublicStorefrontSettings = z.object({
-  new_badge_days: z.number(),
+  brand: z.object({
+    name: z.string(),
+    logo_url: z.string().nullable(),
+    favicon_url: z.string().nullable(),
+    support_email: z.string().nullable(),
+  }),
+  seo: z.object({
+    title: z.string().nullable(),
+    description: z.string().nullable(),
+    og_image_url: z.string().nullable(),
+    twitter_handle: z.string().nullable(),
+    social_links: StoredSocialLinks,
+    allow_indexing: z.boolean(),
+    google_site_verification: z.string().nullable(),
+  }),
+  products: z.object({
+    new_badge_days: z.number(),
+  }),
 });
 
 /** Group descriptions, shown as section intros by API viewers. */
@@ -249,7 +283,7 @@ export const TAGS: Record<string, string> = {
   Marketing:
     "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in.",
   Storefront:
-    "Merchandising settings the storefront renders with, edited from Settings › Storefront. Currently how many days a product shows the New badge.",
+    "Settings the storefront renders with, edited from Settings › Storefront: sharing & search defaults (title, description, share image, social profiles, indexing, Search Console verification) and product display (New badge days). The public route also includes the brand.",
   "Size guides":
     "Measurement tables for product pages. A product shows its own guide, else the nearest category's (walking up the category tree), else the store default. Measurements are stored in cm; the storefront converts to inches for display.",
   Scaffolding:
@@ -475,7 +509,7 @@ export const ROUTES: RouteDoc[] = [
     tag: "Storefront",
     summary: "Get the settings the storefront renders with",
     description:
-      "Public and identical for every shopper, so it is safe to read from cached pages.",
+      "Everything the storefront renders its shell with: `brand` (name, logo, favicon, support email), `seo` (defaults for search results and link previews, social profiles, whether search engines may index the store, Search Console code) and `products` (New badge days). Public and identical for every shopper, so it is safe to read from cached pages.",
     auth: "public",
     response: {
       description: "The public storefront settings.",
@@ -786,7 +820,7 @@ export const ROUTES: RouteDoc[] = [
     tag: "Branding",
     summary: "Get store branding",
     description:
-      "Store name, logo and support email used in customer emails. Created from environment variables on first read.",
+      "Store name, logo, favicon and support email. The name, logo and support email appear in customer emails. Created from environment variables on first read.",
     auth: "admin",
     policies: ["branding:read"],
     response: {

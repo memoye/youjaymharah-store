@@ -2,9 +2,12 @@ import type { Metadata } from "next"
 import { Bodoni_Moda, Montserrat } from "next/font/google"
 
 import "./globals.css"
+import { JsonLd } from "@/components/seo/json-ld"
+import { getStorefrontSettings } from "@/lib/medusa/storefront-settings"
 import { QueryProvider } from "@/lib/query/provider"
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld"
+import { buildRootMetadata } from "@/lib/seo/metadata"
 import { cn } from "@/lib/util/cn"
-import { getBaseURL } from "@/lib/util/env"
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -16,13 +19,17 @@ const bodoniModa = Bodoni_Moda({
   subsets: ["latin"],
 })
 
-export const metadata: Metadata = {
-  title: "YouJaymharah Trends",
-  description: "Fashion store",
-  metadataBase: new URL(getBaseURL()),
+/**
+ * Site-wide title template, description, favicon, link previews, indexing and
+ * Search Console verification, all from Settings › Storefront in the admin.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  return buildRootMetadata(await getStorefrontSettings())
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const settings = await getStorefrontSettings()
+
   return (
     <html
       lang="en"
@@ -34,6 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       )}
     >
       <body className="min-h-full flex flex-col">
+        <JsonLd
+          data={[organizationJsonLd(settings), websiteJsonLd(settings)]}
+        />
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

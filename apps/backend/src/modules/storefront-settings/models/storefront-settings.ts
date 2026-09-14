@@ -1,16 +1,30 @@
 import { model } from "@medusajs/framework/utils";
 
 /**
- * Merchandising settings the storefront reads. A singleton like branding:
- * one row, addressed by STOREFRONT_SETTINGS_ID, edited from
- * Settings -> Storefront.
+ * Settings the storefront renders with. A singleton like branding: one row,
+ * addressed by STOREFRONT_SETTINGS_ID, edited in the "Sharing & search" and
+ * "Products" sections of Settings -> Storefront.
  *
  * Kept apart from branding on purpose: branding is store identity and
- * owner-only, while these are day-to-day decisions for the Store Manager and
- * Marketing.
+ * owner-only, while these are day-to-day decisions for Marketing and the
+ * Store Manager.
  */
 export const StorefrontSettings = model.define("storefront_settings", {
   id: model.id().primaryKey(),
   /** How many days a product shows the "New" badge after it goes on sale. */
   new_badge_days: model.number().default(30),
+  /** The home page title; pages without their own title fall back to it. */
+  seo_title: model.text().nullable(),
+  /** The default description shown in search results and link previews. */
+  seo_description: model.text().nullable(),
+  /** The default link preview image (Open Graph and X cards). */
+  og_image_url: model.text().nullable(),
+  /** The store's X username, for X cards. */
+  twitter_handle: model.text().nullable(),
+  /** Social profile URLs by network: instagram, facebook, tiktok, x, youtube, pinterest. */
+  social_links: model.json().default({}),
+  /** Off asks search engines not to index the store at all. */
+  allow_indexing: model.boolean().default(true),
+  /** Google Search Console's HTML tag verification code. */
+  google_site_verification: model.text().nullable(),
 });

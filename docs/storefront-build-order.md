@@ -381,10 +381,34 @@ switch from Phase 6 go through this same signup and double opt-in.
 
 ## Phase 9 — Ready for real traffic
 
-Build: page metadata and share images, sitemap and robots, structured data for
-products, image optimisation (allow the R2/S3 domain), loading and error states
+Build: image optimisation (allow the R2/S3 domain), loading and error states
 everywhere, analytics, and an accessibility pass — keyboard operation of the
 colour and size selectors, real labels on the swatches, and visible focus.
+
+Already built (search & sharing, all driven by Settings › Storefront in the
+admin; see `DATA-LAYER.md` recipe 10):
+
+- Site-wide metadata in `app/layout.tsx`: title template, description,
+  favicon, Open Graph and X cards, indexing, Google Search Console
+  verification, and Organization and WebSite structured data.
+- `app/robots.ts` and `app/sitemap.ts`. The sitemap lists products,
+  categories and collections at `/products/<handle>`, `/categories/<handle>`
+  and `/collections/<handle>`; change `lib/seo/routes.ts` if the pages live
+  elsewhere.
+- Still to wire into each page as it is built: `buildProductMetadata` and
+  `productJsonLd` on the product page, `breadcrumbJsonLd` on product and
+  category pages, and `generateMetadata` with the category or collection name
+  (categories have their own `seo_title` and `seo_description` in metadata).
+- **Instant updates** (backend side built): add `app/api/revalidate/route.ts`.
+  The backend sends `POST /api/revalidate` with header `x-revalidate-secret`
+  and body `{ "tags": ["storefront-settings"] }` whenever Brand or Sharing &
+  search is saved. Compare the header with `STOREFRONT_REVALIDATE_SECRET` (set
+  the same value on both services; answer 401 if it differs), then call
+  `revalidateTag` for each tag. Read Next's `revalidateTag` docs in
+  `node_modules/next/dist/docs` first; its signature changed in Next 16.
+  Without this route, changes still appear within 5 minutes.
+- **Home-screen manifest:** add `app/manifest.ts` using the brand name and
+  favicon from `getStorefrontSettings()`. No backend work needed.
 
 **Done when:** a Lighthouse pass is clean enough to launch behind and the site
 is usable on a mid-range Android phone on a slow connection.

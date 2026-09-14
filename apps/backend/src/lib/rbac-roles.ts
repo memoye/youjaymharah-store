@@ -104,6 +104,9 @@ const ROLES: RoleDefinition[] = [
       { resources: REGIONS, operations: FULL },
       { resources: FILES, operations: WRITE },
       { resources: ["storefront_settings"], operations: [READ, "update"] },
+      // Sees the Brand section of Settings -> Storefront; changing it stays
+      // with the owner.
+      { resources: ["branding"], operations: [READ] },
       // Read-only on the store record: they can see currencies and defaults
       // but changing store identity stays with the owner.
       { resources: ["store", "store_locale"], operations: [READ] },
@@ -133,7 +136,7 @@ const ROLES: RoleDefinition[] = [
       // never touch pricing or the catalog.
       { resources: CATALOG, operations: [READ] },
       { resources: ["region", "sales_channel"], operations: [READ] },
-      { resources: ["storefront_settings"], operations: [READ] },
+      { resources: ["storefront_settings", "branding"], operations: [READ] },
     ],
   },
   {
@@ -154,8 +157,11 @@ const ROLES: RoleDefinition[] = [
       { resources: ["customer_group"], operations: [READ] },
       // Newsletter settings and the subscriber list.
       { resources: ["newsletter"], operations: [READ, "update"] },
-      // Merchandising settings, such as how long products count as new.
+      // Search & sharing (titles, share image, social links, indexing) and
+      // product display settings such as how long products count as new.
       { resources: ["storefront_settings"], operations: [READ, "update"] },
+      // Sees the Brand section; changing it stays with the owner.
+      { resources: ["branding"], operations: [READ] },
       { resources: ["file"], operations: WRITE },
     ],
   },

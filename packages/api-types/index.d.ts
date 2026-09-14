@@ -5,6 +5,7 @@ export type Branding = {
   id: string;
   name: string;
   logo_url: string | null;
+  favicon_url: string | null;
   support_email: string | null;
 };
 
@@ -62,6 +63,7 @@ export type Customer = {
 export type AdminUpdateBrandingBody = {
   name?: string;
   logo_url?: string | null;
+  favicon_url?: string | null;
   support_email?: string | null;
 };
 
@@ -108,6 +110,7 @@ export type AdminBrandingResponse = {
     id: string;
     name: string;
     logo_url: string | null;
+    favicon_url: string | null;
     support_email: string | null;
   };
 };
@@ -367,22 +370,74 @@ export type AdminSetSizeGuideBody = {
 export type StorefrontSettings = {
   id: string;
   new_badge_days: number;
+  seo_title: string | null;
+  seo_description: string | null;
+  og_image_url: string | null;
+  twitter_handle: string | null;
+  social_links: Record<string, unknown>;
+  allow_indexing: boolean;
+  google_site_verification: string | null;
 };
 
 export type AdminUpdateStorefrontSettingsBody = {
   new_badge_days?: number;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  og_image_url?: string | null;
+  twitter_handle?: string | null;
+  social_links?: {
+    instagram?: string | null;
+    facebook?: string | null;
+    tiktok?: string | null;
+    x?: string | null;
+    youtube?: string | null;
+    pinterest?: string | null;
+  };
+  allow_indexing?: boolean;
+  google_site_verification?: string | null;
 };
 
 export type AdminStorefrontSettingsResponse = {
   settings: {
     id: string;
     new_badge_days: number;
+    seo_title: string | null;
+    seo_description: string | null;
+    og_image_url: string | null;
+    twitter_handle: string | null;
+    social_links: Record<string, unknown>;
+    allow_indexing: boolean;
+    google_site_verification: string | null;
   };
 };
 
 export type StoreStorefrontSettingsResponse = {
   settings: {
-    new_badge_days: number;
+    brand: {
+      name: string;
+      logo_url: string | null;
+      favicon_url: string | null;
+      support_email: string | null;
+    };
+    seo: {
+      title: string | null;
+      description: string | null;
+      og_image_url: string | null;
+      twitter_handle: string | null;
+      social_links: {
+        instagram: string | null;
+        facebook: string | null;
+        tiktok: string | null;
+        x: string | null;
+        youtube: string | null;
+        pinterest: string | null;
+      };
+      allow_indexing: boolean;
+      google_site_verification: string | null;
+    };
+    products: {
+      new_badge_days: number;
+    };
   };
 };
 
