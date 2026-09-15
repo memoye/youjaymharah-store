@@ -29,19 +29,8 @@ export default async function PageLayout(props: LayoutProps<"/">) {
   return (
     <>
       <Header />
-      {/*{customer && cart && (
-        <CartMismatchBanner customer={customer} cart={cart} />
-      )}*/}
 
-      {/*{cart && (
-        <FreeShippingPriceNudge
-          variant="popup"
-          cart={cart}
-          shippingOptions={shippingOptions}
-        />
-      )}*/}
       {props.children}
-      {/*<Footer />*/}
     </>
   )
 }

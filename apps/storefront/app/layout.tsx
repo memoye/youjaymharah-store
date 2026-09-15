@@ -9,6 +9,7 @@ import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld"
 import { buildRootMetadata } from "@/lib/seo/metadata"
 import { cn } from "@/lib/util/cn"
 import { StorefrontSettingsProvider } from "@/features/site-settings/provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 const bodoniModa = Bodoni_Moda({
   variable: "--font-bodoni",
@@ -46,9 +47,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd
           data={[organizationJsonLd(settings), websiteJsonLd(settings)]}
         />
-        <StorefrontSettingsProvider settings={settings}>
-          <QueryProvider>{children}</QueryProvider>
-        </StorefrontSettingsProvider>
+        <TooltipProvider>
+          <StorefrontSettingsProvider settings={settings}>
+            <QueryProvider>{children}</QueryProvider>
+          </StorefrontSettingsProvider>
+        </TooltipProvider>
       </body>
     </html>
   )

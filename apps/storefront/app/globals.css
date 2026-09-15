@@ -150,6 +150,10 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
 
+  .container-wrapper {
+    @apply mx-auto w-full max-w-[1600px];
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
