@@ -46,6 +46,28 @@ export const StoreNewsletterToken = z.object({
 
 export type StoreNewsletterTokenType = z.infer<typeof StoreNewsletterToken>;
 
+/** The token from a bag reminder email's links (48 hex characters). */
+export const StoreBagReminderToken = z.object({
+  token: z.string().regex(/^[0-9a-f]{48}$/, "This link is not valid."),
+});
+
+export type StoreBagReminderTokenType = z.infer<typeof StoreBagReminderToken>;
+
+/**
+ * Hours after the bag's last change. Clearing a later delay turns that
+ * reminder off; their order is checked on save against the stored values.
+ */
+export const AdminUpdateBagReminderSettings = z.object({
+  enabled: z.boolean().optional(),
+  first_delay_hours: z.number().int().min(1).max(168).optional(),
+  second_delay_hours: z.number().int().min(2).max(720).nullable().optional(),
+  third_delay_hours: z.number().int().min(3).max(2160).nullable().optional(),
+});
+
+export type AdminUpdateBagReminderSettingsType = z.infer<
+  typeof AdminUpdateBagReminderSettings
+>;
+
 export const StoreSetCustomerPassword = z.object({
   password: z.string().min(8),
 });
@@ -361,6 +383,33 @@ export default defineMiddlewares({
       matcher: "/store/newsletter/unsubscribe",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreNewsletterToken)],
+    },
+    // Bag reminder links are public: the emailed token is the credential.
+    {
+      matcher: "/store/bag-reminders/restore",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreBagReminderToken)],
+    },
+    {
+      matcher: "/store/bag-reminders/stop",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreBagReminderToken)],
+    },
+    {
+      matcher: "/admin/bag-reminders/settings",
+      method: ["GET"],
+      policies: [{ resource: "bag_reminder", operation: "read" }],
+    },
+    {
+      matcher: "/admin/bag-reminders/settings",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminUpdateBagReminderSettings)],
+      policies: [{ resource: "bag_reminder", operation: "update" }],
+    },
+    {
+      matcher: "/admin/bag-reminders/stats",
+      method: ["GET"],
+      policies: [{ resource: "bag_reminder", operation: "read" }],
     },
     // Finishing a social sign-in: the caller holds a token for an auth
     // identity that may not have a customer yet, so `allowUnregistered`

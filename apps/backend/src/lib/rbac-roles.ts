@@ -104,6 +104,8 @@ const ROLES: RoleDefinition[] = [
       { resources: REGIONS, operations: FULL },
       { resources: FILES, operations: WRITE },
       { resources: ["storefront_settings"], operations: [READ, "update"] },
+      // Custom (src/policies/bag-reminder.ts).
+      { resources: ["bag_reminder"], operations: [READ, "update"] },
       // Sees the Brand section of Settings -> Storefront; changing it stays
       // with the owner.
       { resources: ["branding"], operations: [READ] },
@@ -136,7 +138,10 @@ const ROLES: RoleDefinition[] = [
       // never touch pricing or the catalog.
       { resources: CATALOG, operations: [READ] },
       { resources: ["region", "sales_channel"], operations: [READ] },
-      { resources: ["storefront_settings", "branding"], operations: [READ] },
+      {
+        resources: ["storefront_settings", "branding", "bag_reminder"],
+        operations: [READ],
+      },
     ],
   },
   {
@@ -160,6 +165,8 @@ const ROLES: RoleDefinition[] = [
       // Search & sharing (titles, share image, social links, indexing) and
       // product display settings such as how long products count as new.
       { resources: ["storefront_settings"], operations: [READ, "update"] },
+      // Abandoned shopping bag reminder emails.
+      { resources: ["bag_reminder"], operations: [READ, "update"] },
       // Sees the Brand section; changing it stays with the owner.
       { resources: ["branding"], operations: [READ] },
       { resources: ["file"], operations: WRITE },

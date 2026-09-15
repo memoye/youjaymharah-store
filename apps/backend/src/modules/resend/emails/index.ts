@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { bagReminderCopy, bagReminderEmail } from "./bag-reminder";
 import { claimCreatedEmail } from "./claim-created";
 import { STORE_NAME } from "./constants";
 import { emailVerificationEmail } from "./email-verification";
@@ -41,6 +42,7 @@ export const EmailTemplates = {
   NEWSLETTER_WELCOME: "newsletter-welcome",
   PRODUCT_BACK_IN_STOCK: "product-back-in-stock",
   PRODUCT_LAUNCHED: "product-launched",
+  BAG_REMINDER: "bag-reminder",
 } as const;
 
 export type EmailTemplate =
@@ -200,6 +202,19 @@ const registry: Record<EmailTemplate, TemplateEntry> = {
       reason: "launch",
     }),
   }),
+  [EmailTemplates.BAG_REMINDER]: (data) => {
+    const props = data as Parameters<typeof bagReminderEmail>[0];
+    const brand = data.brand as { name?: string | null } | undefined;
+
+    return {
+      subject: bagReminderCopy(
+        props.reminder_number,
+        props.total_reminders,
+        brand?.name || STORE_NAME,
+      ).subject,
+      react: bagReminderEmail(props),
+    };
+  },
 };
 
 /** Uses the live store name in the subject when branding was passed in. */

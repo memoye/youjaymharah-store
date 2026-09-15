@@ -46,6 +46,10 @@
       "description": "Signup, double opt-in confirmation and unsubscribe, plus the admin side: settings, subscribers and the Resend audiences they sync to."
     },
     {
+      "name": "Bag reminders",
+      "description": "Emails reminding shoppers about shopping bags they left, at up to three delays after the bag's last change, with links to restore the bag or stop reminders."
+    },
+    {
       "name": "Accounts",
       "description": "Customer accounts beyond Medusa's built-in routes: finishing a social sign-in so one person keeps one customer record."
     },
@@ -5719,6 +5723,487 @@
           },
           "400": {
             "description": "Missing, unknown or used token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/bag-reminders/restore": {
+      "post": {
+        "operationId": "postStoreBagRemindersRestore",
+        "tags": [
+          "Bag reminders"
+        ],
+        "summary": "Restore a bag from a reminder email",
+        "description": "Takes the token from a reminder's \"View your bag\" link (`/shopping-bag/restore?token=`) and returns the bag's cart id, for the storefront to set as the shopper's cart.",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{48}$"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The bag's cart.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cart_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "cart_id"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The token is malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown token, or the bag was checked out or deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/bag-reminders/stop": {
+      "post": {
+        "operationId": "postStoreBagRemindersStop",
+        "tags": [
+          "Bag reminders"
+        ],
+        "summary": "Stop bag reminders",
+        "description": "Takes the token from a reminder's stop link (`/shopping-bag/reminders/stop?token=`). No more bag reminders are sent to that address, for any bag. Calling it again changes nothing.",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{48}$"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stopped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The token is malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/bag-reminders/settings": {
+      "get": {
+        "operationId": "getAdminBagRemindersSettings",
+        "tags": [
+          "Bag reminders"
+        ],
+        "summary": "Get bag reminder settings",
+        "description": "Created on first read, with reminders off and delays of 1, 24 and 168 hours.",
+        "x-required-policies": [
+          "bag_reminder:read"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "first_delay_hours": {
+                          "type": "number"
+                        },
+                        "second_delay_hours": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "third_delay_hours": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "enabled",
+                        "first_delay_hours",
+                        "second_delay_hours",
+                        "third_delay_hours"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postAdminBagRemindersSettings",
+        "tags": [
+          "Bag reminders"
+        ],
+        "summary": "Update bag reminder settings",
+        "description": "Only the fields sent change. Delays are hours after the bag's last change; null turns the second or third reminder off. The delays must stay in order.",
+        "x-required-policies": [
+          "bag_reminder:update"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "first_delay_hours": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 168
+                  },
+                  "second_delay_hours": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 720
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "third_delay_hours": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 3,
+                        "maximum": 2160
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "first_delay_hours": {
+                          "type": "number"
+                        },
+                        "second_delay_hours": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "third_delay_hours": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "enabled",
+                        "first_delay_hours",
+                        "second_delay_hours",
+                        "third_delay_hours"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A delay is out of range, or the delays would be out of order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/bag-reminders/stats": {
+      "get": {
+        "operationId": "getAdminBagRemindersStats",
+        "tags": [
+          "Bag reminders"
+        ],
+        "summary": "Bag reminder results",
+        "description": "The last 30 days: bags reminded, bags reopened from an email, orders placed from reminded bags and their value, and addresses that stopped reminders.",
+        "x-required-policies": [
+          "bag_reminder:read"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "since": {
+                          "type": "string"
+                        },
+                        "bags_reminded": {
+                          "type": "number"
+                        },
+                        "bags_opened": {
+                          "type": "number"
+                        },
+                        "orders_recovered": {
+                          "type": "number"
+                        },
+                        "revenue_recovered": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "currency_code": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "currency_code",
+                              "amount"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "stopped": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "since",
+                        "bags_reminded",
+                        "bags_opened",
+                        "orders_recovered",
+                        "revenue_recovered",
+                        "stopped"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "stats"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
             "content": {
               "application/json": {
                 "schema": {

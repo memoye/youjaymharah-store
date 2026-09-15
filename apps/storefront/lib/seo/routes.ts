@@ -15,7 +15,7 @@ export const collectionPath = (handle: string) =>
   `/collections/${encodeURIComponent(handle)}`
 
 /** Pages search engines should not crawl: private or per-visitor. */
-export const PRIVATE_PATHS = ["/api/", "/account", "/cart", "/checkout"]
+export const PRIVATE_PATHS = ["/api/", "/account", "/shopping-bag", "/checkout"]
 
 /** An absolute URL on this storefront, e.g. for structured data. */
 export const absoluteUrl = (path: string) =>

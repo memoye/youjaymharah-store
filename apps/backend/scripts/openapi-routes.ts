@@ -8,6 +8,8 @@ import {
   AdminUpdateNewsletterSettings,
   AdminUpdateSizeGuide,
   AdminUpdateStorefrontSettings,
+  AdminUpdateBagReminderSettings,
+  StoreBagReminderToken,
   SizeGuideTable,
   StoreAddWishlistItem,
   StoreCreateProductAlert,
@@ -222,6 +224,31 @@ const StorefrontSettings = z.object({
   featured_collection_id: z.string().nullable(),
 });
 
+const BagReminderSettings = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  first_delay_hours: z.number(),
+  second_delay_hours: z.number().nullable(),
+  third_delay_hours: z.number().nullable(),
+});
+
+const BagReminderStats = z.object({
+  stats: z.object({
+    /** Start of the 30-day period. */
+    since: z.string(),
+    bags_reminded: z.number(),
+    /** Bags reopened from a reminder's "View your bag" link. */
+    bags_opened: z.number(),
+    /** Orders placed from a bag after it was reminded. */
+    orders_recovered: z.number(),
+    revenue_recovered: z.array(
+      z.object({ currency_code: z.string(), amount: z.number() }),
+    ),
+    /** Addresses that used a stop link. */
+    stopped: z.number(),
+  }),
+});
+
 const HomepageHeroHistory = z.object({
   /** Newest first; only the most recent 10 are kept. */
   revisions: z.array(
@@ -325,6 +352,8 @@ export const TAGS: Record<string, string> = {
     '"Notify me" for sold-out sizes and coming-soon products. One email per alert, sent within about 10 minutes of the item becoming buyable, then the alert is done. Asking for an alert is not marketing consent.',
   Marketing:
     "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in.",
+  "Bag reminders":
+    "Emails reminding shoppers about shopping bags they left, at up to three delays after the bag's last change, with links to restore the bag or stop reminders.",
   Storefront:
     "Settings the storefront renders with, edited from Settings › Storefront: home page content (hero, featured collection), sharing & search defaults (title, description, share image, social profiles, indexing, Search Console verification) and product display (New badge days). The public route also includes the brand.",
   "Size guides":
@@ -514,6 +543,36 @@ export const TYPES: {
   },
   { name: "StoreSearchProduct", schema: SearchProduct, io: "output" },
   { name: "StoreSearchResponse", schema: SearchResult, io: "output" },
+  {
+    name: "AdminBagReminderSettingsResponse",
+    schema: z.object({ settings: BagReminderSettings }),
+    io: "output",
+  },
+  {
+    name: "AdminUpdateBagReminderSettingsBody",
+    schema: AdminUpdateBagReminderSettings,
+    io: "input",
+  },
+  {
+    name: "AdminBagReminderStatsResponse",
+    schema: BagReminderStats,
+    io: "output",
+  },
+  {
+    name: "StoreBagReminderTokenBody",
+    schema: StoreBagReminderToken,
+    io: "input",
+  },
+  {
+    name: "StoreRestoreBagResponse",
+    schema: z.object({ cart_id: z.string() }),
+    io: "output",
+  },
+  {
+    name: "StoreStopBagRemindersResponse",
+    schema: z.object({ status: z.string() }),
+    io: "output",
+  },
 ];
 
 export const ROUTES: RouteDoc[] = [
@@ -1040,6 +1099,92 @@ export const ROUTES: RouteDoc[] = [
     body: StoreNewsletterToken,
     response: { description: "Unsubscribed.", schema: Acknowledged },
     errors: [{ status: 400, description: "Missing, unknown or used token." }],
+  },
+  {
+    method: "POST",
+    path: "/store/bag-reminders/restore",
+    tag: "Bag reminders",
+    summary: "Restore a bag from a reminder email",
+    description:
+      "Takes the token from a reminder's \"View your bag\" link (`/shopping-bag/restore?token=`) and returns the bag's cart id, for the storefront to set as the shopper's cart.",
+    auth: "public",
+    body: StoreBagReminderToken,
+    response: {
+      description: "The bag's cart.",
+      schema: z.object({ cart_id: z.string() }),
+    },
+    errors: [
+      { status: 400, description: "The token is malformed." },
+      {
+        status: 404,
+        description: "Unknown token, or the bag was checked out or deleted.",
+      },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/store/bag-reminders/stop",
+    tag: "Bag reminders",
+    summary: "Stop bag reminders",
+    description:
+      "Takes the token from a reminder's stop link (`/shopping-bag/reminders/stop?token=`). No more bag reminders are sent to that address, for any bag. Calling it again changes nothing.",
+    auth: "public",
+    body: StoreBagReminderToken,
+    response: {
+      description: "Stopped.",
+      schema: z.object({ status: z.string() }),
+    },
+    errors: [
+      { status: 400, description: "The token is malformed." },
+      { status: 404, description: "Unknown token." },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/admin/bag-reminders/settings",
+    tag: "Bag reminders",
+    summary: "Get bag reminder settings",
+    description:
+      "Created on first read, with reminders off and delays of 1, 24 and 168 hours.",
+    auth: "admin",
+    policies: ["bag_reminder:read"],
+    response: {
+      description: "The settings.",
+      schema: z.object({ settings: BagReminderSettings }),
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/bag-reminders/settings",
+    tag: "Bag reminders",
+    summary: "Update bag reminder settings",
+    description:
+      "Only the fields sent change. Delays are hours after the bag's last change; null turns the second or third reminder off. The delays must stay in order.",
+    auth: "admin",
+    policies: ["bag_reminder:update"],
+    body: AdminUpdateBagReminderSettings,
+    response: {
+      description: "The updated settings.",
+      schema: z.object({ settings: BagReminderSettings }),
+    },
+    errors: [
+      {
+        status: 400,
+        description:
+          "A delay is out of range, or the delays would be out of order.",
+      },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/admin/bag-reminders/stats",
+    tag: "Bag reminders",
+    summary: "Bag reminder results",
+    description:
+      "The last 30 days: bags reminded, bags reopened from an email, orders placed from reminded bags and their value, and addresses that stopped reminders.",
+    auth: "admin",
+    policies: ["bag_reminder:read"],
+    response: { description: "The results.", schema: BagReminderStats },
   },
   {
     method: "POST",

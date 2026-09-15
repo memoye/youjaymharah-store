@@ -16,12 +16,12 @@ exhaustively.
 
 ## Status key
 
-| Status            | Meaning                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| **Ready**         | API and storefront helpers exist; build the UI                 |
-| **Backend ready** | API exists; the storefront calls it directly (no helpers yet)  |
-| **To build**      | Storefront work on a known contract                            |
-| **Not available** | No backend support yet                                         |
+| Status            | Meaning                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| **Ready**         | API and storefront helpers exist; build the UI                |
+| **Backend ready** | API exists; the storefront calls it directly (no helpers yet) |
+| **To build**      | Storefront work on a known contract                           |
+| **Not available** | No backend support yet                                        |
 
 ---
 
@@ -60,13 +60,25 @@ Response shape:
 ```json
 {
   "settings": {
-    "brand": { "name": "", "logo_url": null, "favicon_url": null, "support_email": null },
+    "brand": {
+      "name": "",
+      "logo_url": null,
+      "favicon_url": null,
+      "support_email": null
+    },
     "seo": {
       "title": null,
       "description": null,
       "og_image_url": null,
       "twitter_handle": null,
-      "social_links": { "instagram": null, "facebook": null, "tiktok": null, "x": null, "youtube": null, "pinterest": null },
+      "social_links": {
+        "instagram": null,
+        "facebook": null,
+        "tiktok": null,
+        "x": null,
+        "youtube": null,
+        "pinterest": null
+      },
       "allow_indexing": true,
       "google_site_verification": null
     },
@@ -389,6 +401,28 @@ and complete the cart when they return.
     awaiting payment, which the gateway's webhook completes later.
   - Shoppers who pay and never return are handled by the webhook.
 
+### Bag reminder emails: Ready
+
+Emails shoppers who leave items in their shopping bag: by default after 1
+hour, 24 hours and 1 week from the bag's last change. Each email lists the
+items and has a "View your bag" button and a stop link.
+
+- **Admin:** Settings › Bag reminders. It's off until staff turn it on, and
+  shows the timing and the last 30 days of results.
+- **Who gets them:** any bag with an email address, from signed-in customers
+  or guests who entered it at checkout.
+- **Who doesn't:**
+  - addresses that used the stop link or unsubscribed from the newsletter;
+  - shoppers who placed an order after last changing the bag;
+  - bags that are empty.
+- **Storefront:**
+  - Set the cart's email as early in checkout as possible
+    (`POST /store/carts/:id` with `email`). Guests without one can't be
+    reminded.
+  - `/shopping-bag/restore` is already built.
+  - Build the `/shopping-bag/reminders/stop` page with
+    `useStopBagReminders()`, and handle `?restore=` on the shopping bag page.
+
 ### Newsletter box at checkout: Not available
 
 The admin setting saves, but nothing subscribes the address when an order is
@@ -588,16 +622,19 @@ Add the receiving route, which checks a shared secret and revalidates the tag.
 Emails and payment gateways send shoppers to these exact addresses. Each must
 exist, or the address must change in the backend.
 
-| Address                                   | Arrives from                               | Status   |
-| ----------------------------------------- | ------------------------------------------ | -------- |
-| `/account/reset-password?token=…&email=…` | Password reset email                       | To build |
-| `/account/verify?token=…`                 | Email verification email (15-minute link)  | To build |
-| `/newsletter/confirm?token=…`             | Newsletter confirmation email              | To build |
-| `/newsletter/unsubscribe?token=…`         | Every newsletter email                     | To build |
-| `/products/<handle>`                      | Back in stock and launch emails            | To build |
-| `/checkout/callback`                      | Paystack and Credo after payment           | To build |
-| `/api/auth/google/callback`               | Google after sign-in                       | Ready    |
-| `/api/revalidate`                         | Backend after settings are saved           | To build |
+| Address                                   | Arrives from                              | Status   |
+| ----------------------------------------- | ----------------------------------------- | -------- |
+| `/account/reset-password?token=…&email=…` | Password reset email                      | To build |
+| `/account/verify?token=…`                 | Email verification email (15-minute link) | To build |
+| `/newsletter/confirm?token=…`             | Newsletter confirmation email             | To build |
+| `/newsletter/unsubscribe?token=…`         | Every newsletter email                    | To build |
+| `/products/<handle>`                      | Back in stock and launch emails           | To build |
+| `/checkout/callback`                      | Paystack and Credo after payment          | To build |
+| `/shopping-bag/restore?token=…`           | Bag reminder email, "View your bag"       | Ready    |
+| `/shopping-bag/reminders/stop?token=…`    | Bag reminder email, stop link             | To build |
+| `/shopping-bag`                           | Where a restored bag opens                | To build |
+| `/api/auth/google/callback`               | Google after sign-in                      | Ready    |
+| `/api/revalidate`                         | Backend after settings are saved          | To build |
 
 ---
 
@@ -606,19 +643,19 @@ exist, or the address must change in the backend.
 Data and helpers waiting for screens. Recipes are in
 `apps/storefront/DATA-LAYER.md`.
 
-| Area                 | Exports                                                                                                  |
-| -------------------- | -------------------------------------------------------------------------------------------------------- |
-| Cart                 | `useCart`, `useAddToCart`, `useUpdateLineItem`, `useRemoveLineItem`, `fetchCartOnServer`                 |
-| Customer             | `useCustomer`, `useLogin`, `useRegister`, `useLogout`, `fetchCustomerOnServer`; Google via `/api/auth/google` |
-| Wishlist             | `useWishlist`, `useWishlistItem`, `useSaveToWishlist`, `useRemoveFromWishlist`, `fetchWishlistOnServer`  |
-| Alerts & marketing   | `useCreateProductAlert`, `useWaitingProductAlert`, `useProductAlerts`, `useCancelProductAlert`, `useMarketingPreference`, `useSetMarketingPreference` |
-| Product helpers      | `isComingSoon`, `isNew`, `onSaleSince` (`lib/medusa/product.ts`); `getStoreRegion`; `getStorefrontSettings` |
-| Catalogue reads      | `getProductByHandle`, `listProducts`, `getCategoryTree`, `getCategoryByHandle`, `getCollectionByHandle`, `getCollectionById`, `searchProducts` (`lib/medusa/catalog.ts`) |
-| Prices               | `formatPrice`, `getVariantPrice`, `getProductPrice` (`lib/medusa/price.ts`) |
-| Variants and stock   | `getColourChoices`, `getSizeChoices`, `findVariant`, `getVariantStock`, `canPurchase`, `getSelectionImages` (`lib/medusa/variants.ts`); `useProductSelection` |
-| Categories, collections, metadata | `getCategoryTrail`, `getCategorySeo`, `getCollectionContent`, `metaText`, `metaImage` |
-| Size guide           | `fetchSizeGuideOnServer`, `sizeGuideQueries`, `useMeasurementUnit`, `formatSizeGuideCell`, `sizeGuideColumnHeading`, `findSizeGuideRow` |
-| SEO                  | `buildRootMetadata`, `buildProductMetadata`, `productJsonLd`, `breadcrumbJsonLd`, `<JsonLd>`; `robots.ts`, `sitemap.ts`, `manifest.ts` |
+| Area                              | Exports                                                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cart                              | `useCart`, `useAddToCart`, `useUpdateLineItem`, `useRemoveLineItem`, `fetchCartOnServer`                                                                                 |
+| Customer                          | `useCustomer`, `useLogin`, `useRegister`, `useLogout`, `fetchCustomerOnServer`; Google via `/api/auth/google`                                                            |
+| Wishlist                          | `useWishlist`, `useWishlistItem`, `useSaveToWishlist`, `useRemoveFromWishlist`, `fetchWishlistOnServer`                                                                  |
+| Alerts & marketing                | `useCreateProductAlert`, `useWaitingProductAlert`, `useProductAlerts`, `useCancelProductAlert`, `useMarketingPreference`, `useSetMarketingPreference`                    |
+| Product helpers                   | `isComingSoon`, `isNew`, `onSaleSince` (`lib/medusa/product.ts`); `getStoreRegion`; `getStorefrontSettings`                                                              |
+| Catalogue reads                   | `getProductByHandle`, `listProducts`, `getCategoryTree`, `getCategoryByHandle`, `getCollectionByHandle`, `getCollectionById`, `searchProducts` (`lib/medusa/catalog.ts`) |
+| Prices                            | `formatPrice`, `getVariantPrice`, `getProductPrice` (`lib/medusa/price.ts`)                                                                                              |
+| Variants and stock                | `getColourChoices`, `getSizeChoices`, `findVariant`, `getVariantStock`, `canPurchase`, `getSelectionImages` (`lib/medusa/variants.ts`); `useProductSelection`            |
+| Categories, collections, metadata | `getCategoryTrail`, `getCategorySeo`, `getCollectionContent`, `metaText`, `metaImage`                                                                                    |
+| Size guide                        | `fetchSizeGuideOnServer`, `sizeGuideQueries`, `useMeasurementUnit`, `formatSizeGuideCell`, `sizeGuideColumnHeading`, `findSizeGuideRow`                                  |
+| SEO                               | `buildRootMetadata`, `buildProductMetadata`, `productJsonLd`, `breadcrumbJsonLd`, `<JsonLd>`; `robots.ts`, `sitemap.ts`, `manifest.ts`                                   |
 
 ---
 
@@ -626,7 +663,6 @@ Data and helpers waiting for screens. Recipes are in
 
 - **Gift cards, store credit, loyalty points:** not in this Medusa version.
   One-off promo codes are the substitute.
-- **Abandoned-cart reminders:** no backend job sends them yet.
 - **Tracking details on the order page:** order status shows; the shipping
   email carries the tracking link.
 - **Self-service returns:** needs a protected route first (see Orders).

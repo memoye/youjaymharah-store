@@ -122,7 +122,10 @@ export default async function ProductPage({
           {formatPrice(price.price.amount, price.price.currencyCode)}
           {price.price.isOnSale && (
             <s>
-              {formatPrice(price.price.originalAmount, price.price.currencyCode)}
+              {formatPrice(
+                price.price.originalAmount,
+                price.price.currencyCode,
+              )}
             </s>
           )}
         </p>
@@ -133,7 +136,7 @@ export default async function ProductPage({
 ```
 
 - **Listings:** `listProducts({ categoryId, collectionId, order: "-created_at",
-  limit, offset })` returns `{ products, count }` with card fields (price,
+limit, offset })` returns `{ products, count }` with card fields (price,
   stock, swatches, `+metadata` for the New badge).
 - **Navigation and category pages:** `getCategoryTree()` for menus;
   `getCategoryByHandle(handle)` returns the category with its parents, so
@@ -517,6 +520,20 @@ Call them with `sdk.client.fetch` and type the responses from
 | `POST /store/customers/me/password`              | `StoreSetCustomerPasswordResponse` |
 | `POST /store/newsletter/subscribe`               | `StoreNewsletterAckResponse`       |
 | `POST /store/newsletter/confirm`, `/unsubscribe` | `StoreNewsletterAckResponse`       |
+| `POST /store/bag-reminders/restore`              | `StoreRestoreBagResponse`          |
+| `POST /store/bag-reminders/stop`                 | `StoreStopBagRemindersResponse`    |
+
+**Bag reminder emails** link to two storefront addresses:
+
+- `/shopping-bag/restore?token=` is already built
+  (`app/(main)/shopping-bag/restore/route.ts`). It restores the bag as the
+  browser's cart and opens `/shopping-bag`. When restoring fails, it adds
+  `?restore=expired`, `invalid` or `failed`, so show a short message on the
+  shopping bag page. The restored bag replaces whatever cart that browser had.
+- `/shopping-bag/reminders/stop?token=` is still to build. Show a "Stop bag
+  reminders" button that calls `useStopBagReminders()` from
+  `features/bag-reminders/hooks.ts`. Don't stop on page load: email scanners
+  open links first. A 404 means the link is no longer valid.
 
 `/store/wishlists/current` exists only in the proxy. It becomes the customer's
 list (`/store/customers/me/wishlist`) when signed in, and the guest list in the
@@ -620,40 +637,40 @@ with how long Medusa took to answer.
 
 ## File map
 
-| File                                | What it is                                                         |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                     |
-| `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                    |
-| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies            |
-| `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`     |
-| `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                           |
-| `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                           |
-| `lib/query/client.ts`               | Query client defaults                                              |
-| `lib/query/provider.tsx`            | Provider and devtools, mounted in `app/layout.tsx`                 |
-| `lib/http/post-json.ts`             | `postJson` for the storefront's own routes                         |
-| `lib/http/same-origin.ts`           | CSRF check for Route Handlers                                      |
-| `app/api/medusa/[...path]/route.ts` | The proxy                                                          |
-| `app/api/auth/*`                    | Login, register, logout, Google                                    |
-| `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)           |
-| `features/customer/`                | Customer query, auth hooks and server prefetch (worked example)    |
-| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch              |
-| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                    |
-| `features/marketing/`               | The account's marketing email setting                              |
-| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                             |
-| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: brand, home page hero and featured collection, sharing & search, New badge days |
-| `lib/seo/metadata.ts`               | `buildRootMetadata`, `buildProductMetadata`                        |
-| `lib/seo/json-ld.ts`                | Organization, WebSite, Product and breadcrumb structured data      |
-| `lib/seo/routes.ts`                 | Public page paths used by the sitemap and structured data          |
-| `components/seo/json-ld.tsx`        | `<JsonLd>`: renders structured data safely                         |
-| `app/robots.ts`, `app/sitemap.ts`   | robots.txt and sitemap.xml                                         |
-| `app/manifest.ts`                   | Home-screen web app manifest (brand name, description, favicon)    |
-| `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                    |
+| File                                | What it is                                                                                                                                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/medusa/server.ts`              | Server SDK, `getAuthHeaders()`                                                                                                                                                                                             |
+| `lib/medusa/browser.ts`             | Browser SDK (through the proxy)                                                                                                                                                                                            |
+| `lib/medusa/session.ts`             | Reading and writing the auth, cart and wishlist cookies                                                                                                                                                                    |
+| `lib/medusa/errors.ts`              | `errorStatus`, `isUnauthorized`, `isNotFound`, `isClientError`                                                                                                                                                             |
+| `lib/medusa/auth.ts`                | Shared sign-in logic for the auth routes                                                                                                                                                                                   |
+| `lib/query/keys.ts`                 | Every query key, and `privateQueryRoots`                                                                                                                                                                                   |
+| `lib/query/client.ts`               | Query client defaults                                                                                                                                                                                                      |
+| `lib/query/provider.tsx`            | Provider and devtools, mounted in `app/layout.tsx`                                                                                                                                                                         |
+| `lib/http/post-json.ts`             | `postJson` for the storefront's own routes                                                                                                                                                                                 |
+| `lib/http/same-origin.ts`           | CSRF check for Route Handlers                                                                                                                                                                                              |
+| `app/api/medusa/[...path]/route.ts` | The proxy                                                                                                                                                                                                                  |
+| `app/api/auth/*`                    | Login, register, logout, Google                                                                                                                                                                                            |
+| `features/cart/`                    | Cart queries, hooks and server prefetch (worked example)                                                                                                                                                                   |
+| `features/customer/`                | Customer query, auth hooks and server prefetch (worked example)                                                                                                                                                            |
+| `features/wishlist/`                | Wishlist query, save/remove hooks and server prefetch                                                                                                                                                                      |
+| `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                                                                                                                                                                            |
+| `features/marketing/`               | The account's marketing email setting                                                                                                                                                                                      |
+| `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                                                                                                                                                                                     |
+| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: brand, home page hero and featured collection, sharing & search, New badge days                                                                                                                 |
+| `lib/seo/metadata.ts`               | `buildRootMetadata`, `buildProductMetadata`                                                                                                                                                                                |
+| `lib/seo/json-ld.ts`                | Organization, WebSite, Product and breadcrumb structured data                                                                                                                                                              |
+| `lib/seo/routes.ts`                 | Public page paths used by the sitemap and structured data                                                                                                                                                                  |
+| `components/seo/json-ld.tsx`        | `<JsonLd>`: renders structured data safely                                                                                                                                                                                 |
+| `app/robots.ts`, `app/sitemap.ts`   | robots.txt and sitemap.xml                                                                                                                                                                                                 |
+| `app/manifest.ts`                   | Home-screen web app manifest (brand name, description, favicon)                                                                                                                                                            |
+| `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                                                                                                                                                                            |
 | `lib/medusa/catalog.ts`             | Server reads: `getProductByHandle`, `listProducts`, `getCategoryTree`, `getCategoryByHandle`, `getCollectionByHandle`, `getCollectionById`, `searchProducts`; `PRODUCT_CARD_FIELDS`, `PRODUCT_PAGE_FIELDS`, `CATALOG_TAGS` |
-| `lib/medusa/price.ts`               | `formatPrice`, `getVariantPrice`, `getProductPrice` (sale, percent off, "From" ranges) |
-| `lib/medusa/variants.ts`            | `getColourChoices`, `getSizeChoices`, `getOptionChoices`, `findVariant`, `getVariantStock`, `canPurchase`, `isVariantPurchasable`, `getSelectionImages` |
-| `lib/medusa/category.ts`            | `getCategoryTrail` (breadcrumbs), `sortCategoryTree`, `getCategorySeo` |
-| `lib/medusa/collection.ts`          | `getCollectionContent`: description and banner images, cleaned     |
-| `lib/medusa/metadata.ts`            | `metaText`, `metaImage`: read staff-edited metadata safely         |
-| `features/product-selection/`       | `useProductSelection`: colour and size kept in the URL             |
-| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook              |
-| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                        |
+| `lib/medusa/price.ts`               | `formatPrice`, `getVariantPrice`, `getProductPrice` (sale, percent off, "From" ranges)                                                                                                                                     |
+| `lib/medusa/variants.ts`            | `getColourChoices`, `getSizeChoices`, `getOptionChoices`, `findVariant`, `getVariantStock`, `canPurchase`, `isVariantPurchasable`, `getSelectionImages`                                                                    |
+| `lib/medusa/category.ts`            | `getCategoryTrail` (breadcrumbs), `sortCategoryTree`, `getCategorySeo`                                                                                                                                                     |
+| `lib/medusa/collection.ts`          | `getCollectionContent`: description and banner images, cleaned                                                                                                                                                             |
+| `lib/medusa/metadata.ts`            | `metaText`, `metaImage`: read staff-edited metadata safely                                                                                                                                                                 |
+| `features/product-selection/`       | `useProductSelection`: colour and size kept in the URL                                                                                                                                                                     |
+| `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook                                                                                                                                                                      |
+| `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                                                                                                                                                                                |

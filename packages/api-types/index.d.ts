@@ -560,3 +560,46 @@ export type StoreSearchResponse = {
   offset: number;
   facets: Record<string, unknown>;
 };
+
+export type AdminBagReminderSettingsResponse = {
+  settings: {
+    id: string;
+    enabled: boolean;
+    first_delay_hours: number;
+    second_delay_hours: number | null;
+    third_delay_hours: number | null;
+  };
+};
+
+export type AdminUpdateBagReminderSettingsBody = {
+  enabled?: boolean;
+  first_delay_hours?: number;
+  second_delay_hours?: number | null;
+  third_delay_hours?: number | null;
+};
+
+export type AdminBagReminderStatsResponse = {
+  stats: {
+    since: string;
+    bags_reminded: number;
+    bags_opened: number;
+    orders_recovered: number;
+    revenue_recovered: {
+      currency_code: string;
+      amount: number;
+    }[];
+    stopped: number;
+  };
+};
+
+export type StoreBagReminderTokenBody = {
+  token: string;
+};
+
+export type StoreRestoreBagResponse = {
+  cart_id: string;
+};
+
+export type StoreStopBagRemindersResponse = {
+  status: string;
+};

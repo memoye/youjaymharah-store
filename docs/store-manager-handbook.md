@@ -291,6 +291,31 @@ page. The layout and the order of sections are set by the website itself.
   Deleting the featured collection hides the section until you pick another.
 - Changes reach the website within a few minutes.
 
+### Bag reminders
+
+`Settings › Bag reminders` (Marketing or Store Manager) emails shoppers who
+leave items in their shopping bag.
+
+- **Off until you turn it on.** Once on, reminders start within 10 minutes for
+  recently changed bags. Older bags are never emailed.
+- **When:** 1 hour, 24 hours and 1 week after the shopper last changed their
+  bag. Change the hours, or clear the second or last reminder to send fewer.
+  A shopper who comes back and changes their bag moves the next reminder
+  later.
+- **Who:** signed-in customers, and guests who entered their email at
+  checkout.
+- **Who isn't reminded:**
+  - anyone who clicked "Stop bag reminders" in an email;
+  - anyone who unsubscribed from the newsletter;
+  - anyone who ordered after last changing their bag.
+- **"View your bag"** in the email reopens their bag on the website, even on
+  another device.
+- **Last 30 days** shows:
+  - bags reminded;
+  - bags reopened from an email;
+  - orders placed from reminded bags, and what they were worth;
+  - how many people stopped reminders.
+
 ### Search & sharing
 
 `Settings › Storefront` controls how the store looks in Google and when a link
@@ -386,7 +411,7 @@ check `Settings › Workflows` for the failed send.
 | Customer self-service returns            | Not built     | Customers contact support; you create the return                                                     |
 | POS app                                  | Workaround    | Draft orders with a separate shop location                                                           |
 | Gift cards, store credit, loyalty points | Not available | One-off promo codes as a substitute                                                                  |
-| Abandoned-cart reminders                 | Not built     | —                                                                                                    |
+| Abandoned-cart reminders                 | Built         | Settings › Bag reminders (see "Bag reminders")                                                       |
 | Newsletter checkbox at checkout          | Not built     | The "Show opt-in at checkout" setting has no effect yet; the site's signup form and "Notify me" work |
 
 ## 7. Medusa guides
