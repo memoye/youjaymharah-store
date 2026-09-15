@@ -135,9 +135,10 @@ export default async function ProductPage({
 }
 ```
 
-- **Listings:** `listProducts({ categoryId, collectionId, order: "-created_at",
-limit, offset })` returns `{ products, count }` with card fields (price,
-  stock, swatches, `+metadata` for the New badge).
+- **Listings:** `listProducts()` takes `categoryId`, `collectionId`, `order`
+  (such as `"-created_at"`), `limit` and `offset`, and returns
+  `{ products, count }` with card fields: price, stock, swatches and
+  `+metadata` for the New badge.
 - **Navigation and category pages:** `getCategoryTree()` for menus;
   `getCategoryByHandle(handle)` returns the category with its parents, so
   `getCategoryTrail(category)` builds breadcrumbs without another request.
