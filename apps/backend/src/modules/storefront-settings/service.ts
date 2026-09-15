@@ -1,5 +1,6 @@
 import { MedusaService } from "@medusajs/framework/utils";
 
+import { HomepageHeroRevision } from "./models/homepage-hero-revision";
 import { StorefrontSettings } from "./models/storefront-settings";
 
 /** The single row every storefront settings read and write addresses. */
@@ -9,6 +10,7 @@ export const DEFAULT_NEW_BADGE_DAYS = 30;
 
 class StorefrontSettingsModuleService extends MedusaService({
   StorefrontSettings,
+  HomepageHeroRevision,
 }) {
   /**
    * Returns the settings, creating them with defaults on first access, so the

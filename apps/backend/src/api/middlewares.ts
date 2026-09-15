@@ -499,6 +499,16 @@ export default defineMiddlewares({
       middlewares: [validateAndTransformBody(AdminUpdateStorefrontSettings)],
       policies: [{ resource: "storefront_settings", operation: "update" }],
     },
+    {
+      matcher: "/admin/storefront-settings/hero-history",
+      method: ["GET"],
+      policies: [{ resource: "storefront_settings", operation: "read" }],
+    },
+    {
+      matcher: "/admin/storefront-settings/hero-history/:id/restore",
+      method: ["POST"],
+      policies: [{ resource: "storefront_settings", operation: "update" }],
+    },
     // Search reads its arguments from the query string, so the schema gates
     // the paging limits as well -- an unbounded `limit` would let one request
     // pull the whole index.

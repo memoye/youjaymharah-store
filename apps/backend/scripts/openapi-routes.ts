@@ -222,6 +222,25 @@ const StorefrontSettings = z.object({
   featured_collection_id: z.string().nullable(),
 });
 
+const HomepageHeroHistory = z.object({
+  /** Newest first; only the most recent 10 are kept. */
+  revisions: z.array(
+    z.object({
+      id: z.string(),
+      hero: StoredHomepageHero,
+      /** When a save replaced this hero. */
+      replaced_at: z.string(),
+      replaced_by: z
+        .object({
+          id: z.string(),
+          email: z.string().nullable(),
+          name: z.string().nullable(),
+        })
+        .nullable(),
+    }),
+  ),
+});
+
 const PublicStorefrontSettings = z.object({
   brand: z.object({
     name: z.string(),
@@ -484,6 +503,11 @@ export const TYPES: {
     io: "output",
   },
   {
+    name: "AdminHomepageHeroHistoryResponse",
+    schema: HomepageHeroHistory,
+    io: "output",
+  },
+  {
     name: "StoreStorefrontSettingsResponse",
     schema: z.object({ settings: PublicStorefrontSettings }),
     io: "output",
@@ -524,6 +548,44 @@ export const ROUTES: RouteDoc[] = [
         status: 400,
         description:
           "Validation failed: `new_badge_days` must be a whole number from 1 to 365.",
+      },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/admin/storefront-settings/hero-history",
+    tag: "Storefront",
+    summary: "List previous home page heroes",
+    description:
+      "Heroes replaced by earlier saves, newest first, with when and by whom. A save records the hero it replaces only when the hero changed and had content; the 10 most recent are kept.",
+    auth: "admin",
+    policies: ["storefront_settings:read"],
+    response: {
+      description: "The hero history.",
+      schema: HomepageHeroHistory,
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/storefront-settings/hero-history/{id}/restore",
+    tag: "Storefront",
+    summary: "Restore a previous home page hero",
+    description:
+      "Makes the hero current exactly as it was saved, shown or hidden. The hero it replaces joins the history, so a restore can be undone.",
+    auth: "admin",
+    policies: ["storefront_settings:update"],
+    response: {
+      description: "The updated settings.",
+      schema: z.object({ settings: StorefrontSettings }),
+    },
+    errors: [
+      {
+        status: 404,
+        description: "The previous hero is no longer kept.",
+      },
+      {
+        status: 400,
+        description: "The hero no longer meets today's validation rules.",
       },
     ],
   },

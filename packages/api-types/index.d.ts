@@ -450,6 +450,30 @@ export type AdminStorefrontSettingsResponse = {
   };
 };
 
+export type AdminHomepageHeroHistoryResponse = {
+  revisions: {
+    id: string;
+    hero: {
+      enabled: boolean;
+      eyebrow: string | null;
+      title: string | null;
+      description: string | null;
+      desktop_image_url: string | null;
+      mobile_image_url: string | null;
+      desktop_video_url: string | null;
+      mobile_video_url: string | null;
+      cta_label: string | null;
+      cta_url: string | null;
+    };
+    replaced_at: string;
+    replaced_by: {
+      id: string;
+      email: string | null;
+      name: string | null;
+    } | null;
+  }[];
+};
+
 export type StoreStorefrontSettingsResponse = {
   settings: {
     brand: {

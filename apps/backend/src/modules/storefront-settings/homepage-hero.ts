@@ -29,6 +29,22 @@ const TEXT_FIELDS = [
   "cta_url",
 ] as const;
 
+/** How many replaced heroes are kept for staff to restore. */
+export const HERO_HISTORY_LIMIT = 10;
+
+/** Whether anything was filled in; a hero that is only switched on or off doesn't count. */
+export function hasHeroContent(hero: HomepageHero): boolean {
+  return TEXT_FIELDS.some((field) => hero[field] !== null);
+}
+
+/** Field-by-field equality of two complete heroes. */
+export function isSameHero(a: HomepageHero, b: HomepageHero): boolean {
+  return (
+    a.enabled === b.enabled &&
+    TEXT_FIELDS.every((field) => a[field] === b[field])
+  );
+}
+
 /**
  * Every hero field, set to its value or null, with the hero off unless it was
  * explicitly turned on. Always stored in this complete form: JSON fields merge

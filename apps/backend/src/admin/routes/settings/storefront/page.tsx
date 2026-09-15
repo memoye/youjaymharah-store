@@ -14,6 +14,7 @@ import {
   Text,
   Textarea,
   toast,
+  usePrompt,
 } from "@medusajs/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -71,6 +72,14 @@ type StorefrontSettings = {
 const BRANDING_QUERY_KEY = ["branding"];
 const SETTINGS_QUERY_KEY = ["storefront-settings"];
 const COLLECTION_OPTIONS_QUERY_KEY = ["storefront-settings", "collections"];
+const HERO_HISTORY_QUERY_KEY = ["storefront-settings", "hero-history"];
+
+type HeroRevision = {
+  id: string;
+  hero: HomepageHero;
+  replaced_at: string;
+  replaced_by: { id: string; email: string | null; name: string | null } | null;
+};
 
 const TITLE_LIMIT = 60;
 const DESCRIPTION_LIMIT = 155;
@@ -442,22 +451,174 @@ const HomepageSection = () => {
             value={featuredLabel}
             hint="Shown with the collection's own description and images."
           />
+          <HeroHistory onRestored={onHeroChanged} />
           <EditHomepageDrawer
             settings={settings}
             collections={collections.data ?? []}
             collectionsLoading={collections.isLoading}
             open={open}
             onOpenChange={setOpen}
-            onSaved={(updated) =>
-              queryClient.setQueryData<{ settings: StorefrontSettings }>(
-                SETTINGS_QUERY_KEY,
-                { settings: updated },
-              )
-            }
+            onSaved={onHeroChanged}
           />
         </>
       )}
     </Section>
+  );
+
+  function onHeroChanged(updated: StorefrontSettings) {
+    queryClient.setQueryData<{ settings: StorefrontSettings }>(
+      SETTINGS_QUERY_KEY,
+      { settings: updated },
+    );
+    // A save or restore that changed the hero added the old one to history.
+    void queryClient.invalidateQueries({ queryKey: HERO_HISTORY_QUERY_KEY });
+  }
+};
+
+function describeReplacement(revision: HeroRevision): string {
+  const when = new Date(revision.replaced_at).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  const who = revision.replaced_by
+    ? (revision.replaced_by.name ??
+      revision.replaced_by.email ??
+      "a former staff member")
+    : null;
+
+  return who ? `Replaced ${when} by ${who}` : `Replaced ${when}`;
+}
+
+/**
+ * The last few heroes that saves replaced, each restorable. Restoring saves
+ * it as the current hero, so the one it replaces appears here in turn.
+ */
+const HeroHistory = ({
+  onRestored,
+}: {
+  onRestored: (settings: StorefrontSettings) => void;
+}) => {
+  const prompt = usePrompt();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: HERO_HISTORY_QUERY_KEY,
+    queryFn: () =>
+      sdk.client.fetch<{ revisions: HeroRevision[] }>(
+        "/admin/storefront-settings/hero-history",
+      ),
+  });
+
+  const restore = useMutation({
+    mutationFn: (id: string) =>
+      sdk.client.fetch<{ settings: StorefrontSettings }>(
+        `/admin/storefront-settings/hero-history/${id}/restore`,
+        { method: "POST" },
+      ),
+    onSuccess: ({ settings }) => {
+      toast.success("Previous banner restored.");
+      onRestored(settings);
+    },
+    onError: (err: Error & { status?: number }) =>
+      saveError(err, "Marketing, the Store Manager and the store owner"),
+  });
+
+  const revisions = data?.revisions ?? [];
+
+  const onRestore = async (revision: HeroRevision) => {
+    const confirmed = await prompt({
+      title: "Restore this banner?",
+      description: `"${revision.hero.title ?? "Untitled banner"}" replaces the current banner on the website, ${revision.hero.enabled ? "shown" : "hidden"} as it was. The current banner is kept here, so you can switch back.`,
+      confirmText: "Restore",
+      cancelText: "Cancel",
+    });
+
+    if (confirmed) {
+      restore.mutate(revision.id);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-y-3 px-6 py-4">
+      <div className="flex flex-col gap-y-1">
+        <Text size="small" leading="compact" weight="plus">
+          Previous banners
+        </Text>
+        <Text size="small" leading="compact" className="text-ui-fg-subtle">
+          Each save that changes the banner keeps the one it replaced. The last
+          10 are kept.
+        </Text>
+      </div>
+      {isLoading ? (
+        <Spinner className="animate-spin text-ui-fg-subtle" />
+      ) : error ? (
+        <Text size="small" leading="compact" className="text-ui-fg-subtle">
+          Previous banners couldn't be loaded.
+        </Text>
+      ) : !revisions.length ? (
+        <Text size="small" leading="compact" className="text-ui-fg-subtle">
+          None yet.
+        </Text>
+      ) : (
+        <ul className="flex flex-col divide-y rounded-lg border border-ui-border-base">
+          {revisions.map((revision) => (
+            <li
+              key={revision.id}
+              className="flex items-center gap-x-3 px-3 py-2"
+            >
+              {revision.hero.desktop_image_url ? (
+                <img
+                  src={revision.hero.desktop_image_url}
+                  alt=""
+                  className="h-10 w-16 shrink-0 rounded object-cover"
+                />
+              ) : (
+                <div className="h-10 w-16 shrink-0 rounded bg-ui-bg-subtle" />
+              )}
+              <div className="flex min-w-0 flex-1 flex-col gap-y-1">
+                <div className="flex items-center gap-x-2">
+                  <Text
+                    size="small"
+                    leading="compact"
+                    weight="plus"
+                    className="truncate"
+                  >
+                    {revision.hero.title ?? "Untitled banner"}
+                  </Text>
+                  {revision.hero.desktop_video_url && (
+                    <Badge size="2xsmall" color="blue">
+                      Video
+                    </Badge>
+                  )}
+                  {!revision.hero.enabled && (
+                    <Badge size="2xsmall" color="grey">
+                      Hidden
+                    </Badge>
+                  )}
+                </div>
+                <Text
+                  size="small"
+                  leading="compact"
+                  className="truncate text-ui-fg-subtle"
+                >
+                  {describeReplacement(revision)}
+                </Text>
+              </div>
+              <Button
+                size="small"
+                variant="secondary"
+                disabled={restore.isPending}
+                isLoading={
+                  restore.isPending && restore.variables === revision.id
+                }
+                onClick={() => void onRestore(revision)}
+              >
+                Restore
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 };
 

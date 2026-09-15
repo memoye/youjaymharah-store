@@ -279,6 +279,12 @@ page. The layout and the order of sections are set by the website itself.
     full `https://` address.
   - Turning the banner off keeps everything you typed, so you can prepare the
     next one in advance.
+  - **Previous banners:** each save that changes the banner keeps the one it
+    replaced, with who changed it and when. The last 10 are listed under the
+    Homepage section.
+    - **Restore** brings one back exactly as it was, shown or hidden.
+    - The banner it replaces is kept too, so a restore can be undone the same
+      way.
 - **Featured collection:** pick one collection to feature. The website uses
   the collection's own description and images. Set these on the collection
   itself, in its **Website content** box under `Products › Collections`.

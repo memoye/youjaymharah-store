@@ -24,7 +24,7 @@ export const POST = async (
   res: MedusaResponse,
 ) => {
   const { result } = await updateStorefrontSettingsWorkflow(req.scope).run({
-    input: req.validatedBody,
+    input: { ...req.validatedBody, actor_id: req.auth_context.actor_id },
   });
 
   res.json({ settings: result });
