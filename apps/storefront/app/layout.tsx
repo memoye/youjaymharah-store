@@ -10,13 +10,14 @@ import { buildRootMetadata } from "@/lib/seo/metadata"
 import { cn } from "@/lib/util/cn"
 import { StorefrontSettingsProvider } from "@/features/site-settings/provider"
 
-const montserrat = Montserrat({
-  variable: "--font-sans",
+const bodoniModa = Bodoni_Moda({
+  variable: "--font-bodoni",
   subsets: ["latin"],
+  axes: ["opsz"],
 })
 
-const bodoniModa = Bodoni_Moda({
-  variable: "--font-serif",
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
 })
 
