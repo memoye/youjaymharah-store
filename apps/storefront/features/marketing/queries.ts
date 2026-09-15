@@ -1,11 +1,11 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query"
 import type {
   MarketingPreference,
   StoreMarketingPreferenceResponse,
-} from "@youjaymharah/api-types";
+} from "@youjaymharah/api-types"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { queryKeys } from "@/lib/query/keys"
 
 export const marketingQueries = {
   /**
@@ -24,4 +24,4 @@ export const marketingQueries = {
         ).marketing,
       meta: { private: true },
     }),
-};
+}

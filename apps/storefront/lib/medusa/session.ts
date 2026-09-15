@@ -1,24 +1,24 @@
-import "server-only";
+import "server-only"
 
-import { cookies } from "next/headers";
+import { cookies } from "next/headers"
 
-import { AUTH_COOKIE, CART_COOKIE, WISHLIST_COOKIE } from "./constants";
+import { AUTH_COOKIE, CART_COOKIE, WISHLIST_COOKIE } from "./constants"
 
 /**
  * Must not outlive the token inside it. Medusa signs customer tokens for its
  * `jwtExpiresIn` setting, which defaults to one day -- raise both together.
  */
-const AUTH_MAX_AGE_SECONDS = 60 * 60 * 24;
+const AUTH_MAX_AGE_SECONDS = 60 * 60 * 24
 
 /** A basket is worth keeping for longer than a login. */
-const CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 /**
  * Renewed on every save. The backend deletes guest wishlists after the same
  * 90 days without a save (jobs/delete-stale-guest-wishlists.ts), so change
  * both together.
  */
-const WISHLIST_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
+const WISHLIST_MAX_AGE_SECONDS = 60 * 60 * 24 * 90
 
 const baseCookie = {
   httpOnly: true,
@@ -26,53 +26,53 @@ const baseCookie = {
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax",
   path: "/",
-} as const;
+} as const
 
 // Reading works anywhere on the server. Setting and deleting only work in Route
 // Handlers (and Server Functions); Next.js refuses during Server Component
 // rendering, because the response has already started streaming.
 
 export async function getAuthToken(): Promise<string | undefined> {
-  return (await cookies()).get(AUTH_COOKIE)?.value;
+  return (await cookies()).get(AUTH_COOKIE)?.value
 }
 
 export async function setAuthToken(token: string): Promise<void> {
-  (await cookies()).set(AUTH_COOKIE, token, {
+  ;(await cookies()).set(AUTH_COOKIE, token, {
     ...baseCookie,
     maxAge: AUTH_MAX_AGE_SECONDS,
-  });
+  })
 }
 
 export async function clearAuthToken(): Promise<void> {
-  (await cookies()).delete(AUTH_COOKIE);
+  ;(await cookies()).delete(AUTH_COOKIE)
 }
 
 export async function getCartId(): Promise<string | undefined> {
-  return (await cookies()).get(CART_COOKIE)?.value;
+  return (await cookies()).get(CART_COOKIE)?.value
 }
 
 export async function setCartId(cartId: string): Promise<void> {
-  (await cookies()).set(CART_COOKIE, cartId, {
+  ;(await cookies()).set(CART_COOKIE, cartId, {
     ...baseCookie,
     maxAge: CART_MAX_AGE_SECONDS,
-  });
+  })
 }
 
 export async function clearCartId(): Promise<void> {
-  (await cookies()).delete(CART_COOKIE);
+  ;(await cookies()).delete(CART_COOKIE)
 }
 
 export async function getWishlistId(): Promise<string | undefined> {
-  return (await cookies()).get(WISHLIST_COOKIE)?.value;
+  return (await cookies()).get(WISHLIST_COOKIE)?.value
 }
 
 export async function setWishlistId(wishlistId: string): Promise<void> {
-  (await cookies()).set(WISHLIST_COOKIE, wishlistId, {
+  ;(await cookies()).set(WISHLIST_COOKIE, wishlistId, {
     ...baseCookie,
     maxAge: WISHLIST_MAX_AGE_SECONDS,
-  });
+  })
 }
 
 export async function clearWishlistId(): Promise<void> {
-  (await cookies()).delete(WISHLIST_COOKIE);
+  ;(await cookies()).delete(WISHLIST_COOKIE)
 }

@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { StoreMarketingPreferenceResponse } from "@youjaymharah/api-types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { StoreMarketingPreferenceResponse } from "@youjaymharah/api-types"
 
-import { useCustomer } from "@/features/customer/hooks";
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { queryKeys } from "@/lib/query/keys";
+import { useCustomer } from "@/features/customer/hooks"
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { queryKeys } from "@/lib/query/keys"
 
-import { marketingQueries } from "./queries";
+import { marketingQueries } from "./queries"
 
 /** The account's marketing email status. Stays idle for guests. */
 export function useMarketingPreference() {
-  const { data: customer } = useCustomer();
+  const { data: customer } = useCustomer()
 
   return useQuery({
     ...marketingQueries.preference(),
     enabled: Boolean(customer),
-  });
+  })
 }
 
 /**
@@ -25,7 +25,7 @@ export function useMarketingPreference() {
  * status the server returns ("Check your inbox to confirm").
  */
 export function useSetMarketingPreference() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (subscribed: boolean) =>
@@ -37,5 +37,5 @@ export function useSetMarketingPreference() {
       ).marketing,
     onSuccess: (marketing) =>
       queryClient.setQueryData(queryKeys.marketing.preference(), marketing),
-  });
+  })
 }

@@ -1,33 +1,33 @@
-"use client";
+"use client"
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react"
 
-import type { MeasurementUnit } from "@/lib/medusa/size-guide";
+import type { MeasurementUnit } from "@/lib/medusa/size-guide"
 
-const STORAGE_KEY = "size-guide-unit";
+const STORAGE_KEY = "size-guide-unit"
 
-const listeners = new Set<() => void>();
+const listeners = new Set<() => void>()
 
 /** Used when the browser refuses storage (private mode, blocked site data). */
-let fallback: MeasurementUnit = "cm";
+let fallback: MeasurementUnit = "cm"
 
 function read(): MeasurementUnit {
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored === "in" || stored === "cm" ? stored : fallback;
+    const stored = window.localStorage.getItem(STORAGE_KEY)
+    return stored === "in" || stored === "cm" ? stored : fallback
   } catch {
-    return fallback;
+    return fallback
   }
 }
 
 function subscribe(listener: () => void) {
-  listeners.add(listener);
-  window.addEventListener("storage", listener);
+  listeners.add(listener)
+  window.addEventListener("storage", listener)
 
   return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", listener);
-  };
+    listeners.delete(listener)
+    window.removeEventListener("storage", listener)
+  }
 }
 
 /**
@@ -36,21 +36,21 @@ function subscribe(listener: () => void) {
  * hydration, then switches to the stored choice.
  */
 export function useMeasurementUnit() {
-  const unit = useSyncExternalStore(subscribe, read, () => "cm" as const);
+  const unit = useSyncExternalStore(subscribe, read, () => "cm" as const)
 
   const setUnit = useCallback((next: MeasurementUnit) => {
-    fallback = next;
+    fallback = next
 
     try {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(STORAGE_KEY, next)
     } catch {
       // Storage unavailable: the in-memory fallback still applies this visit.
     }
 
     for (const listener of listeners) {
-      listener();
+      listener()
     }
-  }, []);
+  }, [])
 
-  return [unit, setUnit] as const;
+  return [unit, setUnit] as const
 }

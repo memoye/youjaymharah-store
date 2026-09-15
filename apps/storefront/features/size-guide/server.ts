@@ -1,9 +1,9 @@
-import "server-only";
+import "server-only"
 
-import type { StoreSizeGuideResponse } from "@youjaymharah/api-types";
+import type { StoreSizeGuideResponse } from "@youjaymharah/api-types"
 
-import { isNotFound } from "@/lib/medusa/errors";
-import { sdk } from "@/lib/medusa/server";
+import { isNotFound } from "@/lib/medusa/errors"
+import { sdk } from "@/lib/medusa/server"
 
 /**
  * The size guide for a product page, from a Server Component. Reads no
@@ -16,12 +16,12 @@ export async function fetchSizeGuideOnServer(
   try {
     return await sdk.client.fetch<StoreSizeGuideResponse>(
       `/store/products/${encodeURIComponent(productId)}/size-guide`,
-    );
+    )
   } catch (error) {
     if (isNotFound(error)) {
-      return { size_guide: null, source: null };
+      return { size_guide: null, source: null }
     }
 
-    throw error;
+    throw error
   }
 }

@@ -1,9 +1,9 @@
-import { queryOptions } from "@tanstack/react-query";
-import type { StoreWishlistResponse, Wishlist } from "@youjaymharah/api-types";
+import { queryOptions } from "@tanstack/react-query"
+import type { StoreWishlistResponse, Wishlist } from "@youjaymharah/api-types"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { CURRENT_WISHLIST_ID } from "@/lib/medusa/constants";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { CURRENT_WISHLIST_ID } from "@/lib/medusa/constants"
+import { queryKeys } from "@/lib/query/keys"
 
 export const wishlistQueries = {
   /**
@@ -22,4 +22,4 @@ export const wishlistQueries = {
         ).wishlist,
       meta: { private: true },
     }),
-};
+}

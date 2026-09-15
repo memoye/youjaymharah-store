@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import { redirect } from "next/navigation"
 
-import { sdk } from "@/lib/medusa/server";
+import { sdk } from "@/lib/medusa/server"
 
 /**
  * "Continue with Google": link or navigate to this route. It asks Medusa for
@@ -10,18 +10,18 @@ import { sdk } from "@/lib/medusa/server";
  * point at /api/auth/google/callback on this storefront.
  */
 export async function GET(): Promise<never> {
-  let location: string | undefined;
+  let location: string | undefined
 
   try {
-    const result = await sdk.auth.login("customer", "google", {});
+    const result = await sdk.auth.login("customer", "google", {})
 
     if (typeof result !== "string" && "location" in result) {
-      location = result.location;
+      location = result.location
     }
   } catch (error) {
-    console.error("Google sign-in could not start", error);
+    console.error("Google sign-in could not start", error)
   }
 
   // Outside the try: redirect() works by throwing, and a catch would swallow it.
-  redirect(location ?? "/?auth_error=google_unavailable");
+  redirect(location ?? "/?auth_error=google_unavailable")
 }

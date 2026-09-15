@@ -1,9 +1,9 @@
-import "server-only";
+import "server-only"
 
-import type { HttpTypes } from "@medusajs/types";
+import type { HttpTypes } from "@medusajs/types"
 
-import { isUnauthorized } from "@/lib/medusa/errors";
-import { getAuthHeaders, sdk } from "@/lib/medusa/server";
+import { isUnauthorized } from "@/lib/medusa/errors"
+import { getAuthHeaders, sdk } from "@/lib/medusa/server"
 
 /**
  * The server-side query function for `customerQueries.me()`: the signed-in
@@ -12,21 +12,21 @@ import { getAuthHeaders, sdk } from "@/lib/medusa/server";
  * the first paint instead of flashing "Sign in".
  */
 export async function fetchCustomerOnServer(): Promise<HttpTypes.StoreCustomer | null> {
-  const headers = await getAuthHeaders();
+  const headers = await getAuthHeaders()
 
   if (!headers.authorization) {
-    return null;
+    return null
   }
 
   try {
-    const { customer } = await sdk.store.customer.retrieve({}, headers);
+    const { customer } = await sdk.store.customer.retrieve({}, headers)
 
-    return customer;
+    return customer
   } catch (error) {
     if (isUnauthorized(error)) {
-      return null;
+      return null
     }
 
-    throw error;
+    throw error
   }
 }

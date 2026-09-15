@@ -1,9 +1,9 @@
-import type { HttpTypes } from "@medusajs/types";
-import { queryOptions } from "@tanstack/react-query";
+import type { HttpTypes } from "@medusajs/types"
+import { queryOptions } from "@tanstack/react-query"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { isUnauthorized } from "@/lib/medusa/errors";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { isUnauthorized } from "@/lib/medusa/errors"
+import { queryKeys } from "@/lib/query/keys"
 
 export const customerQueries = {
   /**
@@ -15,16 +15,16 @@ export const customerQueries = {
       queryKey: queryKeys.customer.me(),
       queryFn: async (): Promise<HttpTypes.StoreCustomer | null> => {
         try {
-          const { customer } = await getBrowserSdk().store.customer.retrieve();
+          const { customer } = await getBrowserSdk().store.customer.retrieve()
 
-          return customer;
+          return customer
         } catch (error) {
           if (isUnauthorized(error)) {
-            return null;
+            return null
           }
 
-          throw error;
+          throw error
         }
       },
     }),
-};
+}

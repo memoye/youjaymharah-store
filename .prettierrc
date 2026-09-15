@@ -10,7 +10,8 @@
     {
       "files": "apps/storefront/**",
       "options": {
-        "semi": false
+        "semi": false,
+        "tailwindStylesheet": "apps/storefront/app/globals.css"
       }
     }
   ]

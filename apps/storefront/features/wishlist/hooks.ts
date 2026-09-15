@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   type QueryClient,
@@ -6,30 +6,30 @@ import {
   useMutationState,
   useQuery,
   useQueryClient,
-} from "@tanstack/react-query";
+} from "@tanstack/react-query"
 import type {
   StoreAddWishlistItemBody,
   StoreWishlistResponse,
   Wishlist,
-} from "@youjaymharah/api-types";
+} from "@youjaymharah/api-types"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { CURRENT_WISHLIST_ID } from "@/lib/medusa/constants";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { CURRENT_WISHLIST_ID } from "@/lib/medusa/constants"
+import { queryKeys } from "@/lib/query/keys"
 
-import { wishlistQueries } from "./queries";
+import { wishlistQueries } from "./queries"
 
-type WishlistItem = Wishlist["items"][number];
+type WishlistItem = Wishlist["items"][number]
 
 /** Every wishlist write shares this key, so they can tell whether others are in flight. */
-const WISHLIST_MUTATION_KEY = ["wishlist"] as const;
+const WISHLIST_MUTATION_KEY = ["wishlist"] as const
 
-const wishlistKey = queryKeys.wishlist.current();
+const wishlistKey = queryKeys.wishlist.current()
 
 /** Marks an item shown before Medusa has given it a real id. */
-const OPTIMISTIC_ID_PREFIX = "optimistic_";
+const OPTIMISTIC_ID_PREFIX = "optimistic_"
 
-const itemsPath = `/store/wishlists/${CURRENT_WISHLIST_ID}/items`;
+const itemsPath = `/store/wishlists/${CURRENT_WISHLIST_ID}/items`
 
 /**
  * Writes a server response into the cache once no other wishlist change is
@@ -42,18 +42,18 @@ function settleWishlist(
   wishlist: Wishlist | undefined,
 ): void {
   if (queryClient.isMutating({ mutationKey: WISHLIST_MUTATION_KEY }) !== 1) {
-    return;
+    return
   }
 
   if (wishlist) {
-    queryClient.setQueryData(wishlistKey, wishlist);
+    queryClient.setQueryData(wishlistKey, wishlist)
   } else {
-    void queryClient.invalidateQueries({ queryKey: wishlistKey });
+    void queryClient.invalidateQueries({ queryKey: wishlistKey })
   }
 }
 
 export function useWishlist() {
-  return useQuery(wishlistQueries.current());
+  return useQuery(wishlistQueries.current())
 }
 
 /**
@@ -66,7 +66,7 @@ export function useWishlistItem(productId: string) {
     ...wishlistQueries.current(),
     select: (wishlist) =>
       wishlist.items.find((entry) => entry.product_id === productId) ?? null,
-  });
+  })
 
   const pending = useMutationState({
     filters: {
@@ -77,9 +77,9 @@ export function useWishlistItem(productId: string) {
           ?.product_id === productId,
     },
     select: (mutation) => mutation.mutationId,
-  });
+  })
 
-  return { item, isSaved: item !== null, isPending: pending.length > 0 };
+  return { item, isSaved: item !== null, isPending: pending.length > 0 }
 }
 
 /**
@@ -88,7 +88,7 @@ export function useWishlistItem(productId: string) {
  * saved with a `variant_id` updates it to that colour and size.
  */
 export function useSaveToWishlist() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationKey: WISHLIST_MUTATION_KEY,
@@ -100,19 +100,19 @@ export function useSaveToWishlist() {
         })
       ).wishlist,
     onMutate: async ({ product_id, variant_id }) => {
-      await queryClient.cancelQueries({ queryKey: wishlistKey });
+      await queryClient.cancelQueries({ queryKey: wishlistKey })
 
-      const previous = queryClient.getQueryData<Wishlist>(wishlistKey);
+      const previous = queryClient.getQueryData<Wishlist>(wishlistKey)
 
       // Nothing loaded yet: an optimistic list would hide the saved items the
       // server has, so wait for the response instead.
       if (!previous) {
-        return { previous };
+        return { previous }
       }
 
       const existing = previous.items.find(
         (item) => item.product_id === product_id,
-      );
+      )
 
       const items: WishlistItem[] = existing
         ? previous.items.map((item) =>
@@ -128,24 +128,24 @@ export function useSaveToWishlist() {
               created_at: new Date().toISOString(),
             },
             ...previous.items,
-          ];
+          ]
 
-      queryClient.setQueryData<Wishlist>(wishlistKey, { ...previous, items });
+      queryClient.setQueryData<Wishlist>(wishlistKey, { ...previous, items })
 
-      return { previous };
+      return { previous }
     },
     onError: (_error, _input, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(wishlistKey, context.previous);
+        queryClient.setQueryData(wishlistKey, context.previous)
       }
     },
     onSettled: (wishlist) => settleWishlist(queryClient, wishlist),
-  });
+  })
 }
 
 /** Removes an item optimistically and rolls back if Medusa refuses. */
 export function useRemoveFromWishlist() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationKey: WISHLIST_MUTATION_KEY,
@@ -153,7 +153,7 @@ export function useRemoveFromWishlist() {
       if (item.id.startsWith(OPTIMISTIC_ID_PREFIX)) {
         throw new TypeError(
           "This item is still being saved. Wait for useWishlistItem's isPending to clear.",
-        );
+        )
       }
 
       return (
@@ -161,27 +161,27 @@ export function useRemoveFromWishlist() {
           `${itemsPath}/${encodeURIComponent(item.id)}`,
           { method: "DELETE" },
         )
-      ).wishlist;
+      ).wishlist
     },
     onMutate: async (item) => {
-      await queryClient.cancelQueries({ queryKey: wishlistKey });
+      await queryClient.cancelQueries({ queryKey: wishlistKey })
 
-      const previous = queryClient.getQueryData<Wishlist>(wishlistKey);
+      const previous = queryClient.getQueryData<Wishlist>(wishlistKey)
 
       if (previous) {
         queryClient.setQueryData<Wishlist>(wishlistKey, {
           ...previous,
           items: previous.items.filter((entry) => entry.id !== item.id),
-        });
+        })
       }
 
-      return { previous };
+      return { previous }
     },
     onError: (_error, _item, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(wishlistKey, context.previous);
+        queryClient.setQueryData(wishlistKey, context.previous)
       }
     },
     onSettled: (wishlist) => settleWishlist(queryClient, wishlist),
-  });
+  })
 }

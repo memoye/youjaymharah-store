@@ -1,10 +1,10 @@
-import type { HttpTypes } from "@medusajs/types";
-import { queryOptions } from "@tanstack/react-query";
+import type { HttpTypes } from "@medusajs/types"
+import { queryOptions } from "@tanstack/react-query"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { CURRENT_CART_ID } from "@/lib/medusa/constants";
-import { isNotFound } from "@/lib/medusa/errors";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { CURRENT_CART_ID } from "@/lib/medusa/constants"
+import { isNotFound } from "@/lib/medusa/errors"
+import { queryKeys } from "@/lib/query/keys"
 
 export const cartQueries = {
   /**
@@ -17,16 +17,16 @@ export const cartQueries = {
       queryFn: async (): Promise<HttpTypes.StoreCart | null> => {
         try {
           const { cart } =
-            await getBrowserSdk().store.cart.retrieve(CURRENT_CART_ID);
+            await getBrowserSdk().store.cart.retrieve(CURRENT_CART_ID)
 
-          return cart;
+          return cart
         } catch (error) {
           if (isNotFound(error)) {
-            return null;
+            return null
           }
 
-          throw error;
+          throw error
         }
       },
     }),
-};
+}

@@ -1,26 +1,26 @@
-"use client";
+"use client"
 
-import type { HttpTypes } from "@medusajs/types";
+import type { HttpTypes } from "@medusajs/types"
 import {
   type QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
-} from "@tanstack/react-query";
+} from "@tanstack/react-query"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { CURRENT_CART_ID } from "@/lib/medusa/constants";
-import { isNotFound } from "@/lib/medusa/errors";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { CURRENT_CART_ID } from "@/lib/medusa/constants"
+import { isNotFound } from "@/lib/medusa/errors"
+import { queryKeys } from "@/lib/query/keys"
 
-import { cartQueries } from "./queries";
+import { cartQueries } from "./queries"
 
-type Cart = HttpTypes.StoreCart;
+type Cart = HttpTypes.StoreCart
 
 /** Every cart write shares this key, so they can tell whether others are in flight. */
-const CART_MUTATION_KEY = ["cart"] as const;
+const CART_MUTATION_KEY = ["cart"] as const
 
-const cartKey = queryKeys.cart.current();
+const cartKey = queryKeys.cart.current()
 
 /**
  * Writes a server response into the cache, unless another cart change is still
@@ -29,24 +29,24 @@ const cartKey = queryKeys.cart.current();
  */
 function settleCart(queryClient: QueryClient, cart: Cart | undefined): void {
   if (!cart) {
-    return;
+    return
   }
 
   if (queryClient.isMutating({ mutationKey: CART_MUTATION_KEY }) === 1) {
-    queryClient.setQueryData(cartKey, cart);
+    queryClient.setQueryData(cartKey, cart)
   }
 }
 
 export function useCart() {
-  return useQuery(cartQueries.current());
+  return useQuery(cartQueries.current())
 }
 
 type AddToCartInput = {
-  variantId: string;
-  quantity?: number;
+  variantId: string
+  quantity?: number
   /** Only used when a cart has to be created; defaults to the store's region. */
-  regionId?: string;
-};
+  regionId?: string
+}
 
 /**
  * Adds a variant, creating the cart first when there is none. Not optimistic:
@@ -54,7 +54,7 @@ type AddToCartInput = {
  * them, so the cart updates when the response arrives.
  */
 export function useAddToCart() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationKey: CART_MUTATION_KEY,
@@ -63,36 +63,34 @@ export function useAddToCart() {
       quantity = 1,
       regionId,
     }: AddToCartInput): Promise<Cart> => {
-      const sdk = getBrowserSdk();
-      const line = { variant_id: variantId, quantity };
+      const sdk = getBrowserSdk()
+      const line = { variant_id: variantId, quantity }
       const createCart = () =>
-        sdk.store.cart.create(regionId ? { region_id: regionId } : {});
+        sdk.store.cart.create(regionId ? { region_id: regionId } : {})
 
       // The proxy stores a created cart's id, so "current" works right after.
       if (!(await queryClient.fetchQuery(cartQueries.current()))) {
-        await createCart();
+        await createCart()
       }
 
       try {
-        return (await sdk.store.cart.createLineItem(CURRENT_CART_ID, line))
-          .cart;
+        return (await sdk.store.cart.createLineItem(CURRENT_CART_ID, line)).cart
       } catch (error) {
         if (!isNotFound(error)) {
-          throw error;
+          throw error
         }
 
         // The cookie's cart was completed or deleted in the meantime.
-        await createCart();
+        await createCart()
 
-        return (await sdk.store.cart.createLineItem(CURRENT_CART_ID, line))
-          .cart;
+        return (await sdk.store.cart.createLineItem(CURRENT_CART_ID, line)).cart
       }
     },
     onSettled: (cart) => settleCart(queryClient, cart),
-  });
+  })
 }
 
-type UpdateLineItemInput = { lineItemId: string; quantity: number };
+type UpdateLineItemInput = { lineItemId: string; quantity: number }
 
 /**
  * Changes a line's quantity optimistically and rolls back if Medusa refuses
@@ -100,7 +98,7 @@ type UpdateLineItemInput = { lineItemId: string; quantity: number };
  * with the response, because Medusa calculates tax and promotions.
  */
 export function useUpdateLineItem() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationKey: CART_MUTATION_KEY,
@@ -116,9 +114,9 @@ export function useUpdateLineItem() {
         )
       ).cart,
     onMutate: async ({ lineItemId, quantity }) => {
-      await queryClient.cancelQueries({ queryKey: cartKey });
+      await queryClient.cancelQueries({ queryKey: cartKey })
 
-      const previous = queryClient.getQueryData<Cart | null>(cartKey);
+      const previous = queryClient.getQueryData<Cart | null>(cartKey)
 
       queryClient.setQueryData<Cart | null>(cartKey, (cart) =>
         cart
@@ -129,22 +127,22 @@ export function useUpdateLineItem() {
               ),
             }
           : cart,
-      );
+      )
 
-      return { previous };
+      return { previous }
     },
     onError: (_error, _input, context) => {
       if (context) {
-        queryClient.setQueryData(cartKey, context.previous);
+        queryClient.setQueryData(cartKey, context.previous)
       }
     },
     onSettled: (cart) => settleCart(queryClient, cart),
-  });
+  })
 }
 
 /** Removes a line optimistically and rolls back if Medusa refuses. */
 export function useRemoveLineItem() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationKey: CART_MUTATION_KEY,
@@ -156,9 +154,9 @@ export function useRemoveLineItem() {
         )
       ).parent,
     onMutate: async (lineItemId) => {
-      await queryClient.cancelQueries({ queryKey: cartKey });
+      await queryClient.cancelQueries({ queryKey: cartKey })
 
-      const previous = queryClient.getQueryData<Cart | null>(cartKey);
+      const previous = queryClient.getQueryData<Cart | null>(cartKey)
 
       queryClient.setQueryData<Cart | null>(cartKey, (cart) =>
         cart
@@ -167,22 +165,22 @@ export function useRemoveLineItem() {
               items: cart.items?.filter((item) => item.id !== lineItemId),
             }
           : cart,
-      );
+      )
 
-      return { previous };
+      return { previous }
     },
     onError: (_error, _input, context) => {
       if (context) {
-        queryClient.setQueryData(cartKey, context.previous);
+        queryClient.setQueryData(cartKey, context.previous)
       }
     },
     onSettled: (cart) => {
       if (cart) {
-        settleCart(queryClient, cart);
+        settleCart(queryClient, cart)
       } else {
         // The delete response did not include the cart; fetch it.
-        void queryClient.invalidateQueries({ queryKey: cartKey });
+        void queryClient.invalidateQueries({ queryKey: cartKey })
       }
     },
-  });
+  })
 }

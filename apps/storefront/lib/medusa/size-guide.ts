@@ -1,19 +1,19 @@
-import type { StoreSizeGuide } from "@youjaymharah/api-types";
+import type { StoreSizeGuide } from "@youjaymharah/api-types"
 
-export type MeasurementUnit = "cm" | "in";
+export type MeasurementUnit = "cm" | "in"
 
-type Column = StoreSizeGuide["columns"][number];
-type Row = StoreSizeGuide["rows"][number];
+type Column = StoreSizeGuide["columns"][number]
+type Row = StoreSizeGuide["rows"][number]
 
-const CM_PER_INCH = 2.54;
+const CM_PER_INCH = 2.54
 
 /** cm to one decimal place; inches to the nearest half inch, as clothing labels do. */
 function formatNumber(cm: number, unit: MeasurementUnit): string {
   if (unit === "cm") {
-    return String(Number(cm.toFixed(1)));
+    return String(Number(cm.toFixed(1)))
   }
 
-  return String(Math.round((cm / CM_PER_INCH) * 2) / 2);
+  return String(Math.round((cm / CM_PER_INCH) * 2) / 2)
 }
 
 function isRange(cell: unknown): cell is [number, number] {
@@ -22,7 +22,7 @@ function isRange(cell: unknown): cell is [number, number] {
     cell.length === 2 &&
     typeof cell[0] === "number" &&
     typeof cell[1] === "number"
-  );
+  )
 }
 
 /**
@@ -39,22 +39,22 @@ export function formatSizeGuideCell(
   unit: MeasurementUnit,
 ): string {
   if (typeof cell === "string") {
-    return cell.trim() || "–";
+    return cell.trim() || "–"
   }
 
   if (column.type === "text") {
-    return typeof cell === "number" ? String(cell) : "–";
+    return typeof cell === "number" ? String(cell) : "–"
   }
 
   if (typeof cell === "number") {
-    return formatNumber(cell, unit);
+    return formatNumber(cell, unit)
   }
 
   if (isRange(cell)) {
-    return `${formatNumber(cell[0], unit)}–${formatNumber(cell[1], unit)}`;
+    return `${formatNumber(cell[0], unit)}–${formatNumber(cell[1], unit)}`
   }
 
-  return "–";
+  return "–"
 }
 
 /** "Bust (cm)" for measurements, the label alone for text columns. */
@@ -64,7 +64,7 @@ export function sizeGuideColumnHeading(
 ): string {
   return column.type === "measurement"
     ? `${column.label} (${unit})`
-    : column.label;
+    : column.label
 }
 
 /**
@@ -75,5 +75,5 @@ export function findSizeGuideRow(
   guide: StoreSizeGuide,
   size: string | null | undefined,
 ): Row | null {
-  return size ? (guide.rows.find((row) => row.size === size) ?? null) : null;
+  return size ? (guide.rows.find((row) => row.size === size) ?? null) : null
 }

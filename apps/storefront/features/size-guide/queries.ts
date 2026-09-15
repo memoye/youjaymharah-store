@@ -1,9 +1,9 @@
-import { queryOptions } from "@tanstack/react-query";
-import type { StoreSizeGuideResponse } from "@youjaymharah/api-types";
+import { queryOptions } from "@tanstack/react-query"
+import type { StoreSizeGuideResponse } from "@youjaymharah/api-types"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { isNotFound } from "@/lib/medusa/errors";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { isNotFound } from "@/lib/medusa/errors"
+import { queryKeys } from "@/lib/query/keys"
 
 export const sizeGuideQueries = {
   /**
@@ -17,16 +17,16 @@ export const sizeGuideQueries = {
         try {
           return await getBrowserSdk().client.fetch<StoreSizeGuideResponse>(
             `/store/products/${encodeURIComponent(productId)}/size-guide`,
-          );
+          )
         } catch (error) {
           if (isNotFound(error)) {
-            return { size_guide: null, source: null };
+            return { size_guide: null, source: null }
           }
 
-          throw error;
+          throw error
         }
       },
       // Guides change rarely; a product page can keep one for a while.
       staleTime: 10 * 60 * 1000,
     }),
-};
+}

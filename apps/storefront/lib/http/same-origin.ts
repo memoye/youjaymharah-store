@@ -9,19 +9,19 @@
  * not, which is why every mutating handler here calls it.
  */
 export function isSameOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
+  const origin = request.headers.get("origin")
 
   if (!origin) {
-    return false;
+    return false
   }
 
   const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host")
 
   try {
-    return new URL(origin).host === host;
+    return new URL(origin).host === host
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -29,5 +29,5 @@ export function crossOriginRefused(): Response {
   return Response.json(
     { message: "Cross-origin request refused." },
     { status: 403 },
-  );
+  )
 }

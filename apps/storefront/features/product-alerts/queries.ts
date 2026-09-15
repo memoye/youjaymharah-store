@@ -1,11 +1,11 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query"
 import type {
   ProductAlert,
   StoreProductAlertsResponse,
-} from "@youjaymharah/api-types";
+} from "@youjaymharah/api-types"
 
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { queryKeys } from "@/lib/query/keys";
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { queryKeys } from "@/lib/query/keys"
 
 export const productAlertQueries = {
   /**
@@ -23,4 +23,4 @@ export const productAlertQueries = {
         ).alerts,
       meta: { private: true },
     }),
-};
+}

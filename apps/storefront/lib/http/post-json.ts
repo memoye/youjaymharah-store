@@ -1,4 +1,4 @@
-import { FetchError } from "@medusajs/js-sdk";
+import { FetchError } from "@medusajs/js-sdk"
 
 /**
  * POSTs to one of the storefront's own /api routes (not Medusa's -- use the SDK
@@ -10,19 +10,19 @@ export async function postJson<T>(path: string, body?: unknown): Promise<T> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  })
 
   const data = (await response.json().catch(() => ({}))) as {
-    message?: string;
-  };
+    message?: string
+  }
 
   if (!response.ok) {
     throw new FetchError(
       data.message ?? response.statusText,
       response.statusText,
       response.status,
-    );
+    )
   }
 
-  return data as T;
+  return data as T
 }

@@ -1,8 +1,8 @@
-import Medusa from "@medusajs/js-sdk";
+import Medusa from "@medusajs/js-sdk"
 
-import { MEDUSA_PROXY_PATH, PUBLISHABLE_KEY } from "./constants";
+import { MEDUSA_PROXY_PATH, PUBLISHABLE_KEY } from "./constants"
 
-let browserSdk: Medusa | undefined;
+let browserSdk: Medusa | undefined
 
 /**
  * The SDK for Client Components. It talks to this storefront's own
@@ -23,7 +23,7 @@ export function getBrowserSdk(): Medusa {
   if (typeof window === "undefined") {
     throw new TypeError(
       "getBrowserSdk() is browser-only. Use the SDK from lib/medusa/server.ts on the server.",
-    );
+    )
   }
 
   browserSdk ??= new Medusa({
@@ -31,7 +31,7 @@ export function getBrowserSdk(): Medusa {
     publishableKey: PUBLISHABLE_KEY,
     // Never store a token in the browser; the proxy attaches it.
     auth: { type: "jwt", jwtTokenStorageMethod: "nostore" },
-  });
+  })
 
-  return browserSdk;
+  return browserSdk
 }

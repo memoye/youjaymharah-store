@@ -4,9 +4,9 @@
  * would serve one region's prices or one language's copy to everyone.
  */
 export type CatalogContext = {
-  regionId: string;
-  locale: string;
-};
+  regionId: string
+  locale: string
+}
 
 export const queryKeys = {
   customer: {
@@ -41,7 +41,7 @@ export const queryKeys = {
     detail: (handle: string, context: CatalogContext) =>
       [...queryKeys.products.all, "detail", handle, context] as const,
   },
-} as const;
+} as const
 
 /**
  * Data that belongs to whoever is signed in. Removed (not just invalidated) on
@@ -53,4 +53,4 @@ export const privateQueryRoots = [
   queryKeys.wishlist.all,
   queryKeys.productAlerts.all,
   queryKeys.marketing.all,
-] as const;
+] as const

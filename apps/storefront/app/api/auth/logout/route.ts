@@ -1,9 +1,9 @@
-import { crossOriginRefused, isSameOrigin } from "@/lib/http/same-origin";
+import { crossOriginRefused, isSameOrigin } from "@/lib/http/same-origin"
 import {
   clearAuthToken,
   clearCartId,
   clearWishlistId,
-} from "@/lib/medusa/session";
+} from "@/lib/medusa/session"
 
 /**
  * Signs out. Medusa tokens are stateless, so there is nothing to revoke on the
@@ -12,12 +12,12 @@ import {
  */
 export async function POST(request: Request): Promise<Response> {
   if (!isSameOrigin(request)) {
-    return crossOriginRefused();
+    return crossOriginRefused()
   }
 
-  await clearAuthToken();
-  await clearCartId();
-  await clearWishlistId();
+  await clearAuthToken()
+  await clearCartId()
+  await clearWishlistId()
 
-  return Response.json({ success: true });
+  return Response.json({ success: true })
 }

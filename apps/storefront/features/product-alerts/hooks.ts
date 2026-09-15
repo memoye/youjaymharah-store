@@ -1,28 +1,28 @@
-"use client";
+"use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   ProductAlert,
   StoreCreateProductAlertBody,
   StoreCreateProductAlertResponse,
-} from "@youjaymharah/api-types";
+} from "@youjaymharah/api-types"
 
-import { useCustomer } from "@/features/customer/hooks";
-import { getBrowserSdk } from "@/lib/medusa/browser";
-import { queryKeys } from "@/lib/query/keys";
+import { useCustomer } from "@/features/customer/hooks"
+import { getBrowserSdk } from "@/lib/medusa/browser"
+import { queryKeys } from "@/lib/query/keys"
 
-import { productAlertQueries } from "./queries";
+import { productAlertQueries } from "./queries"
 
-const alertsKey = queryKeys.productAlerts.mine();
+const alertsKey = queryKeys.productAlerts.mine()
 
 /** The signed-in customer's alerts. Stays idle (no data) for guests. */
 export function useProductAlerts() {
-  const { data: customer } = useCustomer();
+  const { data: customer } = useCustomer()
 
   return useQuery({
     ...productAlertQueries.mine(),
     enabled: Boolean(customer),
-  });
+  })
 }
 
 /**
@@ -34,7 +34,7 @@ export function useWaitingProductAlert(
   productId: string,
   variantId?: string | null,
 ) {
-  const { data: customer } = useCustomer();
+  const { data: customer } = useCustomer()
 
   const { data: alert = null } = useQuery({
     ...productAlertQueries.mine(),
@@ -46,14 +46,14 @@ export function useWaitingProductAlert(
           entry.product_id === productId &&
           entry.variant_id === (variantId ?? null),
       ) ?? null,
-  });
+  })
 
-  return alert;
+  return alert
 }
 
 export type CreateProductAlertInput = StoreCreateProductAlertBody & {
-  product_id: string;
-};
+  product_id: string
+}
 
 /**
  * "Notify me". Guests pass `email`; signed-in customers don't (their account
@@ -65,7 +65,7 @@ export type CreateProductAlertInput = StoreCreateProductAlertBody & {
  * and show "Add to bag" instead.
  */
 export function useCreateProductAlert() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ product_id, ...body }: CreateProductAlertInput) =>
@@ -75,21 +75,21 @@ export function useCreateProductAlert() {
       ),
     onSuccess: ({ alert }, { marketing_opt_in }) => {
       if (alert) {
-        void queryClient.invalidateQueries({ queryKey: alertsKey });
+        void queryClient.invalidateQueries({ queryKey: alertsKey })
       }
 
       if (marketing_opt_in) {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.marketing.all,
-        });
+        })
       }
     },
-  });
+  })
 }
 
 /** Cancels one of the customer's alerts, optimistically. */
 export function useCancelProductAlert() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (alertId: string) =>
@@ -98,24 +98,24 @@ export function useCancelProductAlert() {
         { method: "DELETE" },
       ),
     onMutate: async (alertId) => {
-      await queryClient.cancelQueries({ queryKey: alertsKey });
+      await queryClient.cancelQueries({ queryKey: alertsKey })
 
-      const previous = queryClient.getQueryData<ProductAlert[]>(alertsKey);
+      const previous = queryClient.getQueryData<ProductAlert[]>(alertsKey)
 
       if (previous) {
         queryClient.setQueryData<ProductAlert[]>(
           alertsKey,
           previous.filter((alert) => alert.id !== alertId),
-        );
+        )
       }
 
-      return { previous };
+      return { previous }
     },
     onError: (_error, _alertId, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(alertsKey, context.previous);
+        queryClient.setQueryData(alertsKey, context.previous)
       }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: alertsKey }),
-  });
+  })
 }

@@ -147,7 +147,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
   }
 
   @media (prefers-reduced-motion: reduce) {
