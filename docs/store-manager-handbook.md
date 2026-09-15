@@ -255,6 +255,36 @@ available count can be lower than the shelf. Adjust under
 Guides: [Inventory](https://docs.medusajs.com/user-guide/inventory/inventory) ·
 [Reservations](https://docs.medusajs.com/user-guide/inventory/reservations)
 
+### Home page
+
+`Settings › Storefront › Homepage` (Marketing or Store Manager) fills in the home
+page. The layout and the order of sections are set by the website itself.
+
+- **Hero banner:** the large image at the top, with an optional eyebrow line
+  (like NEW SEASON), a headline, a short description and a button.
+  - To show it, add a headline and a desktop image (landscape, at least
+    2400 x 1200px), then turn on **Show the hero banner**.
+  - A mobile image (portrait, at least 1080 x 1350px) is optional. Without
+    one, phones show a crop of the desktop image.
+  - **Photo or video:** choose **Video** to play a short silent loop instead
+    of the photo.
+    - Use MP4 (H.264), under 25 MB and around 10–20 seconds.
+    - Keep the photos. They show while the video loads, on phones that block
+      autoplay, and for visitors who turn off motion.
+    - A mobile video (portrait) is optional. Without one, phones show a crop
+      of the desktop video.
+    - The video plays without sound.
+  - The button needs both a label and a destination. The destination is
+    either a page on the store starting with "/", like `/new-arrivals`, or a
+    full `https://` address.
+  - Turning the banner off keeps everything you typed, so you can prepare the
+    next one in advance.
+- **Featured collection:** pick one collection to feature. The website uses
+  the collection's own description and images. Set these on the collection
+  itself, in its **Website content** box under `Products › Collections`.
+  Deleting the featured collection hides the section until you pick another.
+- Changes reach the website within a few minutes.
+
 ### Search & sharing
 
 `Settings › Storefront` controls how the store looks in Google and when a link

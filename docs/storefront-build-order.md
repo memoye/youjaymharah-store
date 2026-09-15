@@ -86,6 +86,18 @@ Backend:
   `variants[options][option_id]` / `variants[options][value]`
 - `GET /store/product-options?is_exclusive=false` lists the shared **Colour**
   and **Size** options to build filter controls from
+- **Home page content** comes from `getStorefrontSettings().homepage`:
+  - `hero`: render it only when `enabled` is true. `title` and
+    `desktop_image_url` are then guaranteed; use the desktop image when
+    `mobile_image_url` is null. A non-null `desktop_video_url` makes it a
+    video: autoplay it muted, looped and inline, with the image as `poster`,
+    and show only the image under `prefers-reduced-motion`. Details in
+    `docs/storefront-capabilities.md`.
+  - `featured_collection_id`: fetch it with
+    `GET /store/collections/{id}?fields=+metadata` for `metadata.description`,
+    `metadata.hero_image` and `metadata.hero_image_mobile`. When it's null,
+    hide the section.
+  - The layout itself stays in code. Category sections use the category tree.
 
 **Done when:** you can walk from the home page into a category, filter by
 colour, sort, and page through results.

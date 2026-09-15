@@ -182,6 +182,84 @@ export const SocialLinks = z.object({
 
 export type SocialLinksType = z.infer<typeof SocialLinks>;
 
+/** A path on the storefront ("/new-arrivals") or a full http(s) address. */
+const LinkDestination = z
+  .string()
+  .trim()
+  .max(2048)
+  .refine(
+    (value) =>
+      (value.startsWith("/") && !value.startsWith("//")) ||
+      /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(value),
+    'Use a page on the store starting with "/", like /new-arrivals, or a full https:// address.',
+  );
+
+const optionalText = (max: number) =>
+  z.string().trim().max(max).nullable().optional();
+
+/**
+ * The whole hero, replacing what is stored: a field left out is cleared. Text
+ * can be saved while the hero is off, so staff can prepare it before turning
+ * it on; turning it on needs a headline and a desktop image, and a button
+ * needs both its label and destination. A desktop video makes the hero a
+ * video, with the images kept as its posters, so the image stays required.
+ */
+export const HomepageHero = z
+  .object({
+    enabled: z.boolean(),
+    eyebrow: optionalText(40),
+    title: optionalText(120),
+    description: optionalText(300),
+    desktop_image_url: z.url().nullable().optional(),
+    mobile_image_url: z.url().nullable().optional(),
+    desktop_video_url: z.url().nullable().optional(),
+    mobile_video_url: z.url().nullable().optional(),
+    cta_label: optionalText(40),
+    cta_url: LinkDestination.nullable().optional(),
+  })
+  .superRefine((hero, ctx) => {
+    if (hero.mobile_video_url && !hero.desktop_video_url) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["mobile_video_url"],
+        message:
+          "Add a desktop video first. A mobile video only replaces it on phones.",
+      });
+    }
+
+    if (Boolean(hero.cta_label) !== Boolean(hero.cta_url)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [hero.cta_label ? "cta_url" : "cta_label"],
+        message: "A button needs both a label and a destination.",
+      });
+    }
+
+    if (!hero.enabled) {
+      return;
+    }
+
+    if (!hero.title) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["title"],
+        message: "Add a headline before turning the hero on.",
+      });
+    }
+
+    if (!hero.desktop_image_url) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["desktop_image_url"],
+        message: hero.desktop_video_url
+          ? "Add a desktop image before turning the hero on. It shows while the video loads or can't play."
+          : "Add a desktop image before turning the hero on.",
+      });
+    }
+  });
+
+export type HomepageHeroType = z.infer<typeof HomepageHero>;
+
 export const AdminUpdateStorefrontSettings = z.object({
   /** Whole days, from 1 to a year. */
   new_badge_days: z.number().int().min(1).max(365).optional(),
@@ -210,6 +288,9 @@ export const AdminUpdateStorefrontSettings = z.object({
     )
     .nullable()
     .optional(),
+  homepage_hero: HomepageHero.optional(),
+  /** The collection featured on the home page; null features none. */
+  featured_collection_id: z.string().trim().min(1).nullable().optional(),
 });
 
 export type AdminUpdateStorefrontSettingsType = z.infer<

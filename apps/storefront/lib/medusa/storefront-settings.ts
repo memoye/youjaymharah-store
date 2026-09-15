@@ -44,12 +44,28 @@ const FALLBACK: StorefrontSettings = {
     allow_indexing: true,
     google_site_verification: null,
   },
+  homepage: {
+    hero: {
+      enabled: false,
+      eyebrow: null,
+      title: null,
+      description: null,
+      desktop_image_url: null,
+      mobile_image_url: null,
+      desktop_video_url: null,
+      mobile_video_url: null,
+      cta_label: null,
+      cta_url: null,
+    },
+    featured_collection_id: null,
+  },
   products: { new_badge_days: 30 },
 }
 
 /**
  * Everything staff set under Settings › Storefront in the admin: the brand,
- * sharing & search defaults, and product display settings. For Server
+ * home page content, sharing & search defaults, and product display settings.
+ * Render the hero only when `homepage.hero.enabled` is true. For Server
  * Components, metadata, `robots.ts` and `sitemap.ts`. Cached by Next for
  * REVALIDATE_SECONDS and shared by every visitor; it reads no cookies, so
  * pages stay cacheable.

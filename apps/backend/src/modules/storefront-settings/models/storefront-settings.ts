@@ -2,8 +2,8 @@ import { model } from "@medusajs/framework/utils";
 
 /**
  * Settings the storefront renders with. A singleton like branding: one row,
- * addressed by STOREFRONT_SETTINGS_ID, edited in the "Sharing & search" and
- * "Products" sections of Settings -> Storefront.
+ * addressed by STOREFRONT_SETTINGS_ID, edited in the "Homepage", "Sharing &
+ * search" and "Products" sections of Settings -> Storefront.
  *
  * Kept apart from branding on purpose: branding is store identity and
  * owner-only, while these are day-to-day decisions for Marketing and the
@@ -27,4 +27,15 @@ export const StorefrontSettings = model.define("storefront_settings", {
   allow_indexing: model.boolean().default(true),
   /** Google Search Console's HTML tag verification code. */
   google_site_verification: model.text().nullable(),
+  /**
+   * The home page hero's content (see homepage-hero.ts). The storefront owns
+   * the layout; staff only fill it in or turn it off.
+   */
+  homepage_hero: model.json().default({ enabled: false }),
+  /**
+   * The collection featured on the home page. Not a module link: a single
+   * optional pointer on a singleton, and a deleted collection is simply
+   * treated as none by the store route.
+   */
+  featured_collection_id: model.text().nullable(),
 });

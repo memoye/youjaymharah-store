@@ -192,6 +192,22 @@ const StoredSocialLinks = z.object({
   pinterest: z.string().nullable(),
 });
 
+const StoredHomepageHero = z.object({
+  enabled: z.boolean(),
+  eyebrow: z.string().nullable(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  /** With a video, the poster shown while it loads or when it can't play. */
+  desktop_image_url: z.string().nullable(),
+  mobile_image_url: z.string().nullable(),
+  /** Set means the hero is a video; null means a photo. */
+  desktop_video_url: z.string().nullable(),
+  /** Only ever set alongside desktop_video_url. */
+  mobile_video_url: z.string().nullable(),
+  cta_label: z.string().nullable(),
+  cta_url: z.string().nullable(),
+});
+
 const StorefrontSettings = z.object({
   id: z.string(),
   new_badge_days: z.number(),
@@ -202,6 +218,8 @@ const StorefrontSettings = z.object({
   social_links: z.record(z.string(), z.string().nullable()),
   allow_indexing: z.boolean(),
   google_site_verification: z.string().nullable(),
+  homepage_hero: StoredHomepageHero,
+  featured_collection_id: z.string().nullable(),
 });
 
 const PublicStorefrontSettings = z.object({
@@ -219,6 +237,12 @@ const PublicStorefrontSettings = z.object({
     social_links: StoredSocialLinks,
     allow_indexing: z.boolean(),
     google_site_verification: z.string().nullable(),
+  }),
+  homepage: z.object({
+    /** Render it only when `enabled` is true; text may be saved while off. */
+    hero: StoredHomepageHero,
+    /** Null when none is set or the collection has since been deleted. */
+    featured_collection_id: z.string().nullable(),
   }),
   products: z.object({
     new_badge_days: z.number(),
@@ -283,7 +307,7 @@ export const TAGS: Record<string, string> = {
   Marketing:
     "A signed-in customer's marketing email preference, backed by the newsletter list and its double opt-in.",
   Storefront:
-    "Settings the storefront renders with, edited from Settings › Storefront: sharing & search defaults (title, description, share image, social profiles, indexing, Search Console verification) and product display (New badge days). The public route also includes the brand.",
+    "Settings the storefront renders with, edited from Settings › Storefront: home page content (hero, featured collection), sharing & search defaults (title, description, share image, social profiles, indexing, Search Console verification) and product display (New badge days). The public route also includes the brand.",
   "Size guides":
     "Measurement tables for product pages. A product shows its own guide, else the nearest category's (walking up the category tree), else the store default. Measurements are stored in cm; the storefront converts to inches for display.",
   Scaffolding:

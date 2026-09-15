@@ -89,6 +89,80 @@ the card. `newBadgeDays` is staff's setting under Settings › Storefront:
 needs `+metadata` in `fields`, and counts from the launch date (or creation
 date).
 
+#### Catalogue helpers
+
+Prefer these to hand-written `sdk.store.*` calls. They add the region, the
+right `fields` and short, tagged caching, and read no cookies.
+
+```tsx
+// app/(main)/products/[handle]/page.tsx
+import { notFound } from "next/navigation"
+
+import { getProductByHandle } from "@/lib/medusa/catalog"
+import { formatPrice, getProductPrice } from "@/lib/medusa/price"
+import { getColourChoices, getSizeChoices } from "@/lib/medusa/variants"
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[handle]">) {
+  const product = await getProductByHandle((await params).handle)
+
+  if (!product) {
+    notFound()
+  }
+
+  const price = getProductPrice(product)
+
+  return (
+    <>
+      <h1>{product.title}</h1>
+      {price && (
+        <p>
+          {price.isRange && "From "}
+          {formatPrice(price.price.amount, price.price.currencyCode)}
+          {price.price.isOnSale && (
+            <s>
+              {formatPrice(price.price.originalAmount, price.price.currencyCode)}
+            </s>
+          )}
+        </p>
+      )}
+    </>
+  )
+}
+```
+
+- **Listings:** `listProducts({ categoryId, collectionId, order: "-created_at",
+  limit, offset })` returns `{ products, count }` with card fields (price,
+  stock, swatches, `+metadata` for the New badge).
+- **Navigation and category pages:** `getCategoryTree()` for menus;
+  `getCategoryByHandle(handle)` returns the category with its parents, so
+  `getCategoryTrail(category)` builds breadcrumbs without another request.
+  `getCategorySeo(category)` gives its page title and description.
+- **Collections:** `getCollectionByHandle(handle)` or `getCollectionById(id)`
+  (for the home page's featured collection), then `getCollectionContent()` for
+  the description and banner images.
+- **Search:** `searchProducts({ q, category, limit })` searches, then loads the
+  hits as priced products in relevance order.
+- **Swatches and sizes:** `getColourChoices(product, selection)` and
+  `getSizeChoices(product, selection)` list only the values this product comes
+  in, in the admin's order, with `hex` or `swatchImage` and whether each is
+  available alongside the other choices.
+- **Stock:** `getVariantStock(variant, product)` returns `in_stock`,
+  `low_stock` (3 or fewer), `backorder`, `sold_out` or `coming_soon`.
+  `canPurchase(status)` decides between Add to bag and Notify me.
+- **Photos:** `getSelectionImages(product, selection)` follows the chosen
+  colour and falls back to the product gallery.
+- **In the browser:** `useProductSelection(product)` keeps `?colour=` and
+  `?size=` in the URL and returns `{ selection, variant, setOption }`. It reads
+  `useSearchParams`, so wrap the component using it in `<Suspense>`.
+- **Metadata:** read staff-edited fields with `metaText()` and `metaImage()`.
+  The admin saves cleared fields as `""`.
+- **Refreshing:** responses are tagged `products`, `product:<handle>`,
+  `categories` and `collections` (`CATALOG_TAGS`) for `revalidateTag`.
+
+Run the helper tests with `pnpm test`.
+
 ### 2. Client-side data with React Query
 
 For anything that changes as the customer interacts, like search-as-you-type.
@@ -566,7 +640,7 @@ with how long Medusa took to answer.
 | `features/product-alerts/`          | "Notify me" hooks and the customer's alert list                    |
 | `features/marketing/`               | The account's marketing email setting                              |
 | `lib/medusa/product.ts`             | `isComingSoon`, `isNew`, `onSaleSince`                             |
-| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: brand, sharing & search, New badge days |
+| `lib/medusa/storefront-settings.ts` | `getStorefrontSettings()`: brand, home page hero and featured collection, sharing & search, New badge days |
 | `lib/seo/metadata.ts`               | `buildRootMetadata`, `buildProductMetadata`                        |
 | `lib/seo/json-ld.ts`                | Organization, WebSite, Product and breadcrumb structured data      |
 | `lib/seo/routes.ts`                 | Public page paths used by the sitemap and structured data          |
@@ -574,5 +648,12 @@ with how long Medusa took to answer.
 | `app/robots.ts`, `app/sitemap.ts`   | robots.txt and sitemap.xml                                         |
 | `app/manifest.ts`                   | Home-screen web app manifest (brand name, description, favicon)    |
 | `lib/medusa/region.ts`              | `getStoreRegion()`: the region prices come from                    |
+| `lib/medusa/catalog.ts`             | Server reads: `getProductByHandle`, `listProducts`, `getCategoryTree`, `getCategoryByHandle`, `getCollectionByHandle`, `getCollectionById`, `searchProducts`; `PRODUCT_CARD_FIELDS`, `PRODUCT_PAGE_FIELDS`, `CATALOG_TAGS` |
+| `lib/medusa/price.ts`               | `formatPrice`, `getVariantPrice`, `getProductPrice` (sale, percent off, "From" ranges) |
+| `lib/medusa/variants.ts`            | `getColourChoices`, `getSizeChoices`, `getOptionChoices`, `findVariant`, `getVariantStock`, `canPurchase`, `isVariantPurchasable`, `getSelectionImages` |
+| `lib/medusa/category.ts`            | `getCategoryTrail` (breadcrumbs), `sortCategoryTree`, `getCategorySeo` |
+| `lib/medusa/collection.ts`          | `getCollectionContent`: description and banner images, cleaned     |
+| `lib/medusa/metadata.ts`            | `metaText`, `metaImage`: read staff-edited metadata safely         |
+| `features/product-selection/`       | `useProductSelection`: colour and size kept in the URL             |
 | `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook              |
 | `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                        |

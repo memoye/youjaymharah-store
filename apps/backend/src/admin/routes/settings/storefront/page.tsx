@@ -8,6 +8,8 @@ import {
   Heading,
   Input,
   Label,
+  RadioGroup,
+  Select,
   Switch,
   Text,
   Textarea,
@@ -17,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { sdk } from "../../../lib/sdk";
+import { uploadImage } from "../../../lib/upload-image";
 
 type Branding = {
   id: string;
@@ -37,6 +40,19 @@ const SOCIAL_NETWORKS = [
 
 type SocialNetwork = (typeof SOCIAL_NETWORKS)[number]["key"];
 
+type HomepageHero = {
+  enabled: boolean;
+  eyebrow: string | null;
+  title: string | null;
+  description: string | null;
+  desktop_image_url: string | null;
+  mobile_image_url: string | null;
+  desktop_video_url: string | null;
+  mobile_video_url: string | null;
+  cta_label: string | null;
+  cta_url: string | null;
+};
+
 type StorefrontSettings = {
   id: string;
   new_badge_days: number;
@@ -47,10 +63,14 @@ type StorefrontSettings = {
   social_links: Partial<Record<SocialNetwork, string | null>>;
   allow_indexing: boolean;
   google_site_verification: string | null;
+  /** Rows saved before the home page settings existed hold only `enabled`. */
+  homepage_hero: Partial<HomepageHero>;
+  featured_collection_id: string | null;
 };
 
 const BRANDING_QUERY_KEY = ["branding"];
 const SETTINGS_QUERY_KEY = ["storefront-settings"];
+const COLLECTION_OPTIONS_QUERY_KEY = ["storefront-settings", "collections"];
 
 const TITLE_LIMIT = 60;
 const DESCRIPTION_LIMIT = 155;
@@ -64,20 +84,10 @@ function saveError(error: Error & { status?: number }, who: string) {
   );
 }
 
-async function uploadImage(file: File): Promise<string> {
-  const { files } = await sdk.admin.upload.create({ files: [file] });
-  const url = files[0]?.url;
-
-  if (!url) {
-    throw new Error("The upload did not return a file address.");
-  }
-
-  return url;
-}
-
 const StorefrontSettingsPage = () => (
   <div className="flex flex-col gap-y-3">
     <BrandSection />
+    <HomepageSection />
     <SharingSection />
     <ProductsSection />
   </div>
@@ -241,6 +251,566 @@ const EditBrandDrawer = ({
         onUpload={(file) => upload.mutate({ file, target: "favicon" })}
         onRemove={() => setFaviconUrl("")}
       />
+    </EditDrawer>
+  );
+};
+
+// Homepage ------------------------------------------------------------------
+
+/** Radix Select can't hold an empty value, so "no collection" needs a name. */
+const NO_COLLECTION = "none";
+
+type CollectionOption = { id: string; title: string };
+
+/** Mirrors the backend: a store path like /new-arrivals, or a full address. */
+function isLinkDestination(value: string): boolean {
+  return (
+    (value.startsWith("/") && !value.startsWith("//")) ||
+    /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(value)
+  );
+}
+
+/**
+ * Uploads pass through the backend's memory on their way to storage, and a
+ * home page video should load quickly on mobile data anyway.
+ */
+const MAX_VIDEO_MB = 25;
+
+type HeroMedia = "photo" | "video";
+
+type HeroDraft = {
+  enabled: boolean;
+  eyebrow: string;
+  title: string;
+  description: string;
+  media: HeroMedia;
+  desktopImageUrl: string;
+  mobileImageUrl: string;
+  desktopVideoUrl: string;
+  mobileVideoUrl: string;
+  ctaLabel: string;
+  ctaUrl: string;
+};
+
+type UploadTarget =
+  "desktopImageUrl" | "mobileImageUrl" | "desktopVideoUrl" | "mobileVideoUrl";
+
+type HeroProblems = Partial<Record<keyof HeroDraft, string>>;
+
+function heroProblems(draft: HeroDraft): HeroProblems {
+  const problems: HeroProblems = {};
+  const label = draft.ctaLabel.trim();
+  const url = draft.ctaUrl.trim();
+  const isVideo = draft.media === "video";
+
+  if (isVideo && draft.enabled && !draft.desktopVideoUrl) {
+    problems.desktopVideoUrl =
+      "Add a desktop video before turning the hero on, or choose Photo.";
+  }
+
+  if (isVideo && draft.mobileVideoUrl && !draft.desktopVideoUrl) {
+    problems.desktopVideoUrl =
+      "Add a desktop video first. The mobile video only replaces it on phones.";
+  }
+
+  if (url && !isLinkDestination(url)) {
+    problems.ctaUrl =
+      'Use a page on the store starting with "/", like /new-arrivals, or a full https:// address.';
+  }
+
+  if (label && !url) {
+    problems.ctaUrl = "Add where the button goes, or clear its label.";
+  }
+
+  if (url && !label) {
+    problems.ctaLabel = "Add the button's label, or clear its destination.";
+  }
+
+  if (draft.enabled && !draft.title.trim()) {
+    problems.title = "Add a headline before turning the hero on.";
+  }
+
+  if (draft.enabled && !draft.desktopImageUrl) {
+    problems.desktopImageUrl = isVideo
+      ? "Add a desktop poster image before turning the hero on. It shows while the video loads or can't play."
+      : "Add a desktop image before turning the hero on.";
+  }
+
+  return problems;
+}
+
+const HomepageSection = () => {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: SETTINGS_QUERY_KEY,
+    queryFn: () =>
+      sdk.client.fetch<{ settings: StorefrontSettings }>(
+        "/admin/storefront-settings",
+      ),
+  });
+
+  const settings = data?.settings;
+
+  const collections = useQuery({
+    queryKey: COLLECTION_OPTIONS_QUERY_KEY,
+    queryFn: async (): Promise<CollectionOption[]> => {
+      const { collections } = await sdk.admin.productCollection.list({
+        limit: 200,
+        fields: "id,title",
+        order: "title",
+      });
+      return collections.map(({ id, title }) => ({ id, title }));
+    },
+    enabled: Boolean(settings),
+  });
+
+  const hero = settings?.homepage_hero ?? {};
+  const featuredId = settings?.featured_collection_id ?? null;
+  const featured = collections.data?.find(({ id }) => id === featuredId);
+  const featuredLabel = !featuredId
+    ? null
+    : featured
+      ? featured.title
+      : collections.isLoading
+        ? "Loading…"
+        : "A deleted collection. The website shows none; choose another.";
+
+  return (
+    <Section
+      title="Homepage"
+      description="The content of the website's home page: the large banner at the top and one featured collection. The page's layout is set by the website itself."
+      badge="Marketing & Store Manager"
+      canEdit={Boolean(settings)}
+      onEdit={() => setOpen(true)}
+      isLoading={isLoading}
+      error={error ? "You don't have access to these settings." : null}
+    >
+      {settings && (
+        <>
+          <div className="grid grid-cols-2 items-center gap-x-4 px-6 py-4">
+            <Text size="small" leading="compact" weight="plus">
+              Hero banner
+            </Text>
+            <div>
+              <Badge size="2xsmall" color={hero.enabled ? "green" : "grey"}>
+                {hero.enabled ? "Showing" : "Hidden"}
+              </Badge>
+            </div>
+          </div>
+          <Row label="Eyebrow" value={hero.eyebrow ?? null} />
+          <Row label="Headline" value={hero.title ?? null} />
+          <Row label="Description" value={hero.description ?? null} />
+          <Row
+            label="Media"
+            value={hero.desktop_video_url ? "Video" : "Photo"}
+          />
+          {hero.desktop_video_url && (
+            <>
+              <VideoRow label="Desktop video" url={hero.desktop_video_url} />
+              <VideoRow
+                label="Mobile video"
+                url={hero.mobile_video_url ?? null}
+              />
+            </>
+          )}
+          <ImageRow
+            label={
+              hero.desktop_video_url ? "Desktop poster image" : "Desktop image"
+            }
+            url={hero.desktop_image_url ?? null}
+            alt="Desktop hero image"
+          />
+          <ImageRow
+            label={
+              hero.desktop_video_url ? "Mobile poster image" : "Mobile image"
+            }
+            url={hero.mobile_image_url ?? null}
+            alt="Mobile hero image"
+          />
+          <Row
+            label="Button"
+            value={
+              hero.cta_label && hero.cta_url
+                ? `${hero.cta_label} → ${hero.cta_url}`
+                : null
+            }
+          />
+          <Row
+            label="Featured collection"
+            value={featuredLabel}
+            hint="Shown with the collection's own description and images."
+          />
+          <EditHomepageDrawer
+            settings={settings}
+            collections={collections.data ?? []}
+            collectionsLoading={collections.isLoading}
+            open={open}
+            onOpenChange={setOpen}
+            onSaved={(updated) =>
+              queryClient.setQueryData<{ settings: StorefrontSettings }>(
+                SETTINGS_QUERY_KEY,
+                { settings: updated },
+              )
+            }
+          />
+        </>
+      )}
+    </Section>
+  );
+};
+
+function draftFrom(hero: Partial<HomepageHero>): HeroDraft {
+  return {
+    enabled: hero.enabled === true,
+    eyebrow: hero.eyebrow ?? "",
+    title: hero.title ?? "",
+    description: hero.description ?? "",
+    media: hero.desktop_video_url ? "video" : "photo",
+    desktopImageUrl: hero.desktop_image_url ?? "",
+    mobileImageUrl: hero.mobile_image_url ?? "",
+    desktopVideoUrl: hero.desktop_video_url ?? "",
+    mobileVideoUrl: hero.mobile_video_url ?? "",
+    ctaLabel: hero.cta_label ?? "",
+    ctaUrl: hero.cta_url ?? "",
+  };
+}
+
+const EditHomepageDrawer = ({
+  settings,
+  collections,
+  collectionsLoading,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  settings: StorefrontSettings;
+  collections: CollectionOption[];
+  collectionsLoading: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (settings: StorefrontSettings) => void;
+}) => {
+  const [draft, setDraft] = useState<HeroDraft>(() =>
+    draftFrom(settings.homepage_hero),
+  );
+  const [collectionId, setCollectionId] = useState(NO_COLLECTION);
+  const [showProblems, setShowProblems] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setDraft(draftFrom(settings.homepage_hero));
+      setCollectionId(settings.featured_collection_id ?? NO_COLLECTION);
+      setShowProblems(false);
+    }
+  }, [open, settings]);
+
+  const set = <K extends keyof HeroDraft>(key: K, value: HeroDraft[K]) =>
+    setDraft((current) => ({ ...current, [key]: value }));
+
+  const problems = showProblems ? heroProblems(draft) : {};
+
+  const upload = useMutation({
+    mutationFn: async ({
+      file,
+      target,
+    }: {
+      file: File;
+      target: UploadTarget;
+    }) => {
+      const isVideoTarget =
+        target === "desktopVideoUrl" || target === "mobileVideoUrl";
+
+      if (isVideoTarget && file.size > MAX_VIDEO_MB * 1024 * 1024) {
+        throw new Error(
+          `the video is ${Math.ceil(file.size / 1024 / 1024)} MB. Export a shorter or more compressed MP4 under ${MAX_VIDEO_MB} MB.`,
+        );
+      }
+
+      return uploadImage(file);
+    },
+    onSuccess: (url, { target }) => set(target, url),
+    onError: (error: Error) => toast.error(`Upload failed: ${error.message}`),
+  });
+
+  const uploadingTo = (target: UploadTarget) =>
+    upload.isPending && upload.variables?.target === target;
+
+  const isVideo = draft.media === "video";
+
+  const save = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{ settings: StorefrontSettings }>(
+        "/admin/storefront-settings",
+        {
+          method: "POST",
+          body: {
+            homepage_hero: {
+              enabled: draft.enabled,
+              eyebrow: draft.eyebrow.trim() || null,
+              title: draft.title.trim() || null,
+              description: draft.description.trim() || null,
+              desktop_image_url: draft.desktopImageUrl || null,
+              mobile_image_url: draft.mobileImageUrl || null,
+              // Choosing Photo removes the videos; the hero is a video
+              // exactly when a desktop video is stored.
+              desktop_video_url: isVideo ? draft.desktopVideoUrl || null : null,
+              mobile_video_url: isVideo ? draft.mobileVideoUrl || null : null,
+              cta_label: draft.ctaLabel.trim() || null,
+              cta_url: draft.ctaUrl.trim() || null,
+            },
+            featured_collection_id:
+              collectionId === NO_COLLECTION ? null : collectionId,
+          },
+        },
+      ),
+    onSuccess: ({ settings: updated }) => {
+      toast.success("Homepage settings updated.");
+      onSaved(updated);
+      onOpenChange(false);
+    },
+    onError: (error: Error & { status?: number }) =>
+      saveError(error, "Marketing, the Store Manager and the store owner"),
+  });
+
+  const onSave = () => {
+    if (Object.keys(heroProblems(draft)).length) {
+      setShowProblems(true);
+      return;
+    }
+
+    save.mutate();
+  };
+
+  const busy = save.isPending || upload.isPending;
+  // A collection that was deleted after being featured has no option; list it
+  // so the Select still shows something and staff can see why to change it.
+  const featuredMissing =
+    collectionId !== NO_COLLECTION &&
+    !collectionsLoading &&
+    !collections.some(({ id }) => id === collectionId);
+
+  return (
+    <EditDrawer
+      title="Edit homepage"
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={busy}
+      saving={save.isPending}
+      canSave
+      onSave={onSave}
+    >
+      <div className="flex items-start justify-between gap-x-4 rounded-lg border border-ui-border-base px-4 py-3">
+        <div className="flex flex-col gap-y-1">
+          <Label htmlFor="hero-enabled" size="small" weight="plus">
+            Show the hero banner
+          </Label>
+          <Text size="small" leading="compact" className="text-ui-fg-subtle">
+            While off, the home page starts with its next section. Anything
+            filled in below is kept, so you can prepare a banner before showing
+            it.
+          </Text>
+        </div>
+        <Switch
+          id="hero-enabled"
+          checked={draft.enabled}
+          onCheckedChange={(checked) => set("enabled", checked)}
+        />
+      </div>
+      <Field
+        id="hero-eyebrow"
+        label="Eyebrow (optional)"
+        hint="A short line above the headline, like NEW SEASON."
+      >
+        <Input
+          id="hero-eyebrow"
+          value={draft.eyebrow}
+          maxLength={40}
+          placeholder="NEW SEASON"
+          onChange={(event) => set("eyebrow", event.target.value)}
+        />
+      </Field>
+      <Field
+        id="hero-title"
+        label="Headline"
+        hint={problems.title ?? "Required to show the banner. Keep it short."}
+        error={Boolean(problems.title)}
+      >
+        <Input
+          id="hero-title"
+          value={draft.title}
+          maxLength={120}
+          placeholder="Designed to be remembered."
+          aria-invalid={Boolean(problems.title)}
+          onChange={(event) => set("title", event.target.value)}
+        />
+      </Field>
+      <Field
+        id="hero-description"
+        label="Description (optional)"
+        hint={`${draft.description.length}/300. A sentence or two under the headline.`}
+      >
+        <Textarea
+          id="hero-description"
+          rows={3}
+          value={draft.description}
+          maxLength={300}
+          onChange={(event) => set("description", event.target.value)}
+        />
+      </Field>
+      <div className="flex flex-col gap-y-2">
+        <Label size="small" weight="plus">
+          Banner media
+        </Label>
+        <RadioGroup
+          value={draft.media}
+          onValueChange={(value) => set("media", value as HeroMedia)}
+          className="flex gap-x-6"
+        >
+          <div className="flex items-center gap-x-2">
+            <RadioGroup.Item value="photo" id="hero-media-photo" />
+            <Label htmlFor="hero-media-photo" size="small">
+              Photo
+            </Label>
+          </div>
+          <div className="flex items-center gap-x-2">
+            <RadioGroup.Item value="video" id="hero-media-video" />
+            <Label htmlFor="hero-media-video" size="small">
+              Video
+            </Label>
+          </div>
+        </RadioGroup>
+        {isVideo && (
+          <Text size="small" leading="compact" className="text-ui-fg-subtle">
+            A short silent loop. The photos below are still needed: they show
+            while the video loads, on phones that block autoplay, and for
+            visitors who turn off motion. Saving with Photo chosen removes the
+            videos.
+          </Text>
+        )}
+      </div>
+      {isVideo && (
+        <>
+          <VideoField
+            label="Desktop video"
+            hint={`Required for a video banner. Landscape MP4 (H.264), under ${MAX_VIDEO_MB} MB, around 10 to 20 seconds. Plays without sound.`}
+            error={problems.desktopVideoUrl}
+            url={draft.desktopVideoUrl}
+            busy={busy}
+            uploading={uploadingTo("desktopVideoUrl")}
+            onUpload={(file) =>
+              upload.mutate({ file, target: "desktopVideoUrl" })
+            }
+            onRemove={() => set("desktopVideoUrl", "")}
+          />
+          <VideoField
+            label="Mobile video (optional)"
+            hint={`Portrait MP4, under ${MAX_VIDEO_MB} MB. Phones show the desktop video, cropped, when this is empty.`}
+            url={draft.mobileVideoUrl}
+            busy={busy}
+            uploading={uploadingTo("mobileVideoUrl")}
+            onUpload={(file) =>
+              upload.mutate({ file, target: "mobileVideoUrl" })
+            }
+            onRemove={() => set("mobileVideoUrl", "")}
+          />
+        </>
+      )}
+      <ImageField
+        label={isVideo ? "Desktop poster image" : "Desktop image"}
+        hint={
+          isVideo
+            ? "Required to show the banner. Use a still from the video's first frame, landscape, at least 2400 x 1200px."
+            : "Required to show the banner. Landscape, at least 2400 x 1200px, with the subject away from where the headline sits."
+        }
+        error={problems.desktopImageUrl}
+        url={draft.desktopImageUrl}
+        busy={busy}
+        uploading={uploadingTo("desktopImageUrl")}
+        accept="image/png,image/jpeg,image/webp"
+        onUpload={(file) => upload.mutate({ file, target: "desktopImageUrl" })}
+        onRemove={() => set("desktopImageUrl", "")}
+      />
+      <ImageField
+        label={
+          isVideo ? "Mobile poster image (optional)" : "Mobile image (optional)"
+        }
+        hint={
+          isVideo
+            ? "A still from the mobile video, portrait, at least 1080 x 1350px. Phones use the desktop poster, cropped, when this is empty."
+            : "Portrait, at least 1080 x 1350px. Phones use the desktop image, cropped, when this is empty."
+        }
+        url={draft.mobileImageUrl}
+        busy={busy}
+        uploading={uploadingTo("mobileImageUrl")}
+        accept="image/png,image/jpeg,image/webp"
+        onUpload={(file) => upload.mutate({ file, target: "mobileImageUrl" })}
+        onRemove={() => set("mobileImageUrl", "")}
+      />
+      <Field
+        id="hero-cta-label"
+        label="Button label (optional)"
+        hint={
+          problems.ctaLabel ?? "Leave both button fields empty for no button."
+        }
+        error={Boolean(problems.ctaLabel)}
+      >
+        <Input
+          id="hero-cta-label"
+          value={draft.ctaLabel}
+          maxLength={40}
+          placeholder="Shop New Arrivals"
+          aria-invalid={Boolean(problems.ctaLabel)}
+          onChange={(event) => set("ctaLabel", event.target.value)}
+        />
+      </Field>
+      <Field
+        id="hero-cta-url"
+        label="Button destination"
+        hint={
+          problems.ctaUrl ??
+          'A page on the store, starting with "/" (like /new-arrivals), or a full https:// address.'
+        }
+        error={Boolean(problems.ctaUrl)}
+      >
+        <Input
+          id="hero-cta-url"
+          value={draft.ctaUrl}
+          maxLength={2048}
+          placeholder="/new-arrivals"
+          aria-invalid={Boolean(problems.ctaUrl)}
+          onChange={(event) => set("ctaUrl", event.target.value)}
+        />
+      </Field>
+      <Field
+        id="homepage-featured-collection"
+        label="Featured collection"
+        hint="Shown on the home page with the collection's own description and images, set on the collection's page under Products › Collections."
+      >
+        <Select
+          value={collectionId}
+          onValueChange={setCollectionId}
+          disabled={collectionsLoading}
+        >
+          <Select.Trigger id="homepage-featured-collection">
+            <Select.Value
+              placeholder={collectionsLoading ? "Loading collections…" : "None"}
+            />
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value={NO_COLLECTION}>None</Select.Item>
+            {featuredMissing && (
+              <Select.Item value={collectionId}>Deleted collection</Select.Item>
+            )}
+            {collections.map(({ id, title }) => (
+              <Select.Item key={id} value={id}>
+                {title}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select>
+      </Field>
     </EditDrawer>
   );
 };
@@ -817,6 +1387,7 @@ const Field = ({
 const ImageField = ({
   label,
   hint,
+  error,
   url,
   square,
   busy,
@@ -827,6 +1398,8 @@ const ImageField = ({
 }: {
   label: string;
   hint: string;
+  /** Shown in place of the hint when set. */
+  error?: string;
   url: string;
   square?: boolean;
   busy: boolean;
@@ -887,8 +1460,116 @@ const ImageField = ({
           </Button>
         )}
       </div>
+      <Text
+        size="small"
+        leading="compact"
+        className={error ? "text-ui-fg-error" : "text-ui-fg-subtle"}
+      >
+        {error ?? hint}
+      </Text>
+    </div>
+  );
+};
+
+const VideoRow = ({ label, url }: { label: string; url: string | null }) => (
+  <div className="grid grid-cols-2 items-center gap-x-4 px-6 py-4">
+    <Text size="small" leading="compact" weight="plus">
+      {label}
+    </Text>
+    {url ? (
+      <video
+        src={url}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        className="h-10 w-auto self-start rounded"
+      />
+    ) : (
       <Text size="small" leading="compact" className="text-ui-fg-subtle">
-        {hint}
+        Not set
+      </Text>
+    )}
+  </div>
+);
+
+const VideoField = ({
+  label,
+  hint,
+  error,
+  url,
+  busy,
+  uploading,
+  onUpload,
+  onRemove,
+}: {
+  label: string;
+  hint: string;
+  /** Shown in place of the hint when set. */
+  error?: string;
+  url: string;
+  busy: boolean;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onRemove: () => void;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="flex flex-col gap-y-2">
+      <Label size="small" weight="plus">
+        {label}
+      </Label>
+      {url && (
+        <video
+          src={url}
+          controls
+          muted
+          playsInline
+          preload="metadata"
+          className="h-32 w-auto self-start rounded"
+        />
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="video/mp4,video/webm"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            onUpload(file);
+          }
+          event.target.value = "";
+        }}
+      />
+      <div className="flex gap-2">
+        <Button
+          size="small"
+          variant="secondary"
+          disabled={busy}
+          isLoading={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {url ? "Replace video" : "Upload video"}
+        </Button>
+        {url && (
+          <Button
+            size="small"
+            variant="transparent"
+            disabled={busy}
+            onClick={onRemove}
+          >
+            Remove
+          </Button>
+        )}
+      </div>
+      <Text
+        size="small"
+        leading="compact"
+        className={error ? "text-ui-fg-error" : "text-ui-fg-subtle"}
+      >
+        {error ?? hint}
       </Text>
     </div>
   );

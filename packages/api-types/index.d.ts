@@ -377,6 +377,19 @@ export type StorefrontSettings = {
   social_links: Record<string, unknown>;
   allow_indexing: boolean;
   google_site_verification: string | null;
+  homepage_hero: {
+    enabled: boolean;
+    eyebrow: string | null;
+    title: string | null;
+    description: string | null;
+    desktop_image_url: string | null;
+    mobile_image_url: string | null;
+    desktop_video_url: string | null;
+    mobile_video_url: string | null;
+    cta_label: string | null;
+    cta_url: string | null;
+  };
+  featured_collection_id: string | null;
 };
 
 export type AdminUpdateStorefrontSettingsBody = {
@@ -395,6 +408,19 @@ export type AdminUpdateStorefrontSettingsBody = {
   };
   allow_indexing?: boolean;
   google_site_verification?: string | null;
+  homepage_hero?: {
+    enabled: boolean;
+    eyebrow?: string | null;
+    title?: string | null;
+    description?: string | null;
+    desktop_image_url?: string | null;
+    mobile_image_url?: string | null;
+    desktop_video_url?: string | null;
+    mobile_video_url?: string | null;
+    cta_label?: string | null;
+    cta_url?: string | null;
+  };
+  featured_collection_id?: string | null;
 };
 
 export type AdminStorefrontSettingsResponse = {
@@ -408,6 +434,19 @@ export type AdminStorefrontSettingsResponse = {
     social_links: Record<string, unknown>;
     allow_indexing: boolean;
     google_site_verification: string | null;
+    homepage_hero: {
+      enabled: boolean;
+      eyebrow: string | null;
+      title: string | null;
+      description: string | null;
+      desktop_image_url: string | null;
+      mobile_image_url: string | null;
+      desktop_video_url: string | null;
+      mobile_video_url: string | null;
+      cta_label: string | null;
+      cta_url: string | null;
+    };
+    featured_collection_id: string | null;
   };
 };
 
@@ -434,6 +473,21 @@ export type StoreStorefrontSettingsResponse = {
       };
       allow_indexing: boolean;
       google_site_verification: string | null;
+    };
+    homepage: {
+      hero: {
+        enabled: boolean;
+        eyebrow: string | null;
+        title: string | null;
+        description: string | null;
+        desktop_image_url: string | null;
+        mobile_image_url: string | null;
+        desktop_video_url: string | null;
+        mobile_video_url: string | null;
+        cta_label: string | null;
+        cta_url: string | null;
+      };
+      featured_collection_id: string | null;
     };
     products: {
       new_badge_days: number;

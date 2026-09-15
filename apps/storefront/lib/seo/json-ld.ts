@@ -2,6 +2,7 @@ import type { HttpTypes } from "@medusajs/types"
 
 import { isComingSoon } from "@/lib/medusa/product"
 import type { StorefrontSettings } from "@/lib/medusa/storefront-settings"
+import { isVariantPurchasable } from "@/lib/medusa/variants"
 import { getBaseURL } from "@/lib/util/env"
 
 import { summarize } from "./metadata"
@@ -61,14 +62,6 @@ type ProductForJsonLd = Pick<
     | null
 }
 
-function canBuy(variant: NonNullable<ProductForJsonLd["variants"]>[number]) {
-  return (
-    variant.manage_inventory === false ||
-    Boolean(variant.allow_backorder) ||
-    (variant.inventory_quantity ?? 0) > 0
-  )
-}
-
 /**
  * A product page's structured data, with its price range and stock. Fetch the
  * product with `*variants.calculated_price`, `+variants.inventory_quantity`
@@ -86,7 +79,9 @@ export function productJsonLd(
 
   // A coming-soon product cannot be bought yet, so it is reported as
   // unavailable rather than as a pre-order.
-  const inStock = !isComingSoon(product) && variants.some(canBuy)
+  const inStock =
+    !isComingSoon(product) &&
+    variants.some((variant) => isVariantPurchasable(variant))
   const availability = inStock
     ? "https://schema.org/InStock"
     : "https://schema.org/OutOfStock"

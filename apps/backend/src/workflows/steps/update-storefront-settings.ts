@@ -1,7 +1,8 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 
-import type { SocialLinksType } from "../../api/middlewares";
+import type { HomepageHeroType, SocialLinksType } from "../../api/middlewares";
 import { STOREFRONT_SETTINGS_MODULE } from "../../modules/storefront-settings";
+import { completeHomepageHero } from "../../modules/storefront-settings/homepage-hero";
 import { completeSocialLinks } from "../../modules/storefront-settings/social-networks";
 import StorefrontSettingsModuleService, {
   STOREFRONT_SETTINGS_ID,
@@ -17,6 +18,9 @@ export type UpdateStorefrontSettingsInput = {
   social_links?: SocialLinksType;
   allow_indexing?: boolean;
   google_site_verification?: string | null;
+  /** Replaces the stored hero as a whole: a field left out is cleared. */
+  homepage_hero?: HomepageHeroType;
+  featured_collection_id?: string | null;
 };
 
 export const updateStorefrontSettingsStep = createStep(
@@ -29,7 +33,7 @@ export const updateStorefrontSettingsStep = createStep(
     // Reads through retrieveSettings so the row exists before the first edit.
     const previous = await service.retrieveSettings();
 
-    const { social_links, ...rest } = input;
+    const { social_links, homepage_hero, ...rest } = input;
 
     const [updated] = await service.updateStorefrontSettings([
       {
@@ -37,6 +41,9 @@ export const updateStorefrontSettingsStep = createStep(
         ...rest,
         ...(social_links
           ? { social_links: completeSocialLinks(social_links) }
+          : {}),
+        ...(homepage_hero
+          ? { homepage_hero: completeHomepageHero(homepage_hero) }
           : {}),
       },
     ]);
@@ -52,6 +59,10 @@ export const updateStorefrontSettingsStep = createStep(
       ),
       allow_indexing: previous.allow_indexing,
       google_site_verification: previous.google_site_verification,
+      homepage_hero: completeHomepageHero(
+        previous.homepage_hero as Record<string, unknown>,
+      ),
+      featured_collection_id: previous.featured_collection_id,
     });
   },
   async (previous, { container }) => {
