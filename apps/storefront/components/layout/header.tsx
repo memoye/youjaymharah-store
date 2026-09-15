@@ -1,17 +1,20 @@
 "use client"
 
+import { useCatalog } from "@/features/catalog/provider"
 import { useStorefrontSettings } from "@/features/site-settings/provider"
 import { cn } from "@/lib/util/cn"
 import Image from "next/image"
 import Link from "next/link"
+import { categoryPath } from "@/lib/seo/routes"
 
 export function Header() {
   const { brand } = useStorefrontSettings()
+  const { categories } = useCatalog()
 
   return (
     <header className="border-b bg-background px-5 sm:px-6">
       <div className="container-wrapper flex items-center justify-between">
-        <div className="flex">
+        <div className="flex items-center gap-6">
           <Link
             href={"/"}
             className={cn(
@@ -32,10 +35,20 @@ export function Header() {
             <span className="sr-only">Home</span>
           </Link>
 
-          {/*<ul>
-            <li>NEW ARRIVALS</li>
-          </ul>*/}
-          {/*categoris here*/}
+          <nav
+            aria-label="Catalogue"
+            className="hidden items-center gap-6 md:flex"
+          >
+            {categories.map((category) => (
+              <Link
+                key={category.id}
+                href={categoryPath(category.handle)}
+                className="text-[13px] font-medium tracking-[0.02em] transition-colors hover:text-muted-foreground"
+              >
+                {category.name}
+              </Link>
+            ))}
+          </nav>
         </div>
 
         <div className="block h-full w-2 bg-black"></div>

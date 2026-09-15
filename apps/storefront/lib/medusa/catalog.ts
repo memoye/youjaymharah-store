@@ -243,6 +243,29 @@ export const getCategoryByHandle = cache(
   },
 )
 
+/**
+ * Every collection. The header's main nav renders these; build each link with
+ * `collectionPath` from `lib/seo/routes`.
+ */
+export const listCollections = cache(
+  async (locale?: string): Promise<HttpTypes.StoreCollection[]> => {
+    const { collections } =
+      await sdk.client.fetch<HttpTypes.StoreCollectionListResponse>(
+        "/store/collections",
+        {
+          query: { fields: COLLECTION_FIELDS, limit: 100 },
+          headers: localeHeaders(locale),
+          next: {
+            revalidate: TAXONOMY_REVALIDATE_SECONDS,
+            tags: [CATALOG_TAGS.collections],
+          },
+        },
+      )
+
+    return collections
+  },
+)
+
 /** One collection by handle, or null. Pass it to `getCollectionContent`. */
 export const getCollectionByHandle = cache(
   async (

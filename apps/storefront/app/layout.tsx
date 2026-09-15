@@ -8,7 +8,9 @@ import { QueryProvider } from "@/lib/query/provider"
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld"
 import { buildRootMetadata } from "@/lib/seo/metadata"
 import { cn } from "@/lib/util/cn"
+import { CatalogProvider } from "@/features/catalog/provider"
 import { StorefrontSettingsProvider } from "@/features/site-settings/provider"
+import { getCategoryTree, listCollections } from "@/lib/medusa/catalog"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 const bodoniModa = Bodoni_Moda({
@@ -31,7 +33,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const settings = await getStorefrontSettings()
+  const [settings, categoryTree, collections] = await Promise.all([
+    getStorefrontSettings(),
+    getCategoryTree(),
+    listCollections(),
+  ])
+
+  const categories = categoryTree.map(({ id, name, handle }) => ({
+    id,
+    name,
+    handle,
+  }))
 
   return (
     <html
@@ -48,9 +60,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           data={[organizationJsonLd(settings), websiteJsonLd(settings)]}
         />
         <TooltipProvider>
-          <StorefrontSettingsProvider settings={settings}>
-            <QueryProvider>{children}</QueryProvider>
-          </StorefrontSettingsProvider>
+          <QueryProvider>
+            <StorefrontSettingsProvider settings={settings}>
+              <CatalogProvider
+                categories={categories}
+                collections={collections}
+              >
+                {children}
+              </CatalogProvider>
+            </StorefrontSettingsProvider>
+          </QueryProvider>
         </TooltipProvider>
       </body>
     </html>
