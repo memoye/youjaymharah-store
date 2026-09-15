@@ -124,11 +124,11 @@ claude mcp add --transport http medusa https://docs.medusajs.com/mcp # or agent 
 ## Code Style
 
 - **The backend must satisfy `@medusajs/eslint-plugin`'s recommended config** (`eslint.config.ts`). Its rules encode Medusa framework requirements — correct route/workflow/module shapes, not just cosmetics — so a lint failure usually means the code is actually wrong, not just badly formatted. Never disable a `@medusajs/*` rule to make lint pass; fix the code.
-- **Formatting is Prettier's job, not yours.** Run `<pm> run format` (or `prettier --write <paths>`) rather than hand-matching style. **The two apps do not share a style**, and Prettier resolves config per file, so the right rules apply automatically:
-  - Root `.prettierrc` — governs the backend and repo root: **semicolons**, double quotes, 2-space indent, trailing commas, 80-column width.
-  - `apps/storefront/.prettierrc.json` — overrides with **`semi: false`** for everything under `apps/storefront`.
+- **Formatting is Prettier's job, not yours.** Run `<pm> run format` (or `prettier --write <paths>`) rather than hand-matching style. **The two apps do not share a style**, so the single root `.prettierrc` governs everything and uses `overrides` to fork per app:
+  - Base style (backend, repo root): **semicolons**, double quotes, 2-space indent, trailing commas, 80-column width.
+  - `apps/storefront/**` override: **`semi: false`**, plus Tailwind class sorting via `prettier-plugin-tailwindcss` (root devDependency) with `tailwindStylesheet` pointing at `apps/storefront/app/globals.css`.
 
-  Never copy the backend's style into the storefront or vice versa; let Prettier decide.
+  Never copy the backend's style into the storefront or vice versa; let Prettier decide. Do not re-create a Prettier config inside `apps/storefront/` — a nearer config file shadows the root one and silently disables class sorting.
 
 - Files: kebab-case. Types/classes: PascalCase. Functions/variables: camelCase. DB columns: snake_case.
 - No emojis in code, comments, or commit messages.
@@ -149,6 +149,7 @@ claude mcp add --transport http medusa https://docs.medusajs.com/mcp # or agent 
 - Calling the Medusa API from the storefront without `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`; requests fail with a publishable-key error, not an obvious 401.
 - Running the test task without a reachable PostgreSQL — integration suites need a live DB.
 - Silencing `@medusajs/*` ESLint rules instead of fixing the underlying pattern.
+- Dropping `maxRetries`/`retryInterval` from workflow steps (or inlining workflow logic into subscribers) because "the event bus has no retry" — that's only true in local dev. When `REDIS_URL` is set, `medusa-config.ts` swaps in the Redis event bus and workflow engine, so step retries become durable and survive restarts. Never reason about prod resilience from the in-memory defaults.
 
 ## Off-Limits
 
