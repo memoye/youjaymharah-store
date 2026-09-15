@@ -8,6 +8,7 @@ import { QueryProvider } from "@/lib/query/provider"
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld"
 import { buildRootMetadata } from "@/lib/seo/metadata"
 import { cn } from "@/lib/util/cn"
+import { StorefrontSettingsProvider } from "@/features/site-settings/provider"
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -44,7 +45,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd
           data={[organizationJsonLd(settings), websiteJsonLd(settings)]}
         />
-        <QueryProvider>{children}</QueryProvider>
+        <StorefrontSettingsProvider settings={settings}>
+          <QueryProvider>{children}</QueryProvider>
+        </StorefrontSettingsProvider>
       </body>
     </html>
   )
