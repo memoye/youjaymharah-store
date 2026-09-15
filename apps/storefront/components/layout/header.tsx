@@ -5,11 +5,14 @@ import { useStorefrontSettings } from "@/features/site-settings/provider"
 import { cn } from "@/lib/util/cn"
 import Image from "next/image"
 import Link from "next/link"
-import { categoryPath } from "@/lib/seo/routes"
+// import { categoryPath } from "@/lib/seo/routes"
+import { MagnifyingGlassIcon } from "@phosphor-icons/react"
+import { DesktopNav } from "./desktop-nav"
 
 export function Header() {
   const { brand } = useStorefrontSettings()
-  const { categories } = useCatalog()
+  const { categoryTree } = useCatalog()
+  console.log(categoryTree)
 
   return (
     <header className="border-b bg-background px-5 sm:px-6">
@@ -35,23 +38,14 @@ export function Header() {
             <span className="sr-only">Home</span>
           </Link>
 
-          <nav
-            aria-label="Catalogue"
-            className="hidden items-center gap-6 md:flex"
-          >
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={categoryPath(category.handle)}
-                className="text-[13px] font-medium tracking-[0.02em] transition-colors hover:text-muted-foreground"
-              >
-                {category.name}
-              </Link>
-            ))}
-          </nav>
+          <DesktopNav />
         </div>
 
-        <div className="block h-full w-2 bg-black"></div>
+        <div className="flex h-12 items-stretch bg-red-500">
+          <button className="bg-blue h-full">
+            <MagnifyingGlassIcon />
+          </button>
+        </div>
         {/*<nav>
           <ul className="flex items-center gap-4">
             <li>Search</li>

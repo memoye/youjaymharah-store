@@ -39,12 +39,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     listCollections(),
   ])
 
-  const categories = categoryTree.map(({ id, name, handle }) => ({
-    id,
-    name,
-    handle,
-  }))
-
   return (
     <html
       lang="en"
@@ -63,7 +57,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <QueryProvider>
             <StorefrontSettingsProvider settings={settings}>
               <CatalogProvider
-                categories={categories}
+                categoryTree={categoryTree}
                 collections={collections}
               >
                 {children}

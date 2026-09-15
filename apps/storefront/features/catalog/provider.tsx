@@ -3,30 +3,24 @@
 import { createContext, useContext, type ReactNode } from "react"
 import type { HttpTypes } from "@medusajs/types"
 
-type CatalogCategory = Pick<
-  HttpTypes.StoreProductCategory,
-  "id" | "name" | "handle"
->
+type CatalogCategory = HttpTypes.StoreProductCategory
 
-type CatalogCollection = Pick<
-  HttpTypes.StoreCollection,
-  "id" | "title" | "handle"
->
+type CatalogCollection = HttpTypes.StoreCollection
 
 type CatalogValue = {
-  categories: CatalogCategory[]
+  categoryTree: CatalogCategory[]
   collections: CatalogCollection[]
 }
 
 const CatalogContext = createContext<CatalogValue | null>(null)
 
 export function CatalogProvider({
-  categories,
+  categoryTree,
   collections,
   children,
 }: CatalogValue & { children: ReactNode }) {
   return (
-    <CatalogContext.Provider value={{ categories, collections }}>
+    <CatalogContext.Provider value={{ categoryTree, collections }}>
       {children}
     </CatalogContext.Provider>
   )

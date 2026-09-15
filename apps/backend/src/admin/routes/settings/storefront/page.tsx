@@ -378,14 +378,19 @@ const HomepageSection = () => {
   const hero = settings?.homepage_hero ?? {};
   const featuredId = settings?.featured_collection_id ?? null;
   const featured = collections.data?.find(({ id }) => id === featuredId);
-  const featuredLabel = !featuredId
-    ? null
-    : featured
-      ? featured.title
-      : collections.isLoading
-        ? "Loading…"
-        : "A deleted collection. The website shows none; choose another.";
 
+  const getFeaturedLabel = () => {
+    if (!featuredId) return null;
+
+    if (featured) return featured.title;
+
+    if (collections.isLoading) return "Loading...";
+
+    return "A deleted collection. The website shows none; choose another.";
+  };
+
+  const featuredLabel = getFeaturedLabel(); 
+  
   return (
     <Section
       title="Homepage"
