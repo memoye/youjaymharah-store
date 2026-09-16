@@ -5,7 +5,7 @@ type RenderFromQueryProps = {
   isEmpty?: boolean;
   loading: React.ReactNode;
   error: React.ReactNode;
-  empty: React.ReactNode;
+  empty?: React.ReactNode;
   children: React.ReactNode;
 };
 

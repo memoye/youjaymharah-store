@@ -506,7 +506,7 @@ const HeroHistory = ({
 }) => {
   const prompt = usePrompt();
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: HERO_HISTORY_QUERY_KEY,
     queryFn: () =>
       sdk.client.fetch<{ revisions: HeroRevision[] }>(
@@ -1447,19 +1447,24 @@ const Section = ({
         Edit
       </Button>
     </div>
-    {isLoading ? (
-      <div className="flex items-center justify-center px-6 py-8">
-        <Spinner className="animate-spin text-ui-fg-subtle" />
-      </div>
-    ) : error ? (
-      <div className="px-6 py-4">
-        <Text size="small" leading="compact" className="text-ui-fg-subtle">
-          {error}
-        </Text>
-      </div>
-    ) : (
-      children
-    )}
+    <RenderFromQuery
+      isLoading={isLoading}
+      isError={!!error}
+      loading={
+        <div className="flex items-center justify-center px-6 py-8">
+          <Spinner className="text-ui-fg-subtle animate-spin" />
+        </div>
+      }
+      error={
+        <div className="px-6 py-4">
+          <Text size="small" leading="compact" className="text-ui-fg-subtle">
+            {error}
+          </Text>
+        </div>
+      }
+    >
+      {children}
+    </RenderFromQuery>
   </Container>
 );
 
@@ -1486,7 +1491,7 @@ const Row = ({
     <Text
       size="small"
       leading="compact"
-      className="break-words text-ui-fg-subtle"
+      className="text-ui-fg-subtle wrap-break-word"
     >
       {value || "Not set"}
     </Text>
