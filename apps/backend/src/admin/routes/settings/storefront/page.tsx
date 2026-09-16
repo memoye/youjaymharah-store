@@ -1062,7 +1062,7 @@ const SharingSection = () => {
 
 /** Accepts the whole `<meta name="google-site-verification" ...>` tag too. */
 function verificationCode(value: string): string {
-  const fromTag = value.match(/content=["']([^"']+)["']/i);
+  const fromTag = new RegExp(/content=["']([^"']+)["']/i).exec(value);
   return (fromTag?.[1] ?? value).trim();
 }
 
