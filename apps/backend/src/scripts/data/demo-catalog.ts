@@ -19,7 +19,8 @@ export type DemoCollection = {
   title: string;
   handle: string;
   description: string;
-  heroImage: string;
+  /** Unsplash photo id, cropped into the landscape and portrait banners. */
+  photo: string;
 };
 
 export type DemoColour = {
@@ -56,6 +57,22 @@ export type DemoPriceList = {
 
 const img = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&h=1600&q=80`;
+
+const unsplash = (id: string, width: number, height: number) =>
+  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&h=${height}&q=80`;
+
+/** Landscape banner: the size the admin asks for (2400 x 1200). */
+export const bannerImage = (id: string) => unsplash(id, 2400, 1200);
+
+/** Portrait banner for phones (1080 x 1350). */
+export const mobileBannerImage = (id: string) => unsplash(id, 1080, 1350);
+
+/**
+ * What earlier versions of this seed stored as a collection's `hero_image`
+ * (a portrait crop), so re-running the seed can upgrade those rows without
+ * touching images staff chose themselves.
+ */
+export const legacyCollectionImage = img;
 
 const APPAREL_SIZES = ["XS", "S", "M", "L", "XL"];
 const TROUSER_SIZES = ["32", "34", "36", "38", "40", "42"];
@@ -197,30 +214,50 @@ export const DEMO_COLLECTIONS: DemoCollection[] = [
     handle: "autumn-winter-2026",
     description:
       "Enveloping wool coats, textured knits and a palette of chocolate, camel and black.",
-    heroImage: img("1618244972963-dbee1a7edc95"),
+    photo: "1618244972963-dbee1a7edc95",
   },
   {
     title: "Wardrobe Essentials",
     handle: "wardrobe-essentials",
     description:
       "The pieces we return to season after season: the clean-cut tee, the poplin shirt, the wide-leg trouser.",
-    heroImage: img("1627130697816-4d71dbfe6a5b"),
+    photo: "1627130697816-4d71dbfe6a5b",
   },
   {
     title: "Atelier",
     handle: "atelier",
     description:
       "Our most elevated line, crafted from exceptional materials such as pure cashmere, double-faced wool and silk.",
-    heroImage: img("1612731486606-2614b4d74921"),
+    photo: "1612731486606-2614b4d74921",
   },
   {
     title: "The Linen Edit",
     handle: "the-linen-edit",
     description:
       "Breathable, European-grown linen in easy shapes for warm days.",
-    heroImage: img("1625499706422-998dd9e31a66"),
+    photo: "1625499706422-998dd9e31a66",
   },
 ];
+
+/**
+ * The home page's demo content: a hero promoting the season's collection and
+ * a different collection featured below it. Applied only while the store's
+ * hero is empty and no collection is featured.
+ */
+export const DEMO_HOMEPAGE = {
+  hero: {
+    enabled: true,
+    eyebrow: "AUTUMN WINTER 2026",
+    title: "Designed to be remembered.",
+    description:
+      "Enveloping wool coats, textured knits and a palette of chocolate, camel and black.",
+    desktop_image_url: bannerImage("1618244972963-dbee1a7edc95"),
+    mobile_image_url: mobileBannerImage("1618244972963-dbee1a7edc95"),
+    cta_label: "Shop the collection",
+    cta_url: "/collections/autumn-winter-2026",
+  },
+  featuredCollection: "atelier",
+};
 
 export const DEMO_TAGS = [
   "new-arrival",

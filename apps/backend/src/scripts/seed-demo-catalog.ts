@@ -22,31 +22,44 @@ import {
   createShippingProfilesWorkflow,
   deletePriceListsWorkflow,
   deleteProductsWorkflow,
+  updateCollectionsWorkflow,
   updateProductOptionsWorkflow,
   updateProductOptionValuesWorkflow,
   updateProductVariantsWorkflow,
 } from "@medusajs/medusa/core-flows";
 
 import {
+  bannerImage,
   COLOUR_OPTION,
   DEMO_CATEGORIES,
   DEMO_COLLECTIONS,
+  DEMO_HOMEPAGE,
   DEMO_COLOURS,
   DEMO_PRICE_LISTS,
   DEMO_PRODUCTS,
   DEMO_TAGS,
   NGN_PER_USD,
   SIZE_OPTION,
+  legacyCollectionImage,
+  mobileBannerImage,
   SIZE_ORDER,
+  type DemoCollection,
   type DemoProduct,
 } from "./data/demo-catalog";
 import { DEMO_SIZE_GUIDES } from "./data/demo-size-guides";
 import { SIZE_GUIDE_MODULE } from "../modules/size-guide";
 import type SizeGuideModuleService from "../modules/size-guide/service";
+import { STOREFRONT_SETTINGS_MODULE } from "../modules/storefront-settings";
+import {
+  completeHomepageHero,
+  hasHeroContent,
+} from "../modules/storefront-settings/homepage-hero";
+import type StorefrontSettingsModuleService from "../modules/storefront-settings/service";
 import {
   createSizeGuideWorkflow,
   setCategorySizeGuideWorkflow,
 } from "../workflows/size-guides";
+import { updateStorefrontSettingsWorkflow } from "../workflows/update-storefront-settings";
 
 /**
  * Seeds a demo womenswear catalog for storefront development:
@@ -55,7 +68,9 @@ import {
  *   pnpm run seed:demo reset    deletes the demo products and sale first,
  *                               then recreates them from the data file
  *
- * Creates categories, collections, product types and tags, shared Colour and
+ * Creates categories, collections (with description, banner and mobile
+ * banner), home page demo content (a hero and a featured collection, only
+ * while those are empty), product types and tags, shared Colour and
  * Size options (each colour's swatch hex in its value metadata), ~45
  * published products with Colour x Size variants priced in NGN and USD,
  * colour-specific variant images and thumbnails, stock at the store's stock
@@ -87,6 +102,7 @@ export default async function seedDemoCatalog({ container, args }: ExecArgs) {
   const sharedOptions = await ensureSharedOptions(container);
   // After the shared options: a guide's sizes are checked against them.
   await ensureSizeGuides(container, categoryIds);
+  await ensureHomepage(container, collectionIds);
 
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const { data: existingProducts } = await query.graph({
@@ -350,11 +366,20 @@ async function ensureCategories(container: MedusaContainer) {
   return ids;
 }
 
+function collectionContent(collection: DemoCollection) {
+  return {
+    description: collection.description,
+    hero_image: bannerImage(collection.photo),
+    hero_image_mobile: mobileBannerImage(collection.photo),
+  };
+}
+
 async function ensureCollections(container: MedusaContainer) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const { data: existing } = await query.graph({
     entity: "product_collection",
-    fields: ["id", "handle"],
+    fields: ["id", "handle", "metadata"],
     filters: { handle: DEMO_COLLECTIONS.map((c) => c.handle) },
   });
   const ids = new Map(existing.map((c) => [c.handle, c.id]));
@@ -366,13 +391,97 @@ async function ensureCollections(container: MedusaContainer) {
         collections: missing.map((c) => ({
           title: c.title,
           handle: c.handle,
-          metadata: { description: c.description, hero_image: c.heroImage },
+          metadata: collectionContent(c),
         })),
       },
     });
     result.forEach((c) => ids.set(c.handle, c.id));
   }
+
+  // Fill in banners on collections seeded before they existed. Only empty
+  // fields, and a hero image still at this seed's old portrait crop, are
+  // changed; anything staff set is left alone.
+  for (const row of existing) {
+    const demo = DEMO_COLLECTIONS.find((c) => c.handle === row.handle);
+    if (!demo) continue;
+
+    const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+    const wanted = collectionContent(demo);
+    const updates: Record<string, string> = {};
+
+    if (!metadata.description) {
+      updates.description = wanted.description;
+    }
+    if (
+      !metadata.hero_image ||
+      metadata.hero_image === legacyCollectionImage(demo.photo)
+    ) {
+      updates.hero_image = wanted.hero_image;
+    }
+    if (!metadata.hero_image_mobile) {
+      updates.hero_image_mobile = wanted.hero_image_mobile;
+    }
+
+    if (Object.keys(updates).length) {
+      await updateCollectionsWorkflow(container).run({
+        input: {
+          selector: { id: row.id },
+          update: { metadata: { ...metadata, ...updates } },
+        },
+      });
+      logger.info(
+        `Collection ${row.handle}: filled in ${Object.keys(updates).join(", ")}.`,
+      );
+    }
+  }
+
   return ids;
+}
+
+/**
+ * Demo home page content: a hero and a featured collection. Each is set only
+ * while it is still empty, so a store that has chosen its own is untouched.
+ */
+async function ensureHomepage(
+  container: MedusaContainer,
+  collectionIds: Map<string, string>,
+) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const settingsService: StorefrontSettingsModuleService = container.resolve(
+    STOREFRONT_SETTINGS_MODULE,
+  );
+  const settings = await settingsService.retrieveSettings();
+
+  const heroIsEmpty = !hasHeroContent(
+    completeHomepageHero(settings.homepage_hero as Record<string, unknown>),
+  );
+  const featuredId = collectionIds.get(DEMO_HOMEPAGE.featuredCollection);
+  const featureIsEmpty =
+    !settings.featured_collection_id && Boolean(featuredId);
+
+  if (!heroIsEmpty && !featureIsEmpty) {
+    logger.info(
+      "Home page already has a hero and featured collection; skipping.",
+    );
+    return;
+  }
+
+  await updateStorefrontSettingsWorkflow(container).run({
+    input: {
+      ...(heroIsEmpty ? { homepage_hero: DEMO_HOMEPAGE.hero } : {}),
+      ...(featureIsEmpty ? { featured_collection_id: featuredId } : {}),
+    },
+  });
+
+  logger.info(
+    `Home page: ${[
+      heroIsEmpty && "demo hero set",
+      featureIsEmpty &&
+        `featured collection set to ${DEMO_HOMEPAGE.featuredCollection}`,
+    ]
+      .filter(Boolean)
+      .join(", ")}.`,
+  );
 }
 
 async function ensureProductTypes(container: MedusaContainer) {

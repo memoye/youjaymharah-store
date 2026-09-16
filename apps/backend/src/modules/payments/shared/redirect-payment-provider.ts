@@ -219,12 +219,13 @@ export abstract class RedirectPaymentProvider<
       return { action: "not_supported" };
     }
 
-    // NOTE: the webhook is a redundancy, not the source of truth. Medusa emits
-    // this event through the in-memory event bus with `attempts: 3`, which the
-    // local bus ignores — there is no retry, and a restart inside the 5s delay
-    // drops the event after we have already ACKed the gateway. The customer's
-    // return leg re-runs authorizePayment, which verifies server-side, so a lost
-    // webhook self-heals. See the no-Redis stance before "fixing" this with a queue.
+    // Medusa processes this through the event bus with `attempts: 3` and a
+    // short delay, after the gateway has already been answered. With REDIS_URL
+    // set (production), the Redis event bus keeps the event across restarts
+    // and retries it. Only local dev, on the in-memory bus, ignores `attempts`
+    // and loses an event pending during a restart. Either way the webhook is
+    // a second path, not the only one: the customer's return leg re-runs
+    // authorizePayment, which verifies with the gateway server-side.
     return {
       action: parsed.action,
       data: {

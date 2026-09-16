@@ -115,10 +115,12 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     );
 
     if (error) {
-      // NOTE: nothing retries this. Subscribers run on the in-memory event bus,
-      // which drops the `attempts` option, so a failed send is gone for good.
-      // Logging here keeps a failed email from taking the caller's flow down
-      // with it — acceptable while notifications are non-critical.
+      // Throwing is what makes a failed send retry: the calling workflow step
+      // fails and runs again per its `maxRetries`/`retryInterval`. With
+      // REDIS_URL set (production), the Redis workflow engine keeps those
+      // retries across restarts and deploys; only local dev on the in-memory
+      // engine loses them. Callers that must not fail on a bad address catch
+      // the error themselves.
       this.logger.error(
         `Resend failed to send "${notification.template}" to ${notification.to}: ${error.message}`,
       );
