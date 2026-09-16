@@ -21,6 +21,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { sdk } from "../../../lib/sdk";
 import { uploadImage } from "../../../lib/upload-image";
+import { RenderFromQuery } from "../../../components/render-from-query";
 
 type Branding = {
   id: string;
@@ -505,7 +506,7 @@ const HeroHistory = ({
 }) => {
   const prompt = usePrompt();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: HERO_HISTORY_QUERY_KEY,
     queryFn: () =>
       sdk.client.fetch<{ revisions: HeroRevision[] }>(
@@ -553,18 +554,23 @@ const HeroHistory = ({
           10 are kept.
         </Text>
       </div>
-      {isLoading ? (
-        <Spinner className="animate-spin text-ui-fg-subtle" />
-      ) : error ? (
-        <Text size="small" leading="compact" className="text-ui-fg-subtle">
-          Previous banners couldn't be loaded.
-        </Text>
-      ) : !revisions.length ? (
-        <Text size="small" leading="compact" className="text-ui-fg-subtle">
-          None yet.
-        </Text>
-      ) : (
-        <ul className="flex flex-col divide-y rounded-lg border border-ui-border-base">
+      <RenderFromQuery
+        isLoading={isLoading}
+        isError={isError}
+        isEmpty={!revisions.length}
+        loading={<Spinner className="text-ui-fg-subtle animate-spin" />}
+        error={
+          <Text size="small" leading="compact" className="text-ui-fg-subtle">
+            Previous banners couldn't be loaded.
+          </Text>
+        }
+        empty={
+          <Text size="small" leading="compact" className="text-ui-fg-subtle">
+            None yet.
+          </Text>
+        }
+      >
+        <ul className="border-ui-border-base flex flex-col divide-y rounded-lg border">
           {revisions.map((revision) => (
             <li
               key={revision.id}
@@ -577,7 +583,7 @@ const HeroHistory = ({
                   className="h-10 w-16 shrink-0 rounded object-cover"
                 />
               ) : (
-                <div className="h-10 w-16 shrink-0 rounded bg-ui-bg-subtle" />
+                <div className="bg-ui-bg-subtle h-10 w-16 shrink-0 rounded" />
               )}
               <div className="flex min-w-0 flex-1 flex-col gap-y-1">
                 <div className="flex items-center gap-x-2">
@@ -603,7 +609,7 @@ const HeroHistory = ({
                 <Text
                   size="small"
                   leading="compact"
-                  className="truncate text-ui-fg-subtle"
+                  className="text-ui-fg-subtle truncate"
                 >
                   {describeReplacement(revision)}
                 </Text>
@@ -622,7 +628,7 @@ const HeroHistory = ({
             </li>
           ))}
         </ul>
-      )}
+      </RenderFromQuery>
     </div>
   );
 };
