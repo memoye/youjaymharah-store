@@ -40,10 +40,10 @@ export function EmailLayout({
 
   return (
     <Tailwind>
-      <Html className="font-sans bg-gray-100">
+      <Html className="bg-gray-100 font-sans">
         <Head />
         <Preview>{preview}</Preview>
-        <Body className="bg-white my-10 mx-auto w-full max-w-2xl">
+        <Body className="mx-auto my-10 w-full max-w-2xl bg-white">
           <Section className="bg-[#27272a] px-6 py-4">
             {logoUrl ? (
               <Img
@@ -53,28 +53,28 @@ export function EmailLayout({
                 className="h-7 w-auto object-contain"
               />
             ) : (
-              <Text className="m-0 text-white text-lg font-semibold">
+              <Text className="m-0 text-lg font-semibold text-white">
                 {storeName}
               </Text>
             )}
           </Section>
 
           <Container className="p-6">
-            <Heading className="text-2xl font-bold text-center text-gray-800">
+            <Heading className="text-center text-2xl font-bold text-gray-800">
               {heading}
             </Heading>
             {intro && (
-              <Text className="text-center text-gray-600 mt-2">{intro}</Text>
+              <Text className="mt-2 text-center text-gray-600">{intro}</Text>
             )}
           </Container>
 
           {children}
 
-          <Section className="bg-gray-50 p-6 mt-10">
-            <Text className="text-center text-gray-500 text-sm">
+          <Section className="mt-10 bg-gray-50 p-6">
+            <Text className="text-center text-sm text-gray-500">
               Questions? Reply to this email or contact us at {supportEmail}.
             </Text>
-            <Text className="text-center text-gray-400 text-xs mt-4">
+            <Text className="mt-4 text-center text-xs text-gray-400">
               {new Date().getFullYear()} {storeName}. All rights reserved.
             </Text>
           </Section>
@@ -96,4 +96,4 @@ export default function EmailLayoutPreview() {
       </Container>
     </EmailLayout>
   );
-};
+}

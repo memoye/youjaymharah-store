@@ -1,7 +1,5 @@
 {
-  "namespaces": [
-    "public"
-  ],
+  "namespaces": ["public"],
   "name": "public",
   "tables": [
     {
@@ -213,9 +211,7 @@
         },
         {
           "keyName": "newsletter_settings_pkey",
-          "columnNames": [
-            "id"
-          ],
+          "columnNames": ["id"],
           "composite": false,
           "constraint": true,
           "primary": true,
@@ -273,11 +269,7 @@
           "scale": null,
           "default": null,
           "comment": null,
-          "enumItems": [
-            "pending",
-            "subscribed",
-            "unsubscribed"
-          ],
+          "enumItems": ["pending", "subscribed", "unsubscribed"],
           "mappedType": "enum"
         },
         "source": {
@@ -473,9 +465,7 @@
         },
         {
           "keyName": "newsletter_subscriber_pkey",
-          "columnNames": [
-            "id"
-          ],
+          "columnNames": ["id"],
           "composite": false,
           "constraint": true,
           "primary": true,

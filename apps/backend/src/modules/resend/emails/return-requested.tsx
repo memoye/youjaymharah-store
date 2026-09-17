@@ -51,7 +51,7 @@ function ReturnRequestedEmailComponent({
       intro={`We have set up a return for order #${order.display_id}.`}
     >
       <Container className="px-6">
-        <Heading className="text-xl font-semibold text-gray-800 mb-4">
+        <Heading className="mb-4 text-xl font-semibold text-gray-800">
           Items to send back
         </Heading>
         {orderReturn.items?.map((item, index) => (
@@ -79,21 +79,21 @@ function ReturnRequestedEmailComponent({
         ))}
 
         {hasDestination ? (
-          <Section className="rounded-lg bg-gray-50 p-4 my-6">
-            <Heading className="text-base font-semibold text-gray-800 m-0">
+          <Section className="my-6 rounded-lg bg-gray-50 p-4">
+            <Heading className="m-0 text-base font-semibold text-gray-800">
               Where to send it
             </Heading>
             {location?.name && (
-              <Text className="text-gray-800 m-0 mt-2">{location.name}</Text>
+              <Text className="m-0 mt-2 text-gray-800">{location.name}</Text>
             )}
             {addressLines.map((line) => (
-              <Text key={line} className="text-gray-600 m-0">
+              <Text key={line} className="m-0 text-gray-600">
                 {line}
               </Text>
             ))}
           </Section>
         ) : (
-          <Text className="text-gray-600 mt-6">
+          <Text className="mt-6 text-gray-600">
             We will be in touch with how to send the items back.
           </Text>
         )}
@@ -103,7 +103,7 @@ function ReturnRequestedEmailComponent({
           {order.display_id}. We will email you when they arrive.
         </Text>
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

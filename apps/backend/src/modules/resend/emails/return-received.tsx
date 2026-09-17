@@ -59,7 +59,7 @@ function ReturnReceivedEmailComponent({
       intro={`Your return for order #${order.display_id} has arrived.`}
     >
       <Container className="px-6">
-        <Heading className="text-xl font-semibold text-gray-800 mb-4">
+        <Heading className="mb-4 text-xl font-semibold text-gray-800">
           What we received
         </Heading>
         {orderReturn.items?.map((item, index) => (
@@ -91,14 +91,14 @@ function ReturnReceivedEmailComponent({
         ))}
 
         {refund ? (
-          <Section className="rounded-lg bg-gray-50 p-4 my-6">
+          <Section className="my-6 rounded-lg bg-gray-50 p-4">
             <Text className="m-0 text-gray-800">
               We will refund <strong>{refund}</strong> to your original payment
               method.
             </Text>
           </Section>
         ) : (
-          <Text className="text-gray-600 mt-6">
+          <Text className="mt-6 text-gray-600">
             If anything is still owed to you, we will let you know once it has
             been issued.
           </Text>
@@ -111,7 +111,7 @@ function ReturnReceivedEmailComponent({
           </Text>
         )}
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

@@ -251,7 +251,7 @@ module.exports = defineConfig({
       resolve: "./src/modules/storefront-settings",
     },
     {
-      resolve: "./src/modules/bag-reminder",
+      resolve: "./src/modules/cart-reminder",
     },
     {
       resolve: "@medusajs/medusa/notification",

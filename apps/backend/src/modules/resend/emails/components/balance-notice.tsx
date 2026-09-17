@@ -24,7 +24,7 @@ export function BalanceNotice({
   }
 
   return (
-    <Section className="rounded-lg bg-gray-50 p-4 my-6">
+    <Section className="my-6 rounded-lg bg-gray-50 p-4">
       {balance.direction === "customer_owes" ? (
         <Text className="m-0 text-gray-800">
           There is <strong>{balance.amount}</strong> left to pay on this order.

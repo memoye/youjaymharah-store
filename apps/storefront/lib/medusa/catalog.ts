@@ -178,6 +178,16 @@ export async function listProducts(
 }
 
 /**
+ * The New arrivals page: newest products first, with card fields. The New
+ * badge itself comes from `isNew()`; this only orders the list.
+ */
+export function listNewArrivals(
+  params: Omit<ListProductsParams, "order"> = {},
+): Promise<ProductPage> {
+  return listProducts({ ...params, order: "-created_at" })
+}
+
+/**
  * The whole category tree from the top level down, children in the admin's
  * order. Fetched once and cached; use it for navigation menus and category
  * sections.

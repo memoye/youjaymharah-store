@@ -32,10 +32,10 @@ function PasswordResetEmailComponent({
       }
     >
       <Container className="px-6">
-        <Section className="text-center my-6">
+        <Section className="my-6 text-center">
           <Button
             href={url}
-            className="bg-[#27272a] text-white rounded-lg px-6 py-3 font-semibold"
+            className="rounded-lg bg-[#27272a] px-6 py-3 font-semibold text-white"
           >
             Choose a new password
           </Button>
@@ -47,9 +47,9 @@ function PasswordResetEmailComponent({
             : "This link expires shortly for your security."}{" "}
           If the button does not work, paste this address into your browser:
         </Text>
-        <Text className="text-sm text-blue-600 break-all">{url}</Text>
+        <Text className="text-sm break-all text-blue-600">{url}</Text>
 
-        <Text className="text-gray-600 mt-6">
+        <Text className="mt-6 text-gray-600">
           If you did not ask to reset your password, you can ignore this email
           and nothing will change.
         </Text>
@@ -70,4 +70,4 @@ export default function PasswordResetEmailPreview() {
       expires_in="15 minutes"
     />
   );
-};
+}

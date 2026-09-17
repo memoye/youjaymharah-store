@@ -63,12 +63,12 @@ function OrderShippedEmailComponent({
     >
       <Container className="px-6">
         {trackingNumbers.length > 0 && (
-          <Section className="rounded-lg bg-gray-50 p-4 mb-6">
-            <Heading className="text-base font-semibold text-gray-800 m-0">
+          <Section className="mb-6 rounded-lg bg-gray-50 p-4">
+            <Heading className="m-0 text-base font-semibold text-gray-800">
               Tracking
             </Heading>
             {trackingNumbers.map((number) => (
-              <Text key={number} className="text-gray-600 m-0 mt-2">
+              <Text key={number} className="m-0 mt-2 text-gray-600">
                 {number}
               </Text>
             ))}
@@ -85,7 +85,7 @@ function OrderShippedEmailComponent({
           </Section>
         )}
 
-        <Heading className="text-xl font-semibold text-gray-800 mb-4">
+        <Heading className="mb-4 text-xl font-semibold text-gray-800">
           What shipped
         </Heading>
         {shippedItems?.map((item, index) => (
@@ -102,7 +102,7 @@ function OrderShippedEmailComponent({
           </Row>
         ))}
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

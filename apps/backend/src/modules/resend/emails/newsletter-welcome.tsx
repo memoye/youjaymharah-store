@@ -40,6 +40,8 @@ export const newsletterWelcomeEmail = (props: NewsletterWelcomeEmailProps) => (
   <NewsletterWelcomeEmailComponent {...props} />
 );
 
-export default function NewsletterWelcomeEmailPreview()  { 
- return <NewsletterWelcomeEmailComponent unsubscribe_url="https://example.com/newsletter/unsubscribe?token=abc123" />
- };
+export default function NewsletterWelcomeEmailPreview() {
+  return (
+    <NewsletterWelcomeEmailComponent unsubscribe_url="https://example.com/newsletter/unsubscribe?token=abc123" />
+  );
+}

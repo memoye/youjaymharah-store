@@ -73,15 +73,15 @@ function OrderPlacedEmailComponent({
           <Section>
             <Row>
               <Column align="left">
-                <Heading className="text-white text-xl font-semibold">
+                <Heading className="text-xl font-semibold text-white">
                   {email_banner.title}
                 </Heading>
-                <Text className="text-white mt-2">{email_banner.body}</Text>
+                <Text className="mt-2 text-white">{email_banner.body}</Text>
               </Column>
               <Column align="right">
                 <Link
                   href={email_banner.url}
-                  className="font-semibold px-2 text-white underline"
+                  className="px-2 font-semibold text-white underline"
                 >
                   Shop Now
                 </Link>
@@ -92,12 +92,12 @@ function OrderPlacedEmailComponent({
       )}
 
       <Container className="px-6">
-        <Heading className="text-xl font-semibold text-gray-800 mb-4">
+        <Heading className="mb-4 text-xl font-semibold text-gray-800">
           Your Items
         </Heading>
         <Row>
           <Column>
-            <Text className="text-sm m-0 my-2 text-gray-500">
+            <Text className="m-0 my-2 text-sm text-gray-500">
               Order ID: #{order.display_id}
             </Text>
           </Column>
@@ -118,7 +118,7 @@ function OrderPlacedEmailComponent({
                   {item.product_title}
                 </Text>
                 <Text className="text-gray-600">{item.variant_title}</Text>
-                <Text className="text-gray-800 mt-2 font-bold">
+                <Text className="mt-2 font-bold text-gray-800">
                   {formatPrice(item.subtotal)}
                 </Text>
               </Column>
@@ -127,7 +127,7 @@ function OrderPlacedEmailComponent({
         ))}
 
         <Section className="mt-8">
-          <Heading className="text-xl font-semibold text-gray-800 mb-4">
+          <Heading className="mb-4 text-xl font-semibold text-gray-800">
             Order Summary
           </Heading>
           {/*
@@ -175,7 +175,7 @@ function OrderPlacedEmailComponent({
               <Text className="m-0">{formatPrice(order.tax_total || 0)}</Text>
             </Column>
           </Row>
-          <Row className="border-t border-gray-200 mt-4 text-gray-800 font-bold">
+          <Row className="mt-4 border-t border-gray-200 font-bold text-gray-800">
             <Column className="w-1/2">
               <Text>Total</Text>
             </Column>
@@ -185,7 +185,7 @@ function OrderPlacedEmailComponent({
           </Row>
         </Section>
 
-        <Text className="text-center text-gray-400 text-xs mt-6">
+        <Text className="mt-6 text-center text-xs text-gray-400">
           Order reference: {order.id}
         </Text>
       </Container>

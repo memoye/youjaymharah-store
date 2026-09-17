@@ -52,12 +52,12 @@ function OrderCanceledEmailComponent({
     >
       <Container className="px-6">
         {reason && (
-          <Section className="rounded-lg bg-gray-50 p-4 mb-6">
+          <Section className="mb-6 rounded-lg bg-gray-50 p-4">
             <Text className="m-0 text-gray-600">{reason}</Text>
           </Section>
         )}
 
-        <Heading className="text-xl font-semibold text-gray-800 mb-4">
+        <Heading className="mb-4 text-xl font-semibold text-gray-800">
           Canceled items
         </Heading>
         {order.items?.map((item) => (
@@ -76,7 +76,7 @@ function OrderCanceledEmailComponent({
           </Row>
         ))}
 
-        <Row className="mt-4 text-gray-800 font-bold">
+        <Row className="mt-4 font-bold text-gray-800">
           <Column className="w-1/2">
             <Text>Order total</Text>
           </Column>
@@ -85,7 +85,7 @@ function OrderCanceledEmailComponent({
           </Column>
         </Row>
 
-        <Text className="text-gray-600 mt-6">
+        <Text className="mt-6 text-gray-600">
           Any payment taken for this order is refunded to the original payment
           method. Refund timing depends on your bank. If anything looks wrong,
           reply to this email or write to {SUPPORT_EMAIL}.

@@ -421,7 +421,7 @@ items and has a "View your bag" button and a stop link.
     reminded.
   - `/shopping-bag/restore` is already built.
   - Build the `/shopping-bag/reminders/stop` page with
-    `useStopBagReminders()`, and handle `?restore=` on the shopping bag page.
+    `useStopCartReminders()`, and handle `?restore=` on the shopping bag page.
 
 ### Newsletter box at checkout: Not available
 

@@ -80,7 +80,7 @@ function ClaimCreatedEmailComponent({
     if (hasReplacements) return `A replacement is on its way, ${recipient}`;
     return `We are sorting out your order, ${recipient}`;
   };
-  
+
   const heading = getHeading();
 
   const claimedItems = claim.claimed_items?.map((item) => ({
@@ -102,14 +102,14 @@ function ClaimCreatedEmailComponent({
 
         <ItemList heading="On its way to you" items={claim.replacement_items} />
         {hasReplacements && (
-          <Text className="text-gray-600 mt-4">
+          <Text className="mt-4 text-gray-600">
             We will email you when it ships.
           </Text>
         )}
 
         {isRefund ? (
           refundAmount && (
-            <Section className="rounded-lg bg-gray-50 p-4 my-6">
+            <Section className="my-6 rounded-lg bg-gray-50 p-4">
               <Text className="m-0 text-gray-800">
                 We will refund <strong>{refundAmount}</strong> to your original
                 payment method.
@@ -129,12 +129,12 @@ function ClaimCreatedEmailComponent({
             <ReturnDestinationSection destination={claim.location} />
           </>
         ) : (
-          <Text className="text-gray-600 mt-6">
+          <Text className="mt-6 text-gray-600">
             You do not need to send anything back.
           </Text>
         )}
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

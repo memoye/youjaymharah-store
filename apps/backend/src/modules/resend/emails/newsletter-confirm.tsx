@@ -33,7 +33,7 @@ function NewsletterConfirmEmailComponent({
         <Text className="text-gray-600">
           If the button does not work, paste this address into your browser:
         </Text>
-        <Text className="break-all text-sm text-blue-600">{confirm_url}</Text>
+        <Text className="text-sm break-all text-blue-600">{confirm_url}</Text>
 
         <Text className="mt-6 text-gray-600">
           If you did not sign up, ignore this email. Nothing will be sent to you
@@ -48,6 +48,8 @@ export const newsletterConfirmEmail = (props: NewsletterConfirmEmailProps) => (
   <NewsletterConfirmEmailComponent {...props} />
 );
 
-export default function NewsletterConfirmEmailPreview()  { 
-  return <NewsletterConfirmEmailComponent confirm_url="https://example.com/newsletter/confirm?token=abc123" />
- };
+export default function NewsletterConfirmEmailPreview() {
+  return (
+    <NewsletterConfirmEmailComponent confirm_url="https://example.com/newsletter/confirm?token=abc123" />
+  );
+}

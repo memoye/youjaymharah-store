@@ -53,7 +53,7 @@ function RefundIssuedEmailComponent({
     >
       <Container className="px-6">
         {(amount || refund.reason) && (
-          <Section className="rounded-lg bg-gray-50 p-4 mb-6">
+          <Section className="mb-6 rounded-lg bg-gray-50 p-4">
             {amount && (
               <Text className="m-0 text-2xl font-semibold text-gray-800">
                 {amount}
@@ -72,7 +72,7 @@ function RefundIssuedEmailComponent({
           bank, it can take several working days to appear.
         </Text>
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

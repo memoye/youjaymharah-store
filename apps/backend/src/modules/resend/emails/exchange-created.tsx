@@ -53,7 +53,7 @@ function ExchangeCreatedEmailComponent({
       <Container className="px-6">
         <ItemList heading="On its way to you" items={exchange.new_items} />
         {hasNewItems && (
-          <Text className="text-gray-600 mt-4">
+          <Text className="mt-4 text-gray-600">
             We will email you when it ships.
           </Text>
         )}
@@ -74,7 +74,7 @@ function ExchangeCreatedEmailComponent({
           currencyCode={order.currency_code}
         />
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

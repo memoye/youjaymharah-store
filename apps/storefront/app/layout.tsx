@@ -11,6 +11,7 @@ import { cn } from "@/lib/util/cn"
 import { CatalogProvider } from "@/features/catalog/provider"
 import { StorefrontSettingsProvider } from "@/features/site-settings/provider"
 import { getCategoryTree, listCollections } from "@/lib/medusa/catalog"
+import { getCollectionMenu, getMenuModel } from "@/lib/medusa/menu"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 const bodoniModa = Bodoni_Moda({
@@ -57,8 +58,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <QueryProvider>
             <StorefrontSettingsProvider settings={settings}>
               <CatalogProvider
-                categoryTree={categoryTree}
-                collections={collections}
+                menu={getMenuModel(categoryTree)}
+                collectionMenu={getCollectionMenu(
+                  collections,
+                  settings.homepage.featured_collection_id,
+                )}
               >
                 {children}
               </CatalogProvider>

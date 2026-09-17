@@ -32,10 +32,10 @@ function InviteUserEmailComponent({
       }
     >
       <Container className="px-6">
-        <Section className="text-center my-6">
+        <Section className="my-6 text-center">
           <Button
             href={url}
-            className="bg-[#27272a] text-white rounded-lg px-6 py-3 font-semibold"
+            className="rounded-lg bg-[#27272a] px-6 py-3 font-semibold text-white"
           >
             Accept invitation
           </Button>
@@ -50,9 +50,9 @@ function InviteUserEmailComponent({
         <Text className="text-gray-600">
           If the button does not work, paste this address into your browser:
         </Text>
-        <Text className="text-sm text-blue-600 break-all">{url}</Text>
+        <Text className="text-sm break-all text-blue-600">{url}</Text>
 
-        <Text className="text-gray-600 mt-6">
+        <Text className="mt-6 text-gray-600">
           Invitations expire. If yours has lapsed, ask an administrator to send
           a new one.
         </Text>
@@ -73,4 +73,4 @@ export default function InviteUserEmailPreview() {
       invited_by="Memoye"
     />
   );
-};
+}

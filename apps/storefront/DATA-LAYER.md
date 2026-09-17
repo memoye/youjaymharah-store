@@ -521,8 +521,8 @@ Call them with `sdk.client.fetch` and type the responses from
 | `POST /store/customers/me/password`              | `StoreSetCustomerPasswordResponse` |
 | `POST /store/newsletter/subscribe`               | `StoreNewsletterAckResponse`       |
 | `POST /store/newsletter/confirm`, `/unsubscribe` | `StoreNewsletterAckResponse`       |
-| `POST /store/bag-reminders/restore`              | `StoreRestoreBagResponse`          |
-| `POST /store/bag-reminders/stop`                 | `StoreStopBagRemindersResponse`    |
+| `POST /store/cart-reminders/restore`             | `StoreRestoreCartResponse`         |
+| `POST /store/cart-reminders/stop`                | `StoreStopCartRemindersResponse`   |
 
 **Bag reminder emails** link to two storefront addresses:
 
@@ -532,8 +532,8 @@ Call them with `sdk.client.fetch` and type the responses from
   `?restore=expired`, `invalid` or `failed`, so show a short message on the
   shopping bag page. The restored bag replaces whatever cart that browser had.
 - `/shopping-bag/reminders/stop?token=` is still to build. Show a "Stop bag
-  reminders" button that calls `useStopBagReminders()` from
-  `features/bag-reminders/hooks.ts`. Don't stop on page load: email scanners
+  reminders" button that calls `useStopCartReminders()` from
+  `features/cart-reminders/hooks.ts`. Don't stop on page load: email scanners
   open links first. A 404 means the link is no longer valid.
 
 `/store/wishlists/current` exists only in the proxy. It becomes the customer's
@@ -673,5 +673,8 @@ with how long Medusa took to answer.
 | `lib/medusa/collection.ts`          | `getCollectionContent`: description and banner images, cleaned                                                                                                                                                                                |
 | `lib/medusa/metadata.ts`            | `metaText`, `metaImage`: read staff-edited metadata safely                                                                                                                                                                                    |
 | `features/product-selection/`       | `useProductSelection`: colour and size kept in the URL                                                                                                                                                                                        |
+| `lib/medusa/menu.ts`                | `getMenuModel` (departments, columns, the "Clothing" group), `getMenuGroups`, `getCollectionMenu`, `getBreadcrumbs`, `findActiveMenuItem`                                                                                                     |
+| `features/catalog/`                 | `CatalogProvider` / `useCatalog()` (menu data built in the root layout), `useActiveMenuItem()`                                                                                                                                                |
+| `components/layout/`                | Header, desktop mega menu (on `components/ui/navigation-menu`), mobile drawer menu                                                                                                                                                            |
 | `features/size-guide/`              | Size guide query, server fetch and the cm/inches hook                                                                                                                                                                                         |
 | `lib/medusa/size-guide.ts`          | Formatting size guide cells in cm or inches                                                                                                                                                                                                   |

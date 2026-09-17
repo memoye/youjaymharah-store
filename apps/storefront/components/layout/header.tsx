@@ -1,23 +1,27 @@
 "use client"
 
-import { useCatalog } from "@/features/catalog/provider"
-import { useStorefrontSettings } from "@/features/site-settings/provider"
-import { cn } from "@/lib/util/cn"
+import { MagnifyingGlassIcon } from "@phosphor-icons/react"
 import Image from "next/image"
 import Link from "next/link"
-// import { categoryPath } from "@/lib/seo/routes"
-import { MagnifyingGlassIcon } from "@phosphor-icons/react"
+import { useRef } from "react"
+
+import { useStorefrontSettings } from "@/features/site-settings/provider"
+import { cn } from "@/lib/util/cn"
+
 import { DesktopNav } from "./desktop-nav"
+import { MobileNav } from "./mobile-nav"
 
 export function Header() {
   const { brand } = useStorefrontSettings()
-  const { categoryTree } = useCatalog()
-  console.log(categoryTree)
+  // The desktop menus open full width under this element.
+  const headerRef = useRef<HTMLElement>(null)
 
   return (
-    <header className="border-b bg-background px-5 sm:px-6">
+    <header ref={headerRef} className="border-b bg-background px-5 sm:px-6">
       <div className="container-wrapper flex items-center justify-between">
         <div className="flex items-center gap-6">
+          <MobileNav />
+
           <Link
             href={"/"}
             className={cn(
@@ -26,19 +30,23 @@ export function Header() {
               "before:transition-[height,background-color] hover:before:h-full hover:before:bg-primary",
             )}
           >
-            <Image
-              src={brand.logo_url ?? ""}
-              alt={brand.name}
-              width={150}
-              height={150}
-              className="h-auto w-10"
-              title={brand.name}
-            />
+            {brand.logo_url ? (
+              <Image
+                src={brand.logo_url}
+                alt={brand.name}
+                width={150}
+                height={150}
+                className="h-auto w-10"
+                title={brand.name}
+              />
+            ) : (
+              <span className="text-[15px] font-medium">{brand.name}</span>
+            )}
 
             <span className="sr-only">Home</span>
           </Link>
 
-          <DesktopNav />
+          <DesktopNav anchor={headerRef} />
         </div>
 
         <div className="flex h-12 items-stretch bg-red-500">

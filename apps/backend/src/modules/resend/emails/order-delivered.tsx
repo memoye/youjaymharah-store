@@ -46,7 +46,7 @@ function OrderDeliveredEmailComponent({
       intro={`Order #${order.display_id} was delivered.`}
     >
       <Container className="px-6">
-        <Heading className="text-xl font-semibold text-gray-800 mb-4">
+        <Heading className="mb-4 text-xl font-semibold text-gray-800">
           What was delivered
         </Heading>
         {deliveredItems?.map((item, index) => (
@@ -63,12 +63,12 @@ function OrderDeliveredEmailComponent({
           </Row>
         ))}
 
-        <Text className="text-gray-600 mt-6">
+        <Text className="mt-6 text-gray-600">
           Something missing, damaged or not quite right? Reply to this email or
           write to {supportEmail} and we will sort it out.
         </Text>
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>

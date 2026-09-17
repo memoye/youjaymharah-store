@@ -1,4 +1,4 @@
-import type { StoreRestoreBagResponse } from "@youjaymharah/api-types"
+import type { StoreRestoreCartResponse } from "@youjaymharah/api-types"
 import { redirect } from "next/navigation"
 import type { NextRequest } from "next/server"
 
@@ -7,15 +7,15 @@ import { sdk } from "@/lib/medusa/server"
 import { setCartId } from "@/lib/medusa/session"
 
 /**
- * The "View your bag" button in bag reminder emails
- * (`/shopping-bag/restore?token=...`). Puts the reminded bag back as this
- * browser's cart, then opens the shopping bag.
+ * The "View your bag" button in cart reminder emails
+ * (`/shopping-bag/restore?token=...`). Puts the reminded cart back as this
+ * browser's cart, then opens `/shopping-bag`.
  *
  * A GET, because it is a link. Opening it twice is harmless, including when an
  * email client's link scanner opens it first: that only sets a cookie in the
  * scanner's own browser.
  *
- * On failure the shopping bag opens with `?restore=` set, for the page to
+ * On failure `/shopping-bag` opens with `?restore=` set, for the page to
  * explain: `expired` (checked out, deleted, or an unknown link), `invalid` (no
  * token) or `failed` (the store couldn't be reached).
  */
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     destination = "/shopping-bag?restore=invalid"
   } else {
     try {
-      const { cart_id } = await sdk.client.fetch<StoreRestoreBagResponse>(
-        "/store/bag-reminders/restore",
+      const { cart_id } = await sdk.client.fetch<StoreRestoreCartResponse>(
+        "/store/cart-reminders/restore",
         { method: "POST", body: { token } },
       )
 

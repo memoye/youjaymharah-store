@@ -46,8 +46,8 @@
       "description": "Signup, double opt-in confirmation and unsubscribe, plus the admin side: settings, subscribers and the Resend audiences they sync to."
     },
     {
-      "name": "Bag reminders",
-      "description": "Emails reminding shoppers about shopping bags they left, at up to three delays after the bag's last change, with links to restore the bag or stop reminders."
+      "name": "Cart reminders",
+      "description": "Emails reminding shoppers about carts they left (their \"shopping bag\" on the storefront), at up to three delays after the cart's last change, with links to restore the cart or stop reminders."
     },
     {
       "name": "Accounts",
@@ -5734,14 +5734,14 @@
         }
       }
     },
-    "/store/bag-reminders/restore": {
+    "/store/cart-reminders/restore": {
       "post": {
-        "operationId": "postStoreBagRemindersRestore",
+        "operationId": "postStoreCartRemindersRestore",
         "tags": [
-          "Bag reminders"
+          "Cart reminders"
         ],
-        "summary": "Restore a bag from a reminder email",
-        "description": "Takes the token from a reminder's \"View your bag\" link (`/shopping-bag/restore?token=`) and returns the bag's cart id, for the storefront to set as the shopper's cart.",
+        "summary": "Restore a cart from a reminder email",
+        "description": "Takes the token from a reminder's \"View your bag\" link (`/shopping-bag/restore?token=`) and returns the cart id, for the storefront to set as the shopper's cart.",
         "security": [
           {
             "publishableKey": []
@@ -5768,7 +5768,7 @@
         },
         "responses": {
           "200": {
-            "description": "The bag's cart.",
+            "description": "The cart.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5797,7 +5797,7 @@
             }
           },
           "404": {
-            "description": "Unknown token, or the bag was checked out or deleted.",
+            "description": "Unknown token, or the cart was checked out or deleted.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5809,14 +5809,14 @@
         }
       }
     },
-    "/store/bag-reminders/stop": {
+    "/store/cart-reminders/stop": {
       "post": {
-        "operationId": "postStoreBagRemindersStop",
+        "operationId": "postStoreCartRemindersStop",
         "tags": [
-          "Bag reminders"
+          "Cart reminders"
         ],
-        "summary": "Stop bag reminders",
-        "description": "Takes the token from a reminder's stop link (`/shopping-bag/reminders/stop?token=`). No more bag reminders are sent to that address, for any bag. Calling it again changes nothing.",
+        "summary": "Stop cart reminders",
+        "description": "Takes the token from a reminder's stop link (`/shopping-bag/reminders/stop?token=`). No more cart reminders are sent to that address, for any cart. Calling it again changes nothing.",
         "security": [
           {
             "publishableKey": []
@@ -5884,16 +5884,16 @@
         }
       }
     },
-    "/admin/bag-reminders/settings": {
+    "/admin/cart-reminders/settings": {
       "get": {
-        "operationId": "getAdminBagRemindersSettings",
+        "operationId": "getAdminCartRemindersSettings",
         "tags": [
-          "Bag reminders"
+          "Cart reminders"
         ],
-        "summary": "Get bag reminder settings",
+        "summary": "Get cart reminder settings",
         "description": "Created on first read, with reminders off and delays of 1, 24 and 168 hours.",
         "x-required-policies": [
-          "bag_reminder:read"
+          "cart_reminder:read"
         ],
         "security": [
           {
@@ -5975,14 +5975,14 @@
         }
       },
       "post": {
-        "operationId": "postAdminBagRemindersSettings",
+        "operationId": "postAdminCartRemindersSettings",
         "tags": [
-          "Bag reminders"
+          "Cart reminders"
         ],
-        "summary": "Update bag reminder settings",
-        "description": "Only the fields sent change. Delays are hours after the bag's last change; null turns the second or third reminder off. The delays must stay in order.",
+        "summary": "Update cart reminder settings",
+        "description": "Only the fields sent change. Delays are hours after the cart's last change; null turns the second or third reminder off. The delays must stay in order.",
         "x-required-policies": [
-          "bag_reminder:update"
+          "cart_reminder:update"
         ],
         "security": [
           {
@@ -6118,16 +6118,16 @@
         }
       }
     },
-    "/admin/bag-reminders/stats": {
+    "/admin/cart-reminders/stats": {
       "get": {
-        "operationId": "getAdminBagRemindersStats",
+        "operationId": "getAdminCartRemindersStats",
         "tags": [
-          "Bag reminders"
+          "Cart reminders"
         ],
-        "summary": "Bag reminder results",
-        "description": "The last 30 days: bags reminded, bags reopened from an email, orders placed from reminded bags and their value, and addresses that stopped reminders.",
+        "summary": "Cart reminder results",
+        "description": "The last 30 days: carts reminded, carts reopened from an email, orders placed from reminded carts and their value, and addresses that stopped reminders.",
         "x-required-policies": [
-          "bag_reminder:read"
+          "cart_reminder:read"
         ],
         "security": [
           {
@@ -6151,10 +6151,10 @@
                         "since": {
                           "type": "string"
                         },
-                        "bags_reminded": {
+                        "carts_reminded": {
                           "type": "number"
                         },
-                        "bags_opened": {
+                        "carts_opened": {
                           "type": "number"
                         },
                         "orders_recovered": {
@@ -6185,8 +6185,8 @@
                       },
                       "required": [
                         "since",
-                        "bags_reminded",
-                        "bags_opened",
+                        "carts_reminded",
+                        "carts_opened",
                         "orders_recovered",
                         "revenue_recovered",
                         "stopped"

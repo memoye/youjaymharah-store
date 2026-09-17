@@ -24,7 +24,7 @@ export function ItemList({ heading, items }: ItemListProps) {
 
   return (
     <>
-      <Heading className="text-xl font-semibold text-gray-800 mb-4 mt-6">
+      <Heading className="mt-6 mb-4 text-xl font-semibold text-gray-800">
         {heading}
       </Heading>
       {items.map((item, index) => (

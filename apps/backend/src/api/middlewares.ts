@@ -46,26 +46,26 @@ export const StoreNewsletterToken = z.object({
 
 export type StoreNewsletterTokenType = z.infer<typeof StoreNewsletterToken>;
 
-/** The token from a bag reminder email's links (48 hex characters). */
-export const StoreBagReminderToken = z.object({
+/** The token from a cart reminder email's links (48 hex characters). */
+export const StoreCartReminderToken = z.object({
   token: z.string().regex(/^[0-9a-f]{48}$/, "This link is not valid."),
 });
 
-export type StoreBagReminderTokenType = z.infer<typeof StoreBagReminderToken>;
+export type StoreCartReminderTokenType = z.infer<typeof StoreCartReminderToken>;
 
 /**
- * Hours after the bag's last change. Clearing a later delay turns that
+ * Hours after the cart's last change. Clearing a later delay turns that
  * reminder off; their order is checked on save against the stored values.
  */
-export const AdminUpdateBagReminderSettings = z.object({
+export const AdminUpdateCartReminderSettings = z.object({
   enabled: z.boolean().optional(),
   first_delay_hours: z.number().int().min(1).max(168).optional(),
   second_delay_hours: z.number().int().min(2).max(720).nullable().optional(),
   third_delay_hours: z.number().int().min(3).max(2160).nullable().optional(),
 });
 
-export type AdminUpdateBagReminderSettingsType = z.infer<
-  typeof AdminUpdateBagReminderSettings
+export type AdminUpdateCartReminderSettingsType = z.infer<
+  typeof AdminUpdateCartReminderSettings
 >;
 
 export const StoreSetCustomerPassword = z.object({
@@ -384,32 +384,32 @@ export default defineMiddlewares({
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreNewsletterToken)],
     },
-    // Bag reminder links are public: the emailed token is the credential.
+    // Cart reminder links are public: the emailed token is the credential.
     {
-      matcher: "/store/bag-reminders/restore",
+      matcher: "/store/cart-reminders/restore",
       method: ["POST"],
-      middlewares: [validateAndTransformBody(StoreBagReminderToken)],
+      middlewares: [validateAndTransformBody(StoreCartReminderToken)],
     },
     {
-      matcher: "/store/bag-reminders/stop",
+      matcher: "/store/cart-reminders/stop",
       method: ["POST"],
-      middlewares: [validateAndTransformBody(StoreBagReminderToken)],
+      middlewares: [validateAndTransformBody(StoreCartReminderToken)],
     },
     {
-      matcher: "/admin/bag-reminders/settings",
+      matcher: "/admin/cart-reminders/settings",
       method: ["GET"],
-      policies: [{ resource: "bag_reminder", operation: "read" }],
+      policies: [{ resource: "cart_reminder", operation: "read" }],
     },
     {
-      matcher: "/admin/bag-reminders/settings",
+      matcher: "/admin/cart-reminders/settings",
       method: ["POST"],
-      middlewares: [validateAndTransformBody(AdminUpdateBagReminderSettings)],
-      policies: [{ resource: "bag_reminder", operation: "update" }],
+      middlewares: [validateAndTransformBody(AdminUpdateCartReminderSettings)],
+      policies: [{ resource: "cart_reminder", operation: "update" }],
     },
     {
-      matcher: "/admin/bag-reminders/stats",
+      matcher: "/admin/cart-reminders/stats",
       method: ["GET"],
-      policies: [{ resource: "bag_reminder", operation: "read" }],
+      policies: [{ resource: "cart_reminder", operation: "read" }],
     },
     // Finishing a social sign-in: the caller holds a token for an auth
     // identity that may not have a customer yet, so `allowUnregistered`

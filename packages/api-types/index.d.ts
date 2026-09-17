@@ -561,7 +561,7 @@ export type StoreSearchResponse = {
   facets: Record<string, unknown>;
 };
 
-export type AdminBagReminderSettingsResponse = {
+export type AdminCartReminderSettingsResponse = {
   settings: {
     id: string;
     enabled: boolean;
@@ -571,18 +571,18 @@ export type AdminBagReminderSettingsResponse = {
   };
 };
 
-export type AdminUpdateBagReminderSettingsBody = {
+export type AdminUpdateCartReminderSettingsBody = {
   enabled?: boolean;
   first_delay_hours?: number;
   second_delay_hours?: number | null;
   third_delay_hours?: number | null;
 };
 
-export type AdminBagReminderStatsResponse = {
+export type AdminCartReminderStatsResponse = {
   stats: {
     since: string;
-    bags_reminded: number;
-    bags_opened: number;
+    carts_reminded: number;
+    carts_opened: number;
     orders_recovered: number;
     revenue_recovered: {
       currency_code: string;
@@ -592,14 +592,14 @@ export type AdminBagReminderStatsResponse = {
   };
 };
 
-export type StoreBagReminderTokenBody = {
+export type StoreCartReminderTokenBody = {
   token: string;
 };
 
-export type StoreRestoreBagResponse = {
+export type StoreRestoreCartResponse = {
   cart_id: string;
 };
 
-export type StoreStopBagRemindersResponse = {
+export type StoreStopCartRemindersResponse = {
   status: string;
 };

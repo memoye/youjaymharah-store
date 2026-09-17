@@ -48,7 +48,7 @@ function OrderUpdatedEmailComponent({
         <ItemList heading="Your items" items={update.items} />
 
         {total && (
-          <Row className="border-t border-gray-200 mt-4 text-gray-800 font-bold">
+          <Row className="mt-4 border-t border-gray-200 font-bold text-gray-800">
             <Column className="w-1/2">
               <Text>New total</Text>
             </Column>
@@ -63,12 +63,12 @@ function OrderUpdatedEmailComponent({
           currencyCode={order.currency_code}
         />
 
-        <Text className="text-gray-600 mt-6">
+        <Text className="mt-6 text-gray-600">
           Did not ask for this change? Reply to this email and we will put it
           right.
         </Text>
 
-        <Text className="text-sm text-gray-500 mt-6">
+        <Text className="mt-6 text-sm text-gray-500">
           Order ID: #{order.display_id}
         </Text>
       </Container>
