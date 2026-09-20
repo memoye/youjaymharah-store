@@ -7,6 +7,7 @@ import { Container, Heading, Label, Select, Text, toast } from "@medusajs/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { sdk } from "../../lib/sdk";
+import { usePermissions, withPermission } from "../../lib/permissions";
 import {
   fetchSizeGuides,
   SIZE_GUIDES_QUERY_KEY,
@@ -27,6 +28,8 @@ const CategorySizeGuideWidget = ({
   data: category,
 }: DetailWidgetProps<AdminProductCategory>) => {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
+  const canEdit = can("product_category", "update");
   const queryKey = ["size-guide-assignment", "category", category.id];
 
   const { data, isLoading } = useQuery({
@@ -74,7 +77,7 @@ const CategorySizeGuideWidget = ({
           </Label>
           <Select
             value={data?.size_guide_id ?? NONE}
-            disabled={isLoading || assign.isPending}
+            disabled={!canEdit || isLoading || assign.isPending}
             onValueChange={(value) =>
               assign.mutate(value === NONE ? null : value)
             }
@@ -114,4 +117,8 @@ export const config = defineWidgetConfig({
   zone: "product_category.details.side",
 });
 
-export default CategorySizeGuideWidget;
+export default withPermission(
+  CategorySizeGuideWidget,
+  "product_category",
+  "read",
+);

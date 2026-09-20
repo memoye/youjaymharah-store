@@ -15,6 +15,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { usePermissions } from "../../../lib/permissions";
 import { sdk } from "../../../lib/sdk";
 
 type CartReminderSettings = {
@@ -99,6 +100,8 @@ const CartRemindersPage = () => {
       ),
   });
 
+  const { can } = usePermissions();
+  const canEdit = can("cart_reminder", "update");
   const settings = settingsQuery.data?.settings;
   const stats = statsQuery.data?.stats;
 
@@ -124,15 +127,17 @@ const CartRemindersPage = () => {
               guests who entered their email at checkout.
             </Text>
           </div>
-          <Button
-            size="small"
-            variant="secondary"
-            disabled={!settings}
-            onClick={() => setOpen(true)}
-          >
-            <PencilSquare />
-            Edit
-          </Button>
+          {canEdit && (
+            <Button
+              size="small"
+              variant="secondary"
+              disabled={!settings}
+              onClick={() => setOpen(true)}
+            >
+              <PencilSquare />
+              Edit
+            </Button>
+          )}
         </div>
         {settingsQuery.isLoading ? (
           <div className="flex justify-center px-6 py-8">

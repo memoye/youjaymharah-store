@@ -7,6 +7,7 @@ import { Container, Heading, Label, Select, Text, toast } from "@medusajs/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { sdk } from "../../lib/sdk";
+import { usePermissions, withPermission } from "../../lib/permissions";
 import {
   fetchSizeGuides,
   SIZE_GUIDES_QUERY_KEY,
@@ -44,6 +45,8 @@ const ProductSizeGuideWidget = ({
   data: product,
 }: DetailWidgetProps<AdminProduct>) => {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
+  const canEdit = can("product", "update");
   const queryKey = ["size-guide-assignment", "product", product.id];
 
   const { data, isLoading } = useQuery({
@@ -88,7 +91,7 @@ const ProductSizeGuideWidget = ({
           </Label>
           <Select
             value={data?.size_guide_id ?? INHERIT}
-            disabled={isLoading || assign.isPending}
+            disabled={!canEdit || isLoading || assign.isPending}
             onValueChange={(value) =>
               assign.mutate(value === INHERIT ? null : value)
             }
@@ -117,4 +120,4 @@ export const config = defineWidgetConfig({
   zone: "product.details.side",
 });
 
-export default ProductSizeGuideWidget;
+export default withPermission(ProductSizeGuideWidget, "product", "read");

@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { sdk } from "../../lib/sdk";
+import { usePermissions, withPermission } from "../../lib/permissions";
 
 type AlertSummary = {
   waiting: number;
@@ -26,6 +27,8 @@ const ProductAlertsWidget = ({
   data: product,
 }: DetailWidgetProps<AdminProduct>) => {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
+  const canEdit = can("product", "update");
   const [comingSoon, setComingSoon] = useState(
     product.metadata?.coming_soon === true,
   );
@@ -128,7 +131,7 @@ const ProductAlertsWidget = ({
         <Switch
           id="product-coming-soon"
           checked={comingSoon}
-          disabled={toggle.isPending}
+          disabled={!canEdit || toggle.isPending}
           onCheckedChange={(value) => toggle.mutate(value)}
         />
       </div>
@@ -150,4 +153,4 @@ export const config = defineWidgetConfig({
   zone: "product.details.side",
 });
 
-export default ProductAlertsWidget;
+export default withPermission(ProductAlertsWidget, "product", "read");

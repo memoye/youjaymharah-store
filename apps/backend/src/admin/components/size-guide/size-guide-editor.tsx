@@ -144,6 +144,9 @@ type SizeGuideEditorProps = {
   /** Values of the shared Size option, in display order. */
   sizes: string[];
   onSaved: () => void;
+  /** False for staff who may view guides but not change them. */
+  canSave?: boolean;
+  canDelete?: boolean;
 };
 
 /**
@@ -156,6 +159,8 @@ export const SizeGuideEditor = ({
   guide,
   sizes,
   onSaved,
+  canSave = true,
+  canDelete = true,
 }: SizeGuideEditorProps) => {
   const prompt = usePrompt();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -355,7 +360,7 @@ export const SizeGuideEditor = ({
           <FocusModal.Header>
             <div className="flex w-full items-center justify-between gap-x-2">
               <div>
-                {guide && (
+                {guide && canDelete && (
                   <Button
                     size="small"
                     variant="danger"
@@ -373,14 +378,16 @@ export const SizeGuideEditor = ({
                     Cancel
                   </Button>
                 </FocusModal.Close>
-                <Button
-                  size="small"
-                  disabled={busy}
-                  isLoading={save.isPending}
-                  onClick={onSave}
-                >
-                  Save
-                </Button>
+                {canSave && (
+                  <Button
+                    size="small"
+                    disabled={busy}
+                    isLoading={save.isPending}
+                    onClick={onSave}
+                  >
+                    Save
+                  </Button>
+                )}
               </div>
             </div>
           </FocusModal.Header>
@@ -411,7 +418,7 @@ export const SizeGuideEditor = ({
                   </Text>
                 </div>
 
-                <div className="flex items-start justify-between gap-x-4 rounded-lg border border-ui-border-base px-4 py-3">
+                <div className="border-ui-border-base flex items-start justify-between gap-x-4 rounded-lg border px-4 py-3">
                   <div className="flex flex-col gap-y-1">
                     <Label
                       htmlFor="size-guide-default"
@@ -606,7 +613,7 @@ export const SizeGuideEditor = ({
                   </Button>
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border border-ui-border-base">
+                <div className="border-ui-border-base overflow-x-auto rounded-lg border">
                   <Table>
                     <Table.Header>
                       <Table.Row>

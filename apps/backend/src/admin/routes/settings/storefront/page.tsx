@@ -19,6 +19,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { usePermissions } from "../../../lib/permissions";
 import { sdk } from "../../../lib/sdk";
 import { uploadImage } from "../../../lib/upload-image";
 import { RenderFromQuery } from "../../../components/render-from-query";
@@ -115,13 +116,14 @@ const BrandSection = () => {
   });
 
   const branding = data?.branding;
+  const { can } = usePermissions();
 
   return (
     <Section
       title="Brand"
       description="Your store's name, logo, browser icon and support address. The name, logo and support address also appear in customer emails."
       badge="Store owner"
-      canEdit={Boolean(branding)}
+      canEdit={Boolean(branding) && can("branding", "update")}
       onEdit={() => setOpen(true)}
       isLoading={isLoading}
       error={error ? "You don't have access to the brand settings." : null}
@@ -363,6 +365,7 @@ const HomepageSection = () => {
 
   const settings = data?.settings;
 
+  const { can } = usePermissions();
   const collections = useQuery({
     queryKey: COLLECTION_OPTIONS_QUERY_KEY,
     queryFn: async (): Promise<CollectionOption[]> => {
@@ -390,14 +393,15 @@ const HomepageSection = () => {
     return "A deleted collection. The website shows none; choose another.";
   };
 
-  const featuredLabel = getFeaturedLabel(); 
-  
+  const canEditSettings = can("storefront_settings", "update");
+  const featuredLabel = getFeaturedLabel();
+
   return (
     <Section
       title="Homepage"
       description="The content of the website's home page: the large banner at the top and one featured collection. The page's layout is set by the website itself."
       badge="Marketing & Store Manager"
-      canEdit={Boolean(settings)}
+      canEdit={Boolean(settings) && canEditSettings}
       onEdit={() => setOpen(true)}
       isLoading={isLoading}
       error={error ? "You don't have access to these settings." : null}
@@ -528,6 +532,8 @@ const HeroHistory = ({
       saveError(err, "Marketing, the Store Manager and the store owner"),
   });
 
+  const { can } = usePermissions();
+  const canRestore = can("storefront_settings", "update");
   const revisions = data?.revisions ?? [];
 
   const onRestore = async (revision: HeroRevision) => {
@@ -614,17 +620,19 @@ const HeroHistory = ({
                   {describeReplacement(revision)}
                 </Text>
               </div>
-              <Button
-                size="small"
-                variant="secondary"
-                disabled={restore.isPending}
-                isLoading={
-                  restore.isPending && restore.variables === revision.id
-                }
-                onClick={() => void onRestore(revision)}
-              >
-                Restore
-              </Button>
+              {canRestore && (
+                <Button
+                  size="small"
+                  variant="secondary"
+                  disabled={restore.isPending}
+                  isLoading={
+                    restore.isPending && restore.variables === revision.id
+                  }
+                  onClick={() => void onRestore(revision)}
+                >
+                  Restore
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -773,7 +781,7 @@ const EditHomepageDrawer = ({
       canSave
       onSave={onSave}
     >
-      <div className="flex items-start justify-between gap-x-4 rounded-lg border border-ui-border-base px-4 py-3">
+      <div className="border-ui-border-base flex items-start justify-between gap-x-4 rounded-lg border px-4 py-3">
         <div className="flex flex-col gap-y-1">
           <Label htmlFor="hero-enabled" size="small" weight="plus">
             Show the hero banner
@@ -1002,6 +1010,8 @@ const SharingSection = () => {
   });
 
   const settings = data?.settings;
+  const { can } = usePermissions();
+  const canEditSettings = can("storefront_settings", "update");
   const links = settings
     ? SOCIAL_NETWORKS.filter(({ key }) => settings.social_links?.[key])
     : [];
@@ -1011,7 +1021,7 @@ const SharingSection = () => {
       title="Sharing & search"
       description="How the store appears in search results and when a link is shared on WhatsApp, Instagram or X. Pages without their own details use these."
       badge="Marketing"
-      canEdit={Boolean(settings)}
+      canEdit={Boolean(settings) && canEditSettings}
       onEdit={() => setOpen(true)}
       isLoading={isLoading}
       error={error ? "You don't have access to these settings." : null}
@@ -1243,7 +1253,7 @@ const EditSharingDrawer = ({
           onChange={(event) => setVerification(event.target.value)}
         />
       </Field>
-      <div className="flex items-start justify-between gap-x-4 rounded-lg border border-ui-border-base px-4 py-3">
+      <div className="border-ui-border-base flex items-start justify-between gap-x-4 rounded-lg border px-4 py-3">
         <div className="flex flex-col gap-y-1">
           <Label htmlFor="seo-indexing" size="small" weight="plus">
             Show the store in search engines
@@ -1278,13 +1288,15 @@ const ProductsSection = () => {
   });
 
   const settings = data?.settings;
+  const { can } = usePermissions();
+  const canEditSettings = can("storefront_settings", "update");
 
   return (
     <Section
       title="Products"
       description="How products are presented on the website."
       badge="Marketing & Store Manager"
-      canEdit={Boolean(settings)}
+      canEdit={Boolean(settings) && canEditSettings}
       onEdit={() => setOpen(true)}
       isLoading={isLoading}
       error={error ? "You don't have access to these settings." : null}

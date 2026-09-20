@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { sdk } from "../../lib/sdk";
+import { withPermission } from "../../lib/permissions";
 
 type AdminOptionValue = {
   id: string;
@@ -163,7 +164,7 @@ const OptionValueSwatchWidget = ({ data }: { data?: AdminOptionValue }) => {
                   onChange={(e) =>
                     setDraft((d) => ({ ...d, hex: e.target.value }))
                   }
-                  className="h-8 w-10 cursor-pointer rounded-md border border-ui-border-base bg-ui-bg-field"
+                  className="border-ui-border-base bg-ui-bg-field h-8 w-10 cursor-pointer rounded-md border"
                 />
                 <Input
                   id="swatch-hex"
@@ -256,7 +257,7 @@ const SwatchPreview = ({
     <div
       role="img"
       aria-label={`${label} swatch`}
-      className={`${dimension} shrink-0 rounded-md border border-ui-border-base bg-ui-bg-subtle bg-cover bg-center`}
+      className={`${dimension} border-ui-border-base bg-ui-bg-subtle shrink-0 rounded-md border bg-cover bg-center`}
       style={
         swatch.swatch_image
           ? { backgroundImage: `url(${swatch.swatch_image})` }
@@ -272,4 +273,8 @@ export const config = defineWidgetConfig({
   zone: "product_option_value.details",
 });
 
-export default OptionValueSwatchWidget;
+export default withPermission(
+  OptionValueSwatchWidget,
+  "product_option_value",
+  "update",
+);

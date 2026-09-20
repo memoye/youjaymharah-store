@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AvatarField } from "../../components/avatar/avatar-field";
 import { sdk } from "../../lib/sdk";
+import { withPermission } from "../../lib/permissions";
 
 type AdminUser = {
   id: string;
@@ -86,4 +87,4 @@ export const config = defineWidgetConfig({
   zone: "user.details.after",
 });
 
-export default UserAvatarWidget;
+export default withPermission(UserAvatarWidget, "user", "update");

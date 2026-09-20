@@ -17,6 +17,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { usePermissions } from "../../../lib/permissions";
 import { sdk } from "../../../lib/sdk";
 
 type NewsletterSettings = {
@@ -40,6 +41,8 @@ const SUBSCRIBERS_KEY = ["newsletter", "subscribers"];
 
 const NewsletterSettingsPage = () => {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
+  const canEdit = can("newsletter", "update");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -80,15 +83,17 @@ const NewsletterSettingsPage = () => {
               {settings.enabled ? "Signup open" : "Signup closed"}
             </Badge>
           )}
-          <Button
-            size="small"
-            variant="secondary"
-            disabled={!settings}
-            onClick={() => setDrawerOpen(true)}
-          >
-            <PencilSquare />
-            Edit
-          </Button>
+          {canEdit && (
+            <Button
+              size="small"
+              variant="secondary"
+              disabled={!settings}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <PencilSquare />
+              Edit
+            </Button>
+          )}
         </div>
       </div>
 

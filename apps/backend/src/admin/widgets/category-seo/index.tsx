@@ -17,6 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { sdk } from "../../lib/sdk";
+import { withPermission } from "../../lib/permissions";
 
 const TITLE_LIMIT = 60;
 const DESCRIPTION_LIMIT = 155;
@@ -126,4 +127,4 @@ export const config = defineWidgetConfig({
   zone: "product_category.details.side",
 });
 
-export default CategorySeoWidget;
+export default withPermission(CategorySeoWidget, "product_category", "update");

@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { sdk } from "../../lib/sdk";
+import { withPermission } from "../../lib/permissions";
 import { uploadImage } from "../../lib/upload-image";
 
 const DESCRIPTION_LIMIT = 500;
@@ -245,4 +246,8 @@ export const config = defineWidgetConfig({
   zone: "product_collection.details.after",
 });
 
-export default CollectionPageContentWidget;
+export default withPermission(
+  CollectionPageContentWidget,
+  "product_collection",
+  "update",
+);

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AvatarField } from "../../components/avatar/avatar-field";
 import { sdk } from "../../lib/sdk";
+import { withPermission } from "../../lib/permissions";
 
 type AdminCustomer = {
   id: string;
@@ -100,4 +101,4 @@ export const config = defineWidgetConfig({
   zone: "customer.details.after",
 });
 
-export default CustomerAvatarWidget;
+export default withPermission(CustomerAvatarWidget, "customer", "update");

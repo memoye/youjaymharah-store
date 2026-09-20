@@ -1,6 +1,6 @@
 "use client"
 
-import { MagnifyingGlassIcon } from "@phosphor-icons/react"
+import { BagIcon, MagnifyingGlassIcon } from "@phosphor-icons/react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRef } from "react"
@@ -10,6 +10,9 @@ import { cn } from "@/lib/util/cn"
 
 import { DesktopNav } from "./desktop-nav"
 import { MobileNav } from "./mobile-nav"
+import { Button } from "../ui/button"
+import { HeartIcon } from "@phosphor-icons/react/dist/ssr"
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
 
 export function Header() {
   const { brand } = useStorefrontSettings()
@@ -18,8 +21,8 @@ export function Header() {
 
   return (
     <header ref={headerRef} className="border-b bg-background px-5 sm:px-6">
-      <div className="container-wrapper flex items-center justify-between">
-        <div className="flex items-center justify-between gap-6 bg-red-500 *:border *:border-black">
+      <div className="container-wrapper flex items-stretch justify-between">
+        <div className="flex items-center justify-between gap-6">
           <MobileNav />
 
           <Link
@@ -52,35 +55,35 @@ export function Header() {
         <Link
           href={"/"}
           className={cn(
-            "relative z-10 py-1 transition-[filter] *:brightness-0 hover:*:brightness-100 md:inline-flex",
+            "relative z-10 inline-flex items-center px-4 py-2 transition-colors hover:text-primary-foreground md:hidden",
             'before:absolute before:inset-x-0 before:bottom-0 before:-z-1 before:block before:h-2/3 before:bg-transparent before:content-[""]',
             "before:transition-[height,background-color] hover:before:h-full hover:before:bg-primary",
+            "font-display text-display-lg text-[15px] font-semibold",
           )}
         >
-          {
-            // brand.logo_url ? (
-            //   <Image
-            //     src={brand.logo_url}
-            //     alt={brand.name}
-            //     width={150}
-            //     height={150}
-            //     className="h-auto w-10"
-            //     title={brand.name}
-            //   />
-            // ) : (
-            <span className="font-display text-display-lg text-[15px] font-medium">
-              {brand.name}
-            </span>
-            // )
-          }
+          {brand.name}
 
           <span className="sr-only">Home</span>
         </Link>
 
-        <div className="flex h-12 items-stretch bg-red-500">
-          <button className="bg-blue h-full">
-            <MagnifyingGlassIcon />
-          </button>
+        <div className="flex *:h-auto max-lg:gap-2">
+          <Tooltip>
+            <TooltipTrigger
+              render={<Button variant={"ghost"} size={"icon"} className="" />}
+            >
+              <MagnifyingGlassIcon />
+            </TooltipTrigger>
+
+            <TooltipContent className={""}>hello</TooltipContent>
+          </Tooltip>
+
+          <Button variant={"ghost"} size={"icon"}>
+            <HeartIcon />
+          </Button>
+
+          <Button variant={"ghost"} size={"icon"}>
+            <BagIcon />
+          </Button>
         </div>
         {/*<nav>
           <ul className="flex items-center gap-4">
@@ -93,3 +96,5 @@ export function Header() {
     </header>
   )
 }
+
+// function 

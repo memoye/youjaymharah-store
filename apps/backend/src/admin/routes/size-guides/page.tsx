@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { SizeGuideEditor } from "../../components/size-guide/size-guide-editor";
+import { usePermissions } from "../../lib/permissions";
 import {
   type AdminSizeGuide,
   fetchSizeGuides,
@@ -31,6 +32,7 @@ function usage(guide: AdminSizeGuide): string {
 
 const SizeGuidesPage = () => {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AdminSizeGuide | null>(null);
 
@@ -61,19 +63,21 @@ const SizeGuidesPage = () => {
             the category page, or override it on a product.
           </Text>
         </div>
-        <Button
-          size="small"
-          variant="secondary"
-          onClick={() => openEditor(null)}
-        >
-          <Plus />
-          Create
-        </Button>
+        {can("size_guide", "create") && (
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={() => openEditor(null)}
+          >
+            <Plus />
+            Create
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center px-6 py-8">
-          <Spinner className="animate-spin text-ui-fg-subtle" />
+          <Spinner className="text-ui-fg-subtle animate-spin" />
         </div>
       ) : !guides.length ? (
         <div className="px-6 py-8">
@@ -89,9 +93,9 @@ const SizeGuidesPage = () => {
               key={guide.id}
               type="button"
               onClick={() => openEditor(guide)}
-              className="rounded-md text-left outline-none focus-visible:shadow-borders-interactive-with-focus [&:hover>div]:bg-ui-bg-component-hover"
+              className="focus-visible:shadow-borders-interactive-with-focus [&:hover>div]:bg-ui-bg-component-hover rounded-md text-left outline-none"
             >
-              <div className="rounded-md bg-ui-bg-component px-4 py-3 shadow-elevation-card-rest transition-colors">
+              <div className="bg-ui-bg-component shadow-elevation-card-rest rounded-md px-4 py-3 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="flex flex-1 flex-col gap-y-1">
                     <div className="flex items-center gap-x-2">
@@ -126,6 +130,8 @@ const SizeGuidesPage = () => {
         onOpenChange={setEditorOpen}
         guide={editing}
         sizes={sizes}
+        canSave={can("size_guide", editing ? "update" : "create")}
+        canDelete={can("size_guide", "delete")}
         onSaved={() => {
           void queryClient.invalidateQueries({
             queryKey: SIZE_GUIDES_QUERY_KEY,

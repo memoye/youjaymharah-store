@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  ArrowArcRightIcon,
+  ArrowRightIcon,
   CaretLeftIcon,
   CaretRightIcon,
   ListIcon,
@@ -48,7 +50,7 @@ const rowClass =
 
 
 const actionClass =
-  "mt-6 inline-block text-[12px] font-medium tracking-[0.06em] uppercase underline underline-offset-4"
+  "mt-6 px-4 inline-flex items-center gap-2 text-[12px] font-medium tracking-[0.06em] uppercase font-medium underline underline-offset-4"
 
 /**
  * The mobile menu: a drawer from the left that drills down one level at a
@@ -75,6 +77,7 @@ export function MobileNav() {
         className="-ml-2 inline-flex size-10 items-center justify-center md:hidden"
       >
         <ListIcon size={20} />
+        <span className="sr-only">toggle side menu</span>
       </DrawerTrigger>
       <DrawerContent>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-0 pb-10">
@@ -207,7 +210,7 @@ function RootPanel({ menu, collectionMenu, onDrill, onNavigate }: NavProps) {
       {sole && sole.columns.length > 0 && (
         <li>
           <ActionLink href={sole.href} onNavigate={onNavigate}>
-            Shop all
+            SHOP ALL
           </ActionLink>
         </li>
       )}
@@ -298,7 +301,7 @@ function DepartmentPanel({
 
       <li>
         <ActionLink href={department.href} onNavigate={onNavigate}>
-          SHOP ALL
+          SHOP ALL <ArrowArcRightIcon />
         </ActionLink>
       </li>
     </ul>
@@ -416,14 +419,20 @@ function ActionLink({
   href,
   children,
   onNavigate,
+  className,
 }: {
   href: string
+  className?: string
   children: ReactNode
   onNavigate: () => void
 }) {
   return (
-    <NextLink href={href} onClick={onNavigate} className={actionClass}>
-      {children}
+    <NextLink
+      href={href}
+      onClick={onNavigate}
+      className={cn(actionClass, className)}
+    >
+      {children} <ArrowRightIcon />
     </NextLink>
   )
 }

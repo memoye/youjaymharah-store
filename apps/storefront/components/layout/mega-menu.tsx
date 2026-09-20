@@ -11,6 +11,7 @@ import type {
   MenuDepartment,
 } from "@/lib/medusa/menu"
 import { cn } from "@/lib/util/cn"
+import { ArrowRightIcon } from "@phosphor-icons/react"
 
 type NavigationMenuLinkProps = React.ComponentProps<typeof NavigationMenuLink>
 
@@ -107,25 +108,35 @@ export function DepartmentPanel({
     .filter((tile) => tile.mobileImage ?? tile.image)
     .slice(0, 2)
 
+  const renderColumnHeading = (column: MenuDepartment["columns"][number]) => {
+    if (column.heading === null) {
+      return (
+        <p aria-hidden className={cn(headingClass, "invisible")}>
+          &nbsp;
+        </p>
+      )
+    }
+
+    if (column.href) {
+      return (
+        <MenuLink
+          href={column.href}
+          className={cn(headingClass, "hover:text-foreground")}
+        >
+          {column.heading}
+        </MenuLink>
+      )
+    }
+
+    return <p className={headingClass}>{column.heading}</p>
+  }
+
   return (
     <div className="container-wrapper grid grid-cols-[1fr_auto] gap-x-12 px-5 pt-10 pb-8 sm:px-6">
       <div className="flex flex-wrap gap-x-16 gap-y-10">
         {department.columns.map((column) => (
           <div key={column.id} className="min-w-40">
-            {column.heading === null ? (
-              <p aria-hidden className={cn(headingClass, "invisible")}>
-                &nbsp;
-              </p>
-            ) : column.href ? (
-              <MenuLink
-                href={column.href}
-                className={cn(headingClass, "hover:text-foreground")}
-              >
-                {column.heading}
-              </MenuLink>
-            ) : (
-              <p className={headingClass}>{column.heading}</p>
-            )}
+            {renderColumnHeading(column)}
 
             <ul
               aria-label={column.heading ?? undefined}
@@ -169,8 +180,11 @@ export function DepartmentPanel({
       )}
 
       <div className="col-span-full mt-10 border-t pt-5">
-        <MenuLink href={department.href} className={actionClass}>
-          Shop all
+        <MenuLink
+          href={department.href}
+          className={cn("inline-flex items-center gap-2", actionClass)}
+        >
+          Shop all <ArrowRightIcon />
         </MenuLink>
       </div>
     </div>
