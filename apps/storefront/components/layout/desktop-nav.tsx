@@ -39,7 +39,7 @@ export function DesktopNav({
 }: {
   anchor: RefObject<HTMLElement | null>
 }) {
-  const { menu, collectionMenu } = useCatalog()
+  const { menu, collectionMenu, storeMenuCards } = useCatalog()
   const active = useActiveMenuItem()
 
   const departments = menu.showDepartments
@@ -58,7 +58,7 @@ export function DesktopNav({
         collisionAvoidance: { side: "none" },
         className: "z-40 w-(--anchor-width)",
       }}
-      popupClassName="w-full _border-b bg-background text-foreground shadow-none ring-0 data-ending-style:scale-100 data-starting-style:scale-100"
+      popupClassName="w-full bg-background text-foreground shadow-none ring-0 data-ending-style:scale-100 data-starting-style:scale-100"
     >
       <NavigationMenuList className="gap-7">
         {departments.map((department) => {
@@ -76,7 +76,7 @@ export function DesktopNav({
               <NavigationMenuContent className={contentClass}>
                 <DepartmentPanel
                   department={department}
-                  tiles={collectionMenu.tiles}
+                  promos={storeMenuCards}
                 />
               </NavigationMenuContent>
             </NavigationMenuItem>
@@ -93,12 +93,6 @@ export function DesktopNav({
           )
         })}
 
-        <NavigationMenuItem
-          render={<MenuLink href={NEW_ARRIVALS_PATH} className={itemClass} />}
-        >
-          New arrivals
-        </NavigationMenuItem>
-
         {collectionMenu.display === "menu" && (
           <NavigationMenuItem value="collections">
             <NavigationMenuTrigger className={itemClass}>
@@ -109,6 +103,12 @@ export function DesktopNav({
             </NavigationMenuContent>
           </NavigationMenuItem>
         )}
+
+        <NavigationMenuItem
+          render={<MenuLink href={NEW_ARRIVALS_PATH} className={itemClass} />}
+        >
+          New arrivals
+        </NavigationMenuItem>
 
         {collectionMenu.display === "link" && (
           <NavigationMenuItem>

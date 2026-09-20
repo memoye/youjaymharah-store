@@ -390,6 +390,52 @@ export type StorefrontSettings = {
     cta_url: string | null;
   };
   featured_collection_id: string | null;
+  store_menu_cards: {
+    target_type: "collection" | "category" | "product";
+    target_id: string;
+    image_url: string;
+    mobile_image_url: string | null;
+  }[];
+  announcement_bar: {
+    enabled: boolean;
+    appearance: "light" | "dark";
+    dismissible: boolean;
+    items: {
+      id: string;
+      enabled: boolean;
+      message: string;
+      link_label: string | null;
+      destination: unknown | null;
+      starts_at: string | null;
+      ends_at: string | null;
+      promotion_id: string | null;
+    }[];
+  };
+};
+
+export type StoreAnnouncementsResponse = {
+  appearance: "light" | "dark";
+  dismissible: boolean;
+  server_time: string;
+  valid_until: string;
+  items: {
+    id: string;
+    message: string;
+    link_label: string | null;
+    href: string | null;
+    promotion_code: string | null;
+    ends_at: string | null;
+  }[];
+};
+
+export type AdminAnnouncementOptionsResponse = {
+  options: {
+    id: string;
+    label: string;
+  }[];
+  count: number;
+  offset: number;
+  limit: number;
 };
 
 export type AdminUpdateStorefrontSettingsBody = {
@@ -421,6 +467,27 @@ export type AdminUpdateStorefrontSettingsBody = {
     cta_url?: string | null;
   };
   featured_collection_id?: string | null;
+  store_menu_cards?: {
+    target_type: "collection" | "category" | "product";
+    target_id: string;
+    image_url: string;
+    mobile_image_url?: string | null;
+  }[];
+  announcement_bar?: {
+    enabled: boolean;
+    appearance: "light" | "dark";
+    dismissible: boolean;
+    items: {
+      id: string;
+      enabled: boolean;
+      message: string;
+      link_label: string | null;
+      destination: unknown | null;
+      starts_at: string | null;
+      ends_at: string | null;
+      promotion_id: string | null;
+    }[];
+  };
 };
 
 export type AdminStorefrontSettingsResponse = {
@@ -447,6 +514,27 @@ export type AdminStorefrontSettingsResponse = {
       cta_url: string | null;
     };
     featured_collection_id: string | null;
+    store_menu_cards: {
+      target_type: "collection" | "category" | "product";
+      target_id: string;
+      image_url: string;
+      mobile_image_url: string | null;
+    }[];
+    announcement_bar: {
+      enabled: boolean;
+      appearance: "light" | "dark";
+      dismissible: boolean;
+      items: {
+        id: string;
+        enabled: boolean;
+        message: string;
+        link_label: string | null;
+        destination: unknown | null;
+        starts_at: string | null;
+        ends_at: string | null;
+        promotion_id: string | null;
+      }[];
+    };
   };
 };
 
@@ -476,6 +564,14 @@ export type AdminHomepageHeroHistoryResponse = {
 
 export type StoreStorefrontSettingsResponse = {
   settings: {
+    navigation: {
+      store_menu_cards: {
+        title: string;
+        href: string;
+        image_url: string;
+        mobile_image_url: string | null;
+      }[];
+    };
     brand: {
       name: string;
       logo_url: string | null;

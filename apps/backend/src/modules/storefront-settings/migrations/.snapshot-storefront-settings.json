@@ -1,5 +1,7 @@
 {
-  "namespaces": ["public"],
+  "namespaces": [
+    "public"
+  ],
   "name": "public",
   "tables": [
     {
@@ -115,7 +117,9 @@
         },
         {
           "keyName": "homepage_hero_revision_pkey",
-          "columnNames": ["id"],
+          "columnNames": [
+            "id"
+          ],
           "composite": false,
           "constraint": true,
           "primary": true,
@@ -304,6 +308,38 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "store_menu_cards": {
+          "name": "store_menu_cards",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{\"items\":[]}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
+        "announcement_bar": {
+          "name": "announcement_bar",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'{\"enabled\":false,\"appearance\":\"dark\",\"dismissible\":true,\"items\":[]}'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
@@ -367,7 +403,9 @@
         },
         {
           "keyName": "storefront_settings_pkey",
-          "columnNames": ["id"],
+          "columnNames": [
+            "id"
+          ],
           "composite": false,
           "constraint": true,
           "primary": true,

@@ -1,6 +1,11 @@
 "use client"
 
-import { BagIcon, MagnifyingGlassIcon } from "@phosphor-icons/react"
+import {
+  BagIcon,
+  MagnifyingGlassIcon,
+  UserCircleIcon,
+  UserIcon,
+} from "@phosphor-icons/react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRef } from "react"
@@ -69,7 +74,9 @@ export function Header() {
         <div className="flex *:h-auto max-lg:gap-2">
           <Tooltip>
             <TooltipTrigger
-              render={<Button variant={"ghost"} size={"icon"} className="" />}
+              render={
+                <Button variant={"ghost"} size={"icon-lg"} className="" />
+              }
             >
               <MagnifyingGlassIcon />
             </TooltipTrigger>
@@ -77,8 +84,16 @@ export function Header() {
             <TooltipContent className={""}>hello</TooltipContent>
           </Tooltip>
 
-          <Button variant={"ghost"} size={"icon"}>
+          <Button variant={"ghost"} size={"icon-lg"}>
             <HeartIcon />
+          </Button>
+
+          <Button className={"relative"} variant={"ghost"} size={"icon-lg"}>
+            {/* <span className="relative"> */}
+            <UserIcon />
+            <span className="text absolute bottom-1/5 left-1/2 inline-block size-1 -translate-x-1/2 rounded-full bg-gold" />
+            <span className="text absolute bottom-1/5 left-1/2 inline-block size-1 -translate-x-1/2 animate-ping rounded-full bg-gold" />
+            {/* </span> */}
           </Button>
 
           <Button variant={"ghost"} size={"icon"}>

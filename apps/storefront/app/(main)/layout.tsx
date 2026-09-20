@@ -5,6 +5,7 @@ import { Metadata } from "next"
 // import { getBaseURL } from "@lib/util/env"
 // import { StoreCartShippingOption } from "@medusajs/types"
 import { Header } from "@/components/layout/header"
+import { AnnouncementBanner } from "@/components/layout/announcement-banner"
 import { getBaseURL } from "@/lib/util/env"
 // import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
 // import Footer from "@modules/layout/templates/footer"
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
 export default async function PageLayout(props: LayoutProps<"/">) {
   return (
     <>
+      <AnnouncementBanner />
       <Header />
 
       {props.children}

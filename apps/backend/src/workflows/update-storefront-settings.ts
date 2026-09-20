@@ -10,6 +10,7 @@ import {
   updateStorefrontSettingsStep,
   type UpdateStorefrontSettingsInput,
 } from "./steps/update-storefront-settings";
+import { validateStoreMenuPromosStep } from "./steps/validate-store-menu-promos";
 import { validateFeaturedCollectionStep } from "./steps/validate-featured-collection";
 
 export type UpdateStorefrontSettingsWorkflowInput =
@@ -26,6 +27,12 @@ export const updateStorefrontSettingsWorkflow = createWorkflow(
     }));
 
     validateFeaturedCollectionStep(featured);
+
+    const promos = transform({ input }, ({ input }) => ({
+      store_menu_cards: input.store_menu_cards,
+    }));
+
+    validateStoreMenuPromosStep(promos);
 
     const revision = transform({ input }, ({ input }) => ({
       homepage_hero: input.homepage_hero,

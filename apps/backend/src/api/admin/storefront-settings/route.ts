@@ -7,6 +7,7 @@ import type { AdminUpdateStorefrontSettingsType } from "../../middlewares";
 import { STOREFRONT_SETTINGS_MODULE } from "../../../modules/storefront-settings";
 import type StorefrontSettingsModuleService from "../../../modules/storefront-settings/service";
 import { updateStorefrontSettingsWorkflow } from "../../../workflows/update-storefront-settings";
+import { adminSettings } from "../../../modules/storefront-settings/admin-settings";
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
@@ -16,7 +17,7 @@ export const GET = async (
     STOREFRONT_SETTINGS_MODULE,
   );
 
-  res.json({ settings: await service.retrieveSettings() });
+  res.json({ settings: adminSettings(await service.retrieveSettings()) });
 };
 
 export const POST = async (
@@ -27,5 +28,5 @@ export const POST = async (
     input: { ...req.validatedBody, actor_id: req.auth_context.actor_id },
   });
 
-  res.json({ settings: result });
+  res.json({ settings: adminSettings(result) });
 };

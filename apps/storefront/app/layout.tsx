@@ -63,6 +63,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   collections,
                   settings.homepage.featured_collection_id,
                 )}
+                storeMenuCards={settings.navigation.store_menu_cards}
               >
                 {children}
               </CatalogProvider>

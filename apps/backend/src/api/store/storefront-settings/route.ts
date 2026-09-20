@@ -7,6 +7,10 @@ import { STOREFRONT_SETTINGS_MODULE } from "../../../modules/storefront-settings
 import { completeHomepageHero } from "../../../modules/storefront-settings/homepage-hero";
 import type StorefrontSettingsModuleService from "../../../modules/storefront-settings/service";
 import { completeSocialLinks } from "../../../modules/storefront-settings/social-networks";
+import {
+  completeStoreMenuPromos,
+  type StoreMenuPromo,
+} from "../../../modules/storefront-settings/store-menu-promos";
 
 /**
  * Everything the storefront renders its shell and home page with: the brand,
@@ -58,6 +62,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       products: {
         new_badge_days: settings.new_badge_days,
       },
+      navigation: {
+        store_menu_cards: await resolveStoreMenuPromos(
+          req,
+          completeStoreMenuPromos(settings.store_menu_cards),
+        ),
+      },
     },
   });
 };
@@ -82,4 +92,63 @@ async function existingCollectionId(
   });
 
   return data.length ? id : null;
+}
+
+type ResolvedStoreMenuPromo = StoreMenuPromo & {
+  title: string;
+  href: string;
+};
+
+/**
+ * URLs are derived from a live product, category, or collection handle. A
+ * target deleted after an admin save is omitted instead of becoming a 404.
+ */
+async function resolveStoreMenuPromos(
+  req: MedusaRequest,
+  promos: StoreMenuPromo[],
+): Promise<ResolvedStoreMenuPromo[]> {
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+
+  return (
+    await Promise.all(
+      promos.map(async (promo): Promise<ResolvedStoreMenuPromo | null> => {
+        const config = {
+          collection: {
+            entity: "product_collection",
+            title: "title",
+            path: "/collections/",
+          },
+          category: {
+            entity: "product_category",
+            title: "name",
+            path: "/categories/",
+          },
+          product: {
+            entity: "product",
+            title: "title",
+            path: "/products/",
+          },
+        } as const;
+        const target = config[promo.target_type];
+        const { data } = await query.graph({
+          entity: target.entity,
+          fields: [target.title, "handle"],
+          filters: { id: promo.target_id },
+        });
+        const item = data[0] as Record<string, unknown> | undefined;
+        const title = item?.[target.title];
+        const handle = item?.handle;
+
+        if (typeof title !== "string" || typeof handle !== "string") {
+          return null;
+        }
+
+        return {
+          ...promo,
+          title,
+          href: `${target.path}${encodeURIComponent(handle)}`,
+        };
+      }),
+    )
+  ).filter((promo): promo is ResolvedStoreMenuPromo => promo !== null);
 }

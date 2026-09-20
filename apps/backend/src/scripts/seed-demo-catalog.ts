@@ -54,12 +54,14 @@ import {
   completeHomepageHero,
   hasHeroContent,
 } from "../modules/storefront-settings/homepage-hero";
+import { completeStoreMenuPromos } from "../modules/storefront-settings/store-menu-promos";
 import type StorefrontSettingsModuleService from "../modules/storefront-settings/service";
 import {
   createSizeGuideWorkflow,
   setCategorySizeGuideWorkflow,
 } from "../workflows/size-guides";
 import { updateStorefrontSettingsWorkflow } from "../workflows/update-storefront-settings";
+import { ensureDemoAnnouncements } from "./seed-announcements";
 
 /**
  * Seeds a demo womenswear catalog for storefront development:
@@ -103,6 +105,8 @@ export default async function seedDemoCatalog({ container, args }: ExecArgs) {
   // After the shared options: a guide's sizes are checked against them.
   await ensureSizeGuides(container, categoryIds);
   await ensureHomepage(container, collectionIds);
+  await ensureStoreMenuPromos(container, collectionIds);
+  await ensureDemoAnnouncements(container);
 
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const { data: existingProducts } = await query.graph({
@@ -482,6 +486,50 @@ async function ensureHomepage(
       .filter(Boolean)
       .join(", ")}.`,
   );
+}
+
+/**
+ * Two cards for exercising the Store megamenu. Like the home page demo
+ * content, these only populate an empty setting and never replace staff work.
+ */
+async function ensureStoreMenuPromos(
+  container: MedusaContainer,
+  collectionIds: Map<string, string>,
+) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const settingsService: StorefrontSettingsModuleService = container.resolve(
+    STOREFRONT_SETTINGS_MODULE,
+  );
+  const settings = await settingsService.retrieveSettings();
+
+  if (completeStoreMenuPromos(settings.store_menu_cards).length) {
+    logger.info("Store menu cards already exist; skipping demo cards.");
+    return;
+  }
+
+  const samples = DEMO_COLLECTIONS.slice(0, 2).flatMap((collection) => {
+    const targetId = collectionIds.get(collection.handle);
+
+    return targetId
+      ? [
+          {
+            target_type: "collection" as const,
+            target_id: targetId,
+            image_url: bannerImage(collection.photo),
+            mobile_image_url: mobileBannerImage(collection.photo),
+          },
+        ]
+      : [];
+  });
+
+  if (!samples.length) {
+    return;
+  }
+
+  await updateStorefrontSettingsWorkflow(container).run({
+    input: { store_menu_cards: samples },
+  });
+  logger.info("Store menu: demo cards set.");
 }
 
 async function ensureProductTypes(container: MedusaContainer) {

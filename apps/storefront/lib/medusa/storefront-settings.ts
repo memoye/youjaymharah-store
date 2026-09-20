@@ -59,6 +59,7 @@ const FALLBACK: StorefrontSettings = {
     },
     featured_collection_id: null,
   },
+  navigation: { store_menu_cards: [] },
   products: { new_badge_days: 30 },
 }
 

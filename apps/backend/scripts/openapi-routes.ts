@@ -1,4 +1,9 @@
 import { z } from "@medusajs/framework/zod";
+import {
+  AnnouncementBar,
+  PublicAnnouncements,
+  AnnouncementOptionsResponse,
+} from "../src/modules/storefront-settings/announcements";
 
 import {
   AdminCreateSizeGuide,
@@ -222,6 +227,15 @@ const StorefrontSettings = z.object({
   google_site_verification: z.string().nullable(),
   homepage_hero: StoredHomepageHero,
   featured_collection_id: z.string().nullable(),
+  store_menu_cards: z.array(
+    z.object({
+      target_type: z.enum(["collection", "category", "product"]),
+      target_id: z.string(),
+      image_url: z.string(),
+      mobile_image_url: z.string().nullable(),
+    }),
+  ),
+  announcement_bar: AnnouncementBar,
 });
 
 const CartReminderSettings = z.object({
@@ -269,6 +283,16 @@ const HomepageHeroHistory = z.object({
 });
 
 const PublicStorefrontSettings = z.object({
+  navigation: z.object({
+    store_menu_cards: z.array(
+      z.object({
+        title: z.string(),
+        href: z.string(),
+        image_url: z.string(),
+        mobile_image_url: z.string().nullable(),
+      }),
+    ),
+  }),
   brand: z.object({
     name: z.string(),
     logo_url: z.string().nullable(),
@@ -522,6 +546,16 @@ export const TYPES: {
   { name: "AdminSetSizeGuideBody", schema: AdminSetSizeGuide, io: "input" },
   { name: "StorefrontSettings", schema: StorefrontSettings, io: "output" },
   {
+    name: "StoreAnnouncementsResponse",
+    schema: PublicAnnouncements,
+    io: "output",
+  },
+  {
+    name: "AdminAnnouncementOptionsResponse",
+    schema: AnnouncementOptionsResponse,
+    io: "output",
+  },
+  {
     name: "AdminUpdateStorefrontSettingsBody",
     schema: AdminUpdateStorefrontSettings,
     io: "input",
@@ -576,6 +610,53 @@ export const TYPES: {
 ];
 
 export const ROUTES: RouteDoc[] = [
+  {
+    method: "GET",
+    path: "/store/announcements",
+    tag: "Storefront",
+    auth: "public",
+    summary: "Get live header announcements",
+    description:
+      "Uncached, ordered live announcements filtered by schedule, destination visibility, and linked offer availability. Refresh by valid_until; never display an expired snapshot.",
+    response: {
+      description: "Live announcements and snapshot expiry.",
+      schema: PublicAnnouncements,
+    },
+  },
+  {
+    method: "GET",
+    path: "/admin/storefront-settings/announcement-options",
+    tag: "Storefront",
+    auth: "admin",
+    policies: ["storefront_settings:read"],
+    summary: "Search announcement destinations and related promotions",
+    query: [
+      {
+        name: "type",
+        description: "Record type.",
+        schema: z.enum(["collection", "category", "product", "promotion"]),
+      },
+      {
+        name: "q",
+        description: "Search label.",
+        schema: z.string().optional(),
+      },
+      {
+        name: "id",
+        description: "Retrieve a selected record.",
+        schema: z.string().optional(),
+      },
+      {
+        name: "offset",
+        description: "Pagination offset (20 per page).",
+        schema: z.number().optional(),
+      },
+    ],
+    response: {
+      description: "Matching options.",
+      schema: AnnouncementOptionsResponse,
+    },
+  },
   {
     method: "GET",
     path: "/admin/storefront-settings",

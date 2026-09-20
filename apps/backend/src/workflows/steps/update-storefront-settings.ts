@@ -1,9 +1,16 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 
-import type { HomepageHeroType, SocialLinksType } from "../../api/middlewares";
+import type {
+  HomepageHeroType,
+  SocialLinksType,
+  StoreMenuPromoType,
+} from "../../api/middlewares";
 import { STOREFRONT_SETTINGS_MODULE } from "../../modules/storefront-settings";
 import { completeHomepageHero } from "../../modules/storefront-settings/homepage-hero";
 import { completeSocialLinks } from "../../modules/storefront-settings/social-networks";
+import { completeStoreMenuPromos } from "../../modules/storefront-settings/store-menu-promos";
+import { validateAnnouncementBar } from "../../modules/storefront-settings/announcement-resolver";
+import type { AnnouncementBar } from "../../modules/storefront-settings/announcements";
 import StorefrontSettingsModuleService, {
   STOREFRONT_SETTINGS_ID,
 } from "../../modules/storefront-settings/service";
@@ -21,6 +28,8 @@ export type UpdateStorefrontSettingsInput = {
   /** Replaces the stored hero as a whole: a field left out is cleared. */
   homepage_hero?: HomepageHeroType;
   featured_collection_id?: string | null;
+  store_menu_cards?: StoreMenuPromoType[];
+  announcement_bar?: AnnouncementBar;
 };
 
 export const updateStorefrontSettingsStep = createStep(
@@ -33,17 +42,26 @@ export const updateStorefrontSettingsStep = createStep(
     // Reads through retrieveSettings so the row exists before the first edit.
     const previous = await service.retrieveSettings();
 
-    const { social_links, homepage_hero, ...rest } = input;
+    const announcementBar =
+      input.announcement_bar !== undefined
+        ? await validateAnnouncementBar(container, input.announcement_bar)
+        : undefined;
+
+    const { social_links, homepage_hero, store_menu_cards, ...rest } = input;
 
     const [updated] = await service.updateStorefrontSettings([
       {
         id: STOREFRONT_SETTINGS_ID,
         ...rest,
+        ...(announcementBar ? { announcement_bar: announcementBar } : {}),
         ...(social_links
           ? { social_links: completeSocialLinks(social_links) }
           : {}),
         ...(homepage_hero
           ? { homepage_hero: completeHomepageHero(homepage_hero) }
+          : {}),
+        ...(store_menu_cards
+          ? { store_menu_cards: { items: store_menu_cards } }
           : {}),
       },
     ]);
@@ -63,6 +81,8 @@ export const updateStorefrontSettingsStep = createStep(
         previous.homepage_hero as Record<string, unknown>,
       ),
       featured_collection_id: previous.featured_collection_id,
+      store_menu_cards: completeStoreMenuPromos(previous.store_menu_cards),
+      announcement_bar: previous.announcement_bar,
     });
   },
   async (previous, { container }) => {
@@ -75,7 +95,11 @@ export const updateStorefrontSettingsStep = createStep(
     );
 
     await service.updateStorefrontSettings([
-      { id: STOREFRONT_SETTINGS_ID, ...previous },
+      {
+        id: STOREFRONT_SETTINGS_ID,
+        ...previous,
+        store_menu_cards: { items: previous.store_menu_cards },
+      },
     ]);
   },
 );

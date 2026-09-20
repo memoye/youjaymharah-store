@@ -9,6 +9,7 @@ import { STOREFRONT_SETTINGS_MODULE } from "../../../../../../modules/storefront
 import { completeHomepageHero } from "../../../../../../modules/storefront-settings/homepage-hero";
 import type StorefrontSettingsModuleService from "../../../../../../modules/storefront-settings/service";
 import { updateStorefrontSettingsWorkflow } from "../../../../../../workflows/update-storefront-settings";
+import { adminSettings } from "../../../../../../modules/storefront-settings/admin-settings";
 
 /**
  * Makes a previous hero the current one, exactly as it was (shown or hidden).
@@ -51,5 +52,5 @@ export const POST = async (
     input: { homepage_hero: parsed.data, actor_id: req.auth_context.actor_id },
   });
 
-  res.json({ settings: result });
+  res.json({ settings: adminSettings(result) });
 };

@@ -6,6 +6,10 @@ import {
 } from "@medusajs/framework/http";
 import type { BaseEntity } from "@medusajs/framework/types";
 import { z } from "@medusajs/framework/zod";
+import {
+  AnnouncementBar,
+  AnnouncementOptionsQuery,
+} from "../modules/storefront-settings/announcements";
 
 export const AdminUpdateBranding = z.object({
   name: z.string().min(1).optional(),
@@ -282,6 +286,15 @@ export const HomepageHero = z
 
 export type HomepageHeroType = z.infer<typeof HomepageHero>;
 
+const StoreMenuPromo = z.object({
+  target_type: z.enum(["collection", "category", "product"]),
+  target_id: z.string().trim().min(1),
+  image_url: z.url(),
+  mobile_image_url: z.url().nullable().optional(),
+});
+
+export type StoreMenuPromoType = z.infer<typeof StoreMenuPromo>;
+
 export const AdminUpdateStorefrontSettings = z.object({
   /** Whole days, from 1 to a year. */
   new_badge_days: z.number().int().min(1).max(365).optional(),
@@ -313,6 +326,9 @@ export const AdminUpdateStorefrontSettings = z.object({
   homepage_hero: HomepageHero.optional(),
   /** The collection featured on the home page; null features none. */
   featured_collection_id: z.string().trim().min(1).nullable().optional(),
+  /** Up to two curated cards in the Store megamenu (not commerce discounts). */
+  store_menu_cards: z.array(StoreMenuPromo).max(2).optional(),
+  announcement_bar: AnnouncementBar.optional(),
 });
 
 export type AdminUpdateStorefrontSettingsType = z.infer<
@@ -551,6 +567,14 @@ export default defineMiddlewares({
     {
       matcher: "/admin/storefront-settings/hero-history",
       method: ["GET"],
+      policies: [{ resource: "storefront_settings", operation: "read" }],
+    },
+    {
+      matcher: "/admin/storefront-settings/announcement-options",
+      method: ["GET"],
+      middlewares: [
+        validateAndTransformQuery<BaseEntity>(AnnouncementOptionsQuery, {}),
+      ],
       policies: [{ resource: "storefront_settings", operation: "read" }],
     },
     {

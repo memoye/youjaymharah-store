@@ -5,6 +5,7 @@ import NextLink from "next/link"
 
 import { NavigationMenuLink } from "@/components/ui/navigation-menu"
 import { useActiveMenuItem } from "@/features/catalog/use-active-menu-item"
+import type { StoreMenuPromo } from "@/features/catalog/provider"
 import type {
   CollectionMenu,
   CollectionTile,
@@ -42,7 +43,7 @@ export function MenuLink({
 }
 
 const headingClass =
-  "text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase"
+  "text-sm font-semibold tracking-[0.08em] text-muted-foreground uppercase"
 
 const linkClass =
   "leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
@@ -56,15 +57,12 @@ const actionClass =
  */
 export function DepartmentPanel({
   department,
-  tiles,
+  promos,
 }: {
   department: MenuDepartment
-  tiles: CollectionTile[]
+  promos: StoreMenuPromo[]
 }) {
   const active = useActiveMenuItem()
-  const promos = tiles
-    .filter((tile) => tile.mobileImage ?? tile.image)
-    .slice(0, 2)
 
   const renderColumnHeading = (column: MenuDepartment["columns"][number]) => {
     if (column.heading === null) {
@@ -125,14 +123,21 @@ export function DepartmentPanel({
 
       {promos.length > 0 && (
         <div className="hidden gap-4 bg-blue-500 lg:flex">
-          {promos.map((tile) => (
-            <CollectionTileLink
-              key={tile.id}
-              tile={tile}
-              shape="portrait"
-              sizes="176px"
-              className="w-44"
-            />
+          {promos.map((promo) => (
+            <MenuLink key={promo.href} href={promo.href} className="group w-44">
+              <span className="relative block aspect-4/5 overflow-hidden bg-muted">
+                <Image
+                  src={promo.mobile_image_url ?? promo.image_url}
+                  alt=""
+                  fill
+                  sizes="176px"
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                />
+              </span>
+              <span className="mt-3 block text-[13px] font-medium">
+                {promo.title}
+              </span>
+            </MenuLink>
           ))}
         </div>
       )}
@@ -182,10 +187,10 @@ export function CollectionTileLink({
         {src && (
           <Image
             src={src}
-            alt=""
-            fill
-            sizes={sizes}
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+            sizes={sizes}
+            fill
+            alt={tile.title || ""}
           />
         )}
       </span>

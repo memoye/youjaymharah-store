@@ -38,4 +38,13 @@ export const StorefrontSettings = model.define("storefront_settings", {
    * treated as none by the store route.
    */
   featured_collection_id: model.text().nullable(),
+  /** Curated, typed destinations for the Store navigation megamenu. */
+  store_menu_cards: model.json().default({ items: [] }),
+  /** Ordered header announcements with individual schedules. */
+  announcement_bar: model.json().default({
+    enabled: false,
+    appearance: "dark",
+    dismissible: true,
+    items: [],
+  }),
 });

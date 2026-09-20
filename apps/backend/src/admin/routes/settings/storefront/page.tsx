@@ -23,6 +23,7 @@ import { usePermissions } from "../../../lib/permissions";
 import { sdk } from "../../../lib/sdk";
 import { uploadImage } from "../../../lib/upload-image";
 import { RenderFromQuery } from "../../../components/render-from-query";
+import { AnnouncementsSection } from "../../../components/announcements/announcements-section";
 
 type Branding = {
   id: string;
@@ -56,6 +57,21 @@ type HomepageHero = {
   cta_url: string | null;
 };
 
+type StoreMenuPromoTargetType = "collection" | "category" | "product";
+
+type StoreMenuPromo = {
+  target_type: StoreMenuPromoTargetType;
+  target_id: string;
+  image_url: string;
+  mobile_image_url: string | null;
+};
+
+type PromoOption = {
+  id: string;
+  title: string;
+  type: StoreMenuPromoTargetType;
+};
+
 type StorefrontSettings = {
   id: string;
   new_badge_days: number;
@@ -69,12 +85,14 @@ type StorefrontSettings = {
   /** Rows saved before the home page settings existed hold only `enabled`. */
   homepage_hero: Partial<HomepageHero>;
   featured_collection_id: string | null;
+  store_menu_cards: StoreMenuPromo[];
 };
 
 const BRANDING_QUERY_KEY = ["branding"];
 const SETTINGS_QUERY_KEY = ["storefront-settings"];
 const COLLECTION_OPTIONS_QUERY_KEY = ["storefront-settings", "collections"];
 const HERO_HISTORY_QUERY_KEY = ["storefront-settings", "hero-history"];
+const PROMO_OPTIONS_QUERY_KEY = ["storefront-settings", "promo-options"];
 
 type HeroRevision = {
   id: string;
@@ -99,6 +117,8 @@ const StorefrontSettingsPage = () => (
   <div className="flex flex-col gap-y-3">
     <BrandSection />
     <HomepageSection />
+    <AnnouncementsSection />
+    <NavigationSection />
     <SharingSection />
     <ProductsSection />
   </div>
@@ -991,6 +1011,320 @@ const EditHomepageDrawer = ({
           </Select.Content>
         </Select>
       </Field>
+    </EditDrawer>
+  );
+};
+
+// Navigation ----------------------------------------------------------------
+
+const NO_PROMO_TARGET = "none";
+
+const NavigationSection = () => {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const { can } = usePermissions();
+  const { data, isLoading, error } = useQuery({
+    queryKey: SETTINGS_QUERY_KEY,
+    queryFn: () =>
+      sdk.client.fetch<{ settings: StorefrontSettings }>(
+        "/admin/storefront-settings",
+      ),
+  });
+  const settings = data?.settings;
+
+  return (
+    <Section
+      title="Navigation"
+      description="The optional visual cards in the Store menu. Choose a live catalogue destination instead of entering a URL, so storefront links stay valid when handles change. These are merchandising cards, not discounts."
+      badge="Marketing & Store Manager"
+      canEdit={Boolean(settings) && can("storefront_settings", "update")}
+      onEdit={() => setOpen(true)}
+      isLoading={isLoading}
+      error={error ? "You don't have access to these settings." : null}
+    >
+      {settings && (
+        <>
+          <Row
+            label="Store menu cards"
+            value={
+              settings.store_menu_cards.length
+                ? settings.store_menu_cards
+                    .map((promo) => `${promo.target_type}: ${promo.target_id}`)
+                    .join(", ")
+                : null
+            }
+            hint="Up to two cards, shown on large screens."
+          />
+          <EditNavigationDrawer
+            settings={settings}
+            open={open}
+            onOpenChange={setOpen}
+            onSaved={(updated) =>
+              queryClient.setQueryData<{ settings: StorefrontSettings }>(
+                SETTINGS_QUERY_KEY,
+                { settings: updated },
+              )
+            }
+          />
+        </>
+      )}
+    </Section>
+  );
+};
+
+const EditNavigationDrawer = ({
+  settings,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  settings: StorefrontSettings;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (settings: StorefrontSettings) => void;
+}) => {
+  const [promos, setPromos] = useState<StoreMenuPromo[]>([]);
+  const options = useQuery({
+    queryKey: PROMO_OPTIONS_QUERY_KEY,
+    queryFn: async (): Promise<PromoOption[]> => {
+      const [collections, categories, products] = await Promise.all([
+        sdk.admin.productCollection.list({
+          limit: 200,
+          fields: "id,title",
+          order: "title",
+        }),
+        sdk.admin.productCategory.list({
+          limit: 200,
+          fields: "id,name",
+          order: "name",
+        }),
+        sdk.admin.product.list({
+          limit: 200,
+          fields: "id,title",
+          order: "title",
+        }),
+      ]);
+
+      return [
+        ...collections.collections.map(({ id, title }) => ({
+          id,
+          title,
+          type: "collection" as const,
+        })),
+        ...categories.product_categories.map(({ id, name }) => ({
+          id,
+          title: name,
+          type: "category" as const,
+        })),
+        ...products.products.map(({ id, title }) => ({
+          id,
+          title,
+          type: "product" as const,
+        })),
+      ];
+    },
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (open) {
+      setPromos(settings.store_menu_cards);
+    }
+  }, [open, settings]);
+
+  const upload = useMutation({
+    mutationFn: ({ file }: { file: File; index: number; mobile: boolean }) =>
+      uploadImage(file),
+    onSuccess: (url, { index, mobile }) =>
+      setPromos((current) =>
+        current.map((promo, currentIndex) =>
+          currentIndex === index
+            ? {
+                ...promo,
+                ...(mobile ? { mobile_image_url: url } : { image_url: url }),
+              }
+            : promo,
+        ),
+      ),
+    onError: (error: Error) => toast.error(`Upload failed: ${error.message}`),
+  });
+
+  const updatePromo = (index: number, changes: Partial<StoreMenuPromo>) =>
+    setPromos((current) =>
+      current.map((promo, currentIndex) =>
+        currentIndex === index ? { ...promo, ...changes } : promo,
+      ),
+    );
+
+  const valid = promos.every((promo) =>
+    Boolean(promo.target_id && promo.image_url),
+  );
+  const save = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{ settings: StorefrontSettings }>(
+        "/admin/storefront-settings",
+        { method: "POST", body: { store_menu_cards: promos } },
+      ),
+    onSuccess: ({ settings: updated }) => {
+      toast.success("Store menu cards updated.");
+      onSaved(updated);
+      onOpenChange(false);
+    },
+    onError: (error: Error & { status?: number }) =>
+      saveError(error, "Marketing, the Store Manager and the store owner"),
+  });
+
+  const busy = save.isPending || upload.isPending;
+  const choices = options.data ?? [];
+
+  return (
+    <EditDrawer
+      title="Edit Store menu cards"
+      open={open}
+      onOpenChange={onOpenChange}
+      busy={busy}
+      saving={save.isPending}
+      canSave={valid}
+      onSave={() => save.mutate()}
+    >
+      <Text size="small" leading="compact" className="text-ui-fg-subtle">
+        Pick a catalogue item for each card. The storefront derives its URL from
+        that item's current handle, and ignores it if the item is later deleted.
+      </Text>
+      {promos.map((promo, index) => {
+        const targetOptions = choices.filter(
+          (option) => option.type === promo.target_type,
+        );
+        const targetMissing =
+          Boolean(promo.target_id) &&
+          !options.isLoading &&
+          !targetOptions.some((option) => option.id === promo.target_id);
+
+        return (
+          <div
+            key={`${promo.target_type}-${promo.target_id}-${index}`}
+            className="border-ui-border-base flex flex-col gap-y-4 rounded-lg border p-4"
+          >
+            <div className="flex items-center justify-between gap-x-4">
+              <Heading level="h3">Card {index + 1}</Heading>
+              <Button
+                size="small"
+                variant="secondary"
+                disabled={busy}
+                onClick={() =>
+                  setPromos((current) =>
+                    current.filter((_, currentIndex) => currentIndex !== index),
+                  )
+                }
+              >
+                Remove
+              </Button>
+            </div>
+            <Field id={`promo-type-${index}`} label="Destination type">
+              <Select
+                value={promo.target_type}
+                onValueChange={(value) =>
+                  updatePromo(index, {
+                    target_type: value as StoreMenuPromoTargetType,
+                    target_id: "",
+                  })
+                }
+              >
+                <Select.Trigger id={`promo-type-${index}`}>
+                  <Select.Value />
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="collection">Collection</Select.Item>
+                  <Select.Item value="category">Category</Select.Item>
+                  <Select.Item value="product">Product</Select.Item>
+                </Select.Content>
+              </Select>
+            </Field>
+            <Field
+              id={`promo-target-${index}`}
+              label="Destination"
+              hint="Only existing catalogue items can be selected."
+            >
+              <Select
+                value={promo.target_id || NO_PROMO_TARGET}
+                disabled={options.isLoading}
+                onValueChange={(value) =>
+                  updatePromo(index, {
+                    target_id: value === NO_PROMO_TARGET ? "" : value,
+                  })
+                }
+              >
+                <Select.Trigger id={`promo-target-${index}`}>
+                  <Select.Value
+                    placeholder={options.isLoading ? "Loading…" : "Choose one"}
+                  />
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value={NO_PROMO_TARGET}>Choose one</Select.Item>
+                  {targetMissing && (
+                    <Select.Item value={promo.target_id}>
+                      Deleted destination
+                    </Select.Item>
+                  )}
+                  {targetOptions.map((option) => (
+                    <Select.Item key={option.id} value={option.id}>
+                      {option.title}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select>
+            </Field>
+            <ImageField
+              label="Desktop image"
+              hint="Required. Portrait image, at least 704 × 880px."
+              url={promo.image_url}
+              busy={busy}
+              uploading={
+                upload.isPending &&
+                upload.variables?.index === index &&
+                !upload.variables.mobile
+              }
+              accept="image/png,image/jpeg,image/webp"
+              onUpload={(file) => upload.mutate({ file, index, mobile: false })}
+              onRemove={() => updatePromo(index, { image_url: "" })}
+            />
+            <ImageField
+              label="Mobile image (optional)"
+              hint="Portrait image for smaller screens. The desktop image is used when empty."
+              url={promo.mobile_image_url ?? ""}
+              busy={busy}
+              uploading={
+                upload.isPending &&
+                upload.variables?.index === index &&
+                upload.variables.mobile
+              }
+              accept="image/png,image/jpeg,image/webp"
+              onUpload={(file) => upload.mutate({ file, index, mobile: true })}
+              onRemove={() => updatePromo(index, { mobile_image_url: null })}
+            />
+          </div>
+        );
+      })}
+      {promos.length < 2 && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() =>
+            setPromos((current) => [
+              ...current,
+              {
+                target_type: "collection",
+                target_id: "",
+                image_url: "",
+                mobile_image_url: null,
+              },
+            ])
+          }
+        >
+          Add card
+        </Button>
+      )}
     </EditDrawer>
   );
 };
