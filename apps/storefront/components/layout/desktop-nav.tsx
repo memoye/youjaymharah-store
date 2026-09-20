@@ -17,7 +17,7 @@ import { CollectionsPanel, DepartmentPanel, MenuLink } from "./mega-menu"
 
 /** Overrides the kit's compact button look with the header's text style. */
 const itemClass =
-  "h-12 px-0 text-[13px] px-2 inline-flex font-medium tracking-[0.02em] decoration-gold underline-offset-[6px] hover:bg-transparent hover:text-muted-foreground focus:bg-transparent focus-visible:underline focus-visible:ring-0 data-current:underline data-popup-open:bg-transparent data-popup-open:text-muted-foreground data-popup-open:hover:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent"
+  "h-12 py-1.5 text-[13px] px-2 inline-flex font-medium tracking-[0.02em] decoration-gold underline-offset-[6px] hover:bg-transparent hover:text-muted-foreground focus:bg-transparent focus-visible:underline focus-visible:ring-0 data-current:underline data-popup-open:bg-transparent data-popup-open:text-muted-foreground data-popup-open:hover:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent"
 
 const contentClass = "p-0"
 
@@ -53,11 +53,12 @@ export function DesktopNav({
       closeDelay={120}
       positionerProps={{
         anchor,
-        sideOffset: 0,
+        sideOffset: -1,
+        collisionPadding: 0,
         collisionAvoidance: { side: "none" },
         className: "z-40 w-(--anchor-width)",
       }}
-      popupClassName="w-full border-b bg-background text-foreground shadow-none ring-0 data-ending-style:scale-100 data-starting-style:scale-100"
+      popupClassName="w-full _border-b bg-background text-foreground shadow-none ring-0 data-ending-style:scale-100 data-starting-style:scale-100"
     >
       <NavigationMenuList className="gap-7">
         {departments.map((department) => {

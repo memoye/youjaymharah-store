@@ -12,6 +12,7 @@ import type {
 } from "@/lib/medusa/menu"
 import { cn } from "@/lib/util/cn"
 import { ArrowRightIcon } from "@phosphor-icons/react"
+import { Separator } from "../ui/separator"
 
 type NavigationMenuLinkProps = React.ComponentProps<typeof NavigationMenuLink>
 
@@ -30,7 +31,7 @@ export function MenuLink({
       render={<NextLink href={href} />}
       closeOnClick
       className={cn(
-        "block p-0 hover:bg-transparent focus:bg-transparent data-active:bg-transparent data-active:hover:bg-transparent data-active:focus:bg-transparent",
+        "block p-0 hover:bg-transparent focus:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring data-active:bg-transparent data-active:hover:bg-transparent data-active:focus:bg-transparent",
         className,
       )}
       {...props}
@@ -41,56 +42,13 @@ export function MenuLink({
 }
 
 const headingClass =
-  "text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase"
+  "text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase"
 
 const linkClass =
-  "text-[15px] leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
+  "leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
 
 const actionClass =
-  "text-[12px] font-medium tracking-[0.06em] uppercase underline-offset-4 hover:underline"
-
-/**
- * One tile per collection, with its portrait banner in the shop menu and its
- * landscape banner in the collections menu.
- */
-export function CollectionTileLink({
-  tile,
-  shape,
-  sizes,
-  className,
-}: {
-  tile: CollectionTile
-  shape: "portrait" | "landscape"
-  sizes: string
-  className?: string
-}) {
-  const src =
-    shape === "portrait"
-      ? (tile.mobileImage ?? tile.image)
-      : (tile.image ?? tile.mobileImage)
-
-  return (
-    <MenuLink href={tile.href} className={cn("group block", className)}>
-      <span
-        className={cn(
-          "relative block overflow-hidden bg-muted",
-          shape === "portrait" ? "aspect-4/5" : "aspect-2/1",
-        )}
-      >
-        {src && (
-          <Image
-            src={src}
-            alt=""
-            fill
-            sizes={sizes}
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-          />
-        )}
-      </span>
-      <span className="mt-3 block text-[13px] font-medium">{tile.title}</span>
-    </MenuLink>
-  )
-}
+  "text-xs font-medium tracking-[0.06em] uppercase underline-offset-4 hover:underline"
 
 /**
  * A department's mega menu: category columns on the left, up to two
@@ -132,8 +90,8 @@ export function DepartmentPanel({
   }
 
   return (
-    <div className="container-wrapper grid grid-cols-[1fr_auto] gap-x-12 px-5 pt-10 pb-8 sm:px-6">
-      <div className="flex flex-wrap gap-x-16 gap-y-10">
+    <div className="container-wrapper grid grid-cols-[1fr_auto] gap-x-12 pt-10 pb-8">
+      <div className="flex flex-wrap gap-x-16 gap-y-10 px-5 sm:px-6">
         {department.columns.map((column) => (
           <div key={column.id} className="min-w-40">
             {renderColumnHeading(column)}
@@ -166,7 +124,7 @@ export function DepartmentPanel({
       </div>
 
       {promos.length > 0 && (
-        <div className="hidden gap-4 lg:flex">
+        <div className="hidden gap-4 bg-blue-500 lg:flex">
           {promos.map((tile) => (
             <CollectionTileLink
               key={tile.id}
@@ -179,7 +137,9 @@ export function DepartmentPanel({
         </div>
       )}
 
-      <div className="col-span-full mt-10 border-t pt-5">
+      <Separator className="col-span-full mt-10" />
+
+      <div className="container-wrapper col-span-full px-5 pt-5 sm:px-6">
         <MenuLink
           href={department.href}
           className={cn("inline-flex items-center gap-2", actionClass)}
@@ -188,6 +148,49 @@ export function DepartmentPanel({
         </MenuLink>
       </div>
     </div>
+  )
+}
+
+/**
+ * One tile per collection, with its portrait banner in the shop menu and its
+ * landscape banner in the collections menu.
+ */
+export function CollectionTileLink({
+  tile,
+  shape,
+  sizes,
+  className,
+}: {
+  tile: CollectionTile
+  shape: "portrait" | "landscape"
+  sizes: string
+  className?: string
+}) {
+  const src =
+    shape === "portrait"
+      ? (tile.mobileImage ?? tile.image)
+      : (tile.image ?? tile.mobileImage)
+
+  return (
+    <MenuLink href={tile.href} className={cn("group block", className)}>
+      <span
+        className={cn(
+          "relative block overflow-hidden bg-muted",
+          shape === "portrait" ? "aspect-4/5" : "aspect-2/1",
+        )}
+      >
+        {src && (
+          <Image
+            src={src}
+            alt=""
+            fill
+            sizes={sizes}
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+          />
+        )}
+      </span>
+      <span className="mt-3 block text-[13px] font-medium">{tile.title}</span>
+    </MenuLink>
   )
 }
 
