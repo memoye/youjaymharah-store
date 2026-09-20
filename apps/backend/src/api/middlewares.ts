@@ -356,6 +356,19 @@ export const StoreSearchProducts = z.object({
 
 export type StoreSearchProductsType = z.infer<typeof StoreSearchProducts>;
 
+export const StoreSearchSuggestions = z.object({
+  q: z.string().trim().min(2).max(64),
+  limit: z.coerce.number().int().min(1).max(10).default(6),
+});
+
+export type StoreSearchSuggestionsType = z.infer<typeof StoreSearchSuggestions>;
+
+export const StoreSearchTrending = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(6),
+});
+
+export type StoreSearchTrendingType = z.infer<typeof StoreSearchTrending>;
+
 export default defineMiddlewares({
   routes: [
     // Custom admin routes are ungated unless they declare policies -- without
@@ -600,6 +613,26 @@ export default defineMiddlewares({
         validateAndTransformQuery<BaseEntity>(StoreSearchProducts, {
           isList: true,
           defaultLimit: 24,
+        }),
+      ],
+    },
+    {
+      matcher: "/store/search/trending",
+      method: ["GET"],
+      middlewares: [
+        validateAndTransformQuery<BaseEntity>(StoreSearchTrending, {
+          isList: true,
+          defaultLimit: 6,
+        }),
+      ],
+    },
+    {
+      matcher: "/store/search/suggestions",
+      method: ["GET"],
+      middlewares: [
+        validateAndTransformQuery<BaseEntity>(StoreSearchSuggestions, {
+          isList: true,
+          defaultLimit: 6,
         }),
       ],
     },

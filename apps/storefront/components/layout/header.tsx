@@ -1,11 +1,5 @@
 "use client"
 
-import {
-  BagIcon,
-  MagnifyingGlassIcon,
-  UserCircleIcon,
-  UserIcon,
-} from "@phosphor-icons/react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRef } from "react"
@@ -15,9 +9,7 @@ import { cn } from "@/lib/util/cn"
 
 import { DesktopNav } from "./desktop-nav"
 import { MobileNav } from "./mobile-nav"
-import { Button } from "../ui/button"
-import { HeartIcon } from "@phosphor-icons/react/dist/ssr"
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
+import { UtilityNav } from "./utility-nav"
 
 export function Header() {
   const { brand } = useStorefrontSettings()
@@ -71,45 +63,8 @@ export function Header() {
           <span className="sr-only">Home</span>
         </Link>
 
-        <div className="flex *:h-auto max-lg:gap-2">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant={"ghost"} size={"icon-lg"} className="" />
-              }
-            >
-              <MagnifyingGlassIcon />
-            </TooltipTrigger>
-
-            <TooltipContent className={""}>hello</TooltipContent>
-          </Tooltip>
-
-          <Button variant={"ghost"} size={"icon-lg"}>
-            <HeartIcon />
-          </Button>
-
-          <Button className={"relative"} variant={"ghost"} size={"icon-lg"}>
-            {/* <span className="relative"> */}
-            <UserIcon />
-            <span className="text absolute bottom-1/5 left-1/2 inline-block size-1 -translate-x-1/2 rounded-full bg-gold" />
-            <span className="text absolute bottom-1/5 left-1/2 inline-block size-1 -translate-x-1/2 animate-ping rounded-full bg-gold" />
-            {/* </span> */}
-          </Button>
-
-          <Button variant={"ghost"} size={"icon"}>
-            <BagIcon />
-          </Button>
-        </div>
-        {/*<nav>
-          <ul className="flex items-center gap-4">
-            <li>Search</li>
-            <li>Wishlist</li>
-            <li>Shopping bag</li>
-          </ul>
-        </nav>*/}
+        <UtilityNav />
       </div>
     </header>
   )
 }
-
-// function 

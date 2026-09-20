@@ -6,6 +6,7 @@ import type { SearchTypes } from "@medusajs/framework/types";
 import { MedusaError, Modules, ProductStatus } from "@medusajs/framework/utils";
 
 import type { StoreSearchProductsType } from "../../middlewares";
+import { SEARCH_PERFORMED_EVENT } from "../../../subscribers/search-performed";
 
 /**
  * Faceted so a results page can offer refinements next to the hits, and count
@@ -70,6 +71,10 @@ export const GET = async (
     },
   });
 
+  if (q) {
+    await recordTerm(req, q, result.metadata.count ?? 0);
+  }
+
   res.json({
     products: result.hits.map((hit) => hit.document),
     count: result.metadata.count ?? 0,
@@ -77,4 +82,24 @@ export const GET = async (
     limit: result.metadata.take,
     facets: result.facets ?? {},
   });
+};
+
+/**
+ * Counts the search towards the trending terms. Emitted rather than written
+ * here so the shopper's response does not wait on it, and swallowed because a
+ * tally is never worth failing a search over.
+ */
+const recordTerm = async (
+  req: MedusaStoreRequest<unknown, StoreSearchProductsType>,
+  term: string,
+  resultCount: number,
+) => {
+  try {
+    await req.scope.resolve(Modules.EVENT_BUS).emit({
+      name: SEARCH_PERFORMED_EVENT,
+      data: { term, result_count: resultCount },
+    });
+  } catch {
+    // The search itself succeeded; the tally is not worth a 500.
+  }
 };

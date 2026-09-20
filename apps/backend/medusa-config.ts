@@ -254,6 +254,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/cart-reminder",
     },
     {
+      resolve: "./src/modules/search-insights",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [

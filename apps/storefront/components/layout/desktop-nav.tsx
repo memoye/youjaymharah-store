@@ -48,6 +48,7 @@ export function DesktopNav({
 
   return (
     <NavigationMenu
+      aria-label="Catalogue"
       className="hidden items-stretch md:flex"
       delay={80}
       closeDelay={120}

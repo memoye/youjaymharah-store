@@ -20,8 +20,16 @@ export const COLLECTIONS_PATH = "/collections"
 /** Products newest first. */
 export const NEW_ARRIVALS_PATH = "/new-arrivals"
 
+/** The cart, called "shopping bag" everywhere a shopper can see it. */
+export const SHOPPING_BAG_PATH = "/shopping-bag"
+
 /** Pages search engines should not crawl: private or per-visitor. */
-export const PRIVATE_PATHS = ["/api/", "/account", "/shopping-bag", "/checkout"]
+export const PRIVATE_PATHS = [
+  "/api/",
+  "/account",
+  SHOPPING_BAG_PATH,
+  "/checkout",
+]
 
 /** An absolute URL on this storefront, e.g. for structured data. */
 export const absoluteUrl = (path: string) =>

@@ -1,0 +1,166 @@
+import { MedusaService } from "@medusajs/framework/utils";
+
+import { SearchTermStat } from "./models/search-term-stat";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Longer terms are sentences pasted in, not searches worth trending. */
+const MAX_TERM_LENGTH = 64;
+
+const MIN_TERM_LENGTH = 2;
+
+/** How many day rows one trending read will look at. */
+const READ_LIMIT = 5000;
+
+export const TRENDING_DEFAULTS = {
+  window_days: 7,
+  limit: 6,
+  /** One shopper searching once is not a trend. */
+  min_searches: 2,
+} as const;
+
+/** UTC midnight, the bucket a search is counted in. */
+const startOfDay = (date: Date) =>
+  new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+
+/**
+ * Terms to count. Returns null for anything that is not a search worth
+ * remembering: too short, too long, an email or URL someone pasted into the
+ * box, or a bare number, which is an order lookup rather than a trend.
+ */
+export const normaliseTerm = (raw: string): string | null => {
+  const term = raw.toLowerCase().replace(/\s+/g, " ").trim();
+
+  if (term.length < MIN_TERM_LENGTH || term.length > MAX_TERM_LENGTH) {
+    return null;
+  }
+
+  if (term.includes("@") || term.includes("http") || /^[\d\s-]+$/.test(term)) {
+    return null;
+  }
+
+  return term;
+};
+
+class SearchInsightsModuleService extends MedusaService({
+  SearchTermStat,
+}) {
+  /**
+   * Adds one search to today's tally for a term. Ignores terms
+   * `normaliseTerm` rejects, so callers can hand over raw input.
+   */
+  async recordSearch(rawTerm: string, resultCount: number) {
+    const term = normaliseTerm(rawTerm);
+
+    if (!term) {
+      return;
+    }
+
+    const day = startOfDay(new Date());
+    const [existing] = await this.listSearchTermStats({ term, day });
+
+    if (existing) {
+      await this.updateSearchTermStats([
+        {
+          id: existing.id,
+          searches: existing.searches + 1,
+          last_result_count: resultCount,
+        },
+      ]);
+
+      return;
+    }
+
+    try {
+      await this.createSearchTermStats([
+        { term, day, searches: 1, last_result_count: resultCount },
+      ]);
+    } catch {
+      // Two searches for a new term in the same instant: the unique index
+      // rejects the second insert, and the row it lost to is now there to
+      // count against.
+      const [created] = await this.listSearchTermStats({ term, day });
+
+      if (created) {
+        await this.updateSearchTermStats([
+          {
+            id: created.id,
+            searches: created.searches + 1,
+            last_result_count: resultCount,
+          },
+        ]);
+      }
+    }
+  }
+
+  /**
+   * The most searched terms over the window, busiest first. Terms whose last
+   * search found nothing are left out: suggesting them sends shoppers to an
+   * empty results page.
+   */
+  async listTrendingTerms({
+    window_days = TRENDING_DEFAULTS.window_days,
+    limit = TRENDING_DEFAULTS.limit,
+    min_searches = TRENDING_DEFAULTS.min_searches,
+  }: {
+    window_days?: number;
+    limit?: number;
+    min_searches?: number;
+  } = {}): Promise<string[]> {
+    const since = startOfDay(new Date(Date.now() - (window_days - 1) * DAY_MS));
+
+    const rows = await this.listSearchTermStats(
+      { day: { $gte: since } },
+      {
+        select: ["term", "searches", "last_result_count"],
+        take: READ_LIMIT,
+        order: { day: "DESC" },
+      },
+    );
+
+    const totals = new Map<string, { searches: number; results: number }>();
+
+    for (const row of rows) {
+      const running = totals.get(row.term) ?? { searches: 0, results: 0 };
+
+      totals.set(row.term, {
+        searches: running.searches + row.searches,
+        results: Math.max(running.results, row.last_result_count),
+      });
+    }
+
+    return [...totals.entries()]
+      .filter(
+        ([, totalled]) =>
+          totalled.results > 0 && totalled.searches >= min_searches,
+      )
+      .sort(
+        ([termA, a], [termB, b]) =>
+          b.searches - a.searches || termA.localeCompare(termB),
+      )
+      .slice(0, limit)
+      .map(([term]) => term);
+  }
+
+  /** Drops day rows older than the retention window. */
+  async pruneOlderThan(days: number) {
+    const cutoff = startOfDay(new Date(Date.now() - days * DAY_MS));
+
+    const stale = await this.listSearchTermStats(
+      { day: { $lt: cutoff } },
+      { select: ["id"], take: READ_LIMIT },
+    );
+
+    if (!stale.length) {
+      return 0;
+    }
+
+    await this.deleteSearchTermStats(stale.map((row) => row.id));
+
+    return stale.length;
+  }
+}
+
+export default SearchInsightsModuleService;
