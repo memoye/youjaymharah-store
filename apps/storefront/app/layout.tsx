@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Bodoni_Moda, Montserrat } from "next/font/google"
+import { Bodoni_Moda, Instrument_Sans } from "next/font/google"
 
 import "./globals.css"
 import { JsonLd } from "@/components/seo/json-ld"
@@ -20,8 +20,8 @@ const bodoniModa = Bodoni_Moda({
   axes: ["opsz"],
 })
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
 })
 
@@ -46,7 +46,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={cn(
         "h-full",
         "antialiased",
-        montserrat.variable,
+        instrumentSans.variable,
         bodoniModa.variable,
       )}
     >

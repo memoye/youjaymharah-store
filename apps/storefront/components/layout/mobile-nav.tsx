@@ -7,9 +7,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react"
 import Image from "next/image"
-import NextLink from "next/link"
 import { useState, type ReactNode } from "react"
-
 import {
   Drawer,
   DrawerClose,
@@ -22,6 +20,8 @@ import { useActiveMenuItem } from "@/features/catalog/use-active-menu-item"
 import { getMenuGroups, type MenuDepartment } from "@/lib/medusa/menu"
 import { NEW_ARRIVALS_PATH } from "@/lib/seo/routes"
 import { cn } from "@/lib/util/cn"
+import NextLink from "next/link"
+import { useStorefrontSettings } from "@/features/site-settings/provider"
 
 type View =
   | { kind: "root" }
@@ -29,8 +29,23 @@ type View =
   | { kind: "group"; departmentId: string; groupId: string }
   | { kind: "collections" }
 
+const ROOT: View = { kind: "root" }
+
+type Catalog = ReturnType<typeof useCatalog>
+type Menu = Catalog["menu"]
+type CollectionMenu = Catalog["collectionMenu"]
+
+type NavProps = {
+  menu: Menu
+  collectionMenu: CollectionMenu
+  activeHref: string | undefined
+  onDrill: (view: View) => void
+  onNavigate: () => void
+}
+
 const rowClass =
-  "flex min-h-12 w-full items-center justify-between gap-4 border-b py-3 text-left text-[15px] outline-none focus-visible:underline"
+  "flex min-h-12 w-full px-4 items-center justify-between gap-4 border-b py-3 text-left text-[15px] outline-none focus-visible:underline"
+
 
 const actionClass =
   "mt-6 inline-block text-[12px] font-medium tracking-[0.06em] uppercase underline underline-offset-4"
@@ -44,179 +59,14 @@ export function MobileNav() {
   const { menu, collectionMenu } = useCatalog()
   const active = useActiveMenuItem()
   const [open, setOpen] = useState(false)
-  const [stack, setStack] = useState<View[]>([{ kind: "root" }])
-
-  const view = stack[stack.length - 1]
-  const push = (next: View) => setStack((current) => [...current, next])
-  const back = () => setStack((current) => current.slice(0, -1))
-  const close = () => setOpen(false)
-
-  const findDepartment = (id: string) =>
-    menu.departments.find((department) => department.id === id)
-
-  const sole = menu.showDepartments ? undefined : menu.departments[0]
-
-  const link = (href: string, label: ReactNode, current = false) => (
-    <NextLink
-      href={href}
-      onClick={close}
-      aria-current={current ? "page" : undefined}
-      className={cn(
-        rowClass,
-        current && "underline decoration-gold underline-offset-4",
-      )}
-    >
-      {label}
-    </NextLink>
-  )
-
-  const drill = (label: string, next: View) => (
-    <button type="button" className={rowClass} onClick={() => push(next)}>
-      {label}
-      <CaretRightIcon size={14} aria-hidden />
-    </button>
-  )
-
-  const departmentRows = (department: MenuDepartment) => (
-    <>
-      {getMenuGroups(department).map((group) => (
-        <li key={group.id}>
-          {drill(group.heading ?? "", {
-            kind: "group",
-            departmentId: department.id,
-            groupId: group.id,
-          })}
-        </li>
-      ))}
-      <li>
-        <NextLink
-          href={department.href}
-          onClick={close}
-          className={actionClass}
-        >
-          Shop all
-        </NextLink>
-      </li>
-    </>
-  )
-
-  let title = "Menu"
-  let body: ReactNode = null
-
-  if (view.kind === "root") {
-    body = (
-      <ul>
-        {menu.showDepartments
-          ? menu.departments.map((department) => (
-              <li key={department.id}>
-                {department.columns.length
-                  ? drill(department.label, {
-                      kind: "department",
-                      departmentId: department.id,
-                    })
-                  : link(department.href, department.label)}
-              </li>
-            ))
-          : sole &&
-            (sole.columns.length ? (
-              getMenuGroups(sole).map((group) => (
-                <li key={group.id}>
-                  {drill(group.heading ?? "", {
-                    kind: "group",
-                    departmentId: sole.id,
-                    groupId: group.id,
-                  })}
-                </li>
-              ))
-            ) : (
-              <li>{link(sole.href, "Shop")}</li>
-            ))}
-        <li>{link(NEW_ARRIVALS_PATH, "New arrivals")}</li>
-        {collectionMenu.display === "menu" && (
-          <li>{drill("Collections", { kind: "collections" })}</li>
-        )}
-        {collectionMenu.display === "link" && (
-          <li>{link(collectionMenu.href, collectionMenu.tiles[0].title)}</li>
-        )}
-        {sole && sole.columns.length > 0 && (
-          <li>
-            <NextLink href={sole.href} onClick={close} className={actionClass}>
-              Shop all
-            </NextLink>
-          </li>
-        )}
-      </ul>
-    )
-  } else if (view.kind === "department") {
-    const department = findDepartment(view.departmentId)
-    title = department?.label ?? title
-    body = department && <ul>{departmentRows(department)}</ul>
-  } else if (view.kind === "group") {
-    const department = findDepartment(view.departmentId)
-    const group = department
-      ? getMenuGroups(department).find((g) => g.id === view.groupId)
-      : undefined
-    title = group?.heading ?? title
-    body = group && (
-      <ul>
-        {group.links.map((item) => (
-          <li key={item.id}>
-            {link(item.href, item.label, active.href === item.href)}
-          </li>
-        ))}
-        {group.href && (
-          <li>
-            <NextLink href={group.href} onClick={close} className={actionClass}>
-              View all
-            </NextLink>
-          </li>
-        )}
-      </ul>
-    )
-  } else {
-    title = "Collections"
-    body = (
-      <>
-        <ul className="flex flex-col gap-6 pt-2">
-          {collectionMenu.tiles.map((tile) => {
-            const src = tile.image ?? tile.mobileImage
-            return (
-              <li key={tile.id}>
-                <NextLink href={tile.href} onClick={close} className="block">
-                  <span className="relative block aspect-2/1 overflow-hidden bg-muted">
-                    {src && (
-                      <Image
-                        src={src}
-                        alt=""
-                        fill
-                        sizes="(max-width: 400px) 100vw, 22rem"
-                        className="object-cover"
-                      />
-                    )}
-                  </span>
-                  <span className="mt-2 block text-[15px]">{tile.title}</span>
-                </NextLink>
-              </li>
-            )
-          })}
-        </ul>
-        <NextLink
-          href={collectionMenu.href}
-          onClick={close}
-          className={actionClass}
-        >
-          View all collections
-        </NextLink>
-      </>
-    )
-  }
+  const { view, canGoBack, push, back, reset } = useDrillStack()
 
   return (
     <Drawer
       open={open}
       onOpenChange={setOpen}
       onOpenChangeComplete={(isOpen) => {
-        if (!isOpen) setStack([{ kind: "root" }])
+        if (!isOpen) reset()
       }}
       swipeDirection="left"
     >
@@ -227,33 +77,400 @@ export function MobileNav() {
         <ListIcon size={20} />
       </DrawerTrigger>
       <DrawerContent>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-10">
-          <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between bg-popover">
-            {stack.length > 1 ? (
-              <button
-                type="button"
-                onClick={back}
-                className="-ml-2 inline-flex size-10 items-center justify-center"
-                aria-label="Back"
-              >
-                <CaretLeftIcon size={18} />
-              </button>
-            ) : (
-              <span className="size-10" aria-hidden />
-            )}
-            <DrawerTitle className="text-[13px] font-medium tracking-[0.02em]">
-              {title}
-            </DrawerTitle>
-            <DrawerClose
-              aria-label="Close menu"
-              className="-mr-2 inline-flex size-10 items-center justify-center"
-            >
-              <XIcon size={18} />
-            </DrawerClose>
-          </div>
-          <nav aria-label="Catalogue">{body}</nav>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-0 pb-10">
+          <Header
+            title={titleFor(view, menu.departments)}
+            canGoBack={canGoBack}
+            onBack={back}
+          />
+          <nav aria-label="Catalogue">
+            <Panel
+              view={view}
+              menu={menu}
+              collectionMenu={collectionMenu}
+              activeHref={active.href ?? "#"}
+              onDrill={push}
+              onNavigate={() => setOpen(false)}
+            />
+          </nav>
         </div>
       </DrawerContent>
     </Drawer>
   )
+}
+
+function Header({
+  title,
+  canGoBack,
+  onBack,
+}: {
+  title: string
+  canGoBack: boolean
+  onBack: () => void
+}) {
+  const { brand } = useStorefrontSettings()
+
+  return (
+    <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between bg-popover px-3">
+      {canGoBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="-ml-2 inline-flex size-10 items-center justify-center"
+          aria-label="Back"
+        >
+          <CaretLeftIcon size={18} />
+        </button>
+      ) : (
+        <DrawerClose
+          render={
+            <NextLink
+              href={"/"}
+              className="relative z-10 py-1 transition-[filter] *:brightness-0"
+            />
+          }
+        >
+          {brand.logo_url ? (
+            <Image
+              src={brand.logo_url}
+              alt={brand.name}
+              width={150}
+              height={150}
+              className="h-auto w-8"
+              title={brand.name}
+            />
+          ) : (
+            <span className="text-[15px] font-medium">{brand.name}</span>
+          )}
+
+          <span className="sr-only">Home</span>
+        </DrawerClose>
+      )}
+      <DrawerTitle className="text-display-lg font-medium tracking-[0.02em] uppercase">
+        {title}
+      </DrawerTitle>
+      <DrawerClose
+        aria-label="Close menu"
+        className="-mr-2 inline-flex size-10 items-center justify-center"
+      >
+        <XIcon size={18} />
+      </DrawerClose>
+    </div>
+  )
+}
+
+function Panel({ view, ...nav }: NavProps & { view: View }) {
+  switch (view.kind) {
+    case "root":
+      return <RootPanel {...nav} />
+    case "department":
+      return <DepartmentPanel departmentId={view.departmentId} {...nav} />
+    case "group":
+      return (
+        <GroupPanel
+          departmentId={view.departmentId}
+          groupId={view.groupId}
+          {...nav}
+        />
+      )
+    case "collections":
+      return <CollectionsPanel {...nav} />
+  }
+}
+
+function RootPanel({ menu, collectionMenu, onDrill, onNavigate }: NavProps) {
+  const sole = menu.showDepartments ? undefined : menu.departments[0]
+
+  return (
+    <ul>
+      <CatalogEntries menu={menu} onDrill={onDrill} onNavigate={onNavigate} />
+      <li>
+        <LinkRow href={NEW_ARRIVALS_PATH} onNavigate={onNavigate}>
+          New arrivals
+        </LinkRow>
+      </li>
+      {collectionMenu.display === "menu" && (
+        <li>
+          <DrillRow
+            label="Collections"
+            onClick={() => onDrill({ kind: "collections" })}
+          />
+        </li>
+      )}
+      {collectionMenu.display === "link" && (
+        <li>
+          <LinkRow href={collectionMenu.href} onNavigate={onNavigate}>
+            {collectionMenu.tiles[0].title}
+          </LinkRow>
+        </li>
+      )}
+      {sole && sole.columns.length > 0 && (
+        <li>
+          <ActionLink href={sole.href} onNavigate={onNavigate}>
+            Shop all
+          </ActionLink>
+        </li>
+      )}
+    </ul>
+  )
+}
+
+function CatalogEntries({
+  menu,
+  onDrill,
+  onNavigate,
+}: Pick<NavProps, "menu" | "onDrill" | "onNavigate">) {
+  if (menu.showDepartments) {
+    return menu.departments.map((department) => (
+      <li key={department.id}>
+        {department.columns.length > 0 ? (
+          <DrillRow
+            label={department.label}
+            onClick={() =>
+              onDrill({ kind: "department", departmentId: department.id })
+            }
+          />
+        ) : (
+          <LinkRow href={department.href} onNavigate={onNavigate}>
+            {department.label}
+          </LinkRow>
+        )}
+      </li>
+    ))
+  }
+
+  const sole = menu.departments[0]
+
+  if (!sole) return null
+
+  if (sole.columns.length === 0) {
+    return (
+      <li>
+        <LinkRow href={sole.href} onNavigate={onNavigate}>
+          Shop
+        </LinkRow>
+      </li>
+    )
+  }
+
+  return getMenuGroups(sole).map((group) => (
+    <li key={group.id}>
+      <DrillRow
+        label={group.heading ?? ""}
+        onClick={() =>
+          onDrill({
+            kind: "group",
+            departmentId: sole.id,
+            groupId: group.id,
+          })
+        }
+      />
+    </li>
+  ))
+}
+
+function DepartmentPanel({
+  departmentId,
+  menu,
+  onDrill,
+  onNavigate,
+}: NavProps & { departmentId: string }) {
+  const department = findDepartment(menu.departments, departmentId)
+
+  if (!department) return null
+
+  return (
+    <ul>
+      {getMenuGroups(department).map((group) => (
+        <li key={group.id}>
+          <DrillRow
+            label={group.heading ?? ""}
+            onClick={() =>
+              onDrill({
+                kind: "group",
+                departmentId: department.id,
+                groupId: group.id,
+              })
+            }
+          />
+        </li>
+      ))}
+
+      <li>
+        <ActionLink href={department.href} onNavigate={onNavigate}>
+          SHOP ALL
+        </ActionLink>
+      </li>
+    </ul>
+  )
+}
+
+function GroupPanel({
+  departmentId,
+  groupId,
+  menu,
+  activeHref,
+  onNavigate,
+}: NavProps & { departmentId: string; groupId: string }) {
+  const group = findGroup(menu.departments, departmentId, groupId)
+
+  if (!group) return null
+
+  return (
+    <ul>
+      {group.links.map((item) => (
+        <li key={item.id}>
+          <LinkRow
+            href={item.href}
+            current={activeHref === item.href}
+            onNavigate={onNavigate}
+          >
+            {item.label}
+          </LinkRow>
+        </li>
+      ))}
+
+      {group.href && (
+        <li>
+          <ActionLink href={group.href} onNavigate={onNavigate}>
+            View all
+          </ActionLink>
+        </li>
+      )}
+    </ul>
+  )
+}
+
+function CollectionsPanel({
+  collectionMenu,
+  onNavigate,
+}: Pick<NavProps, "collectionMenu" | "onNavigate">) {
+  return (
+    <>
+      <ul className="flex flex-col gap-6 pt-2">
+        {collectionMenu.tiles.map((tile) => {
+          const src = tile.image ?? tile.mobileImage
+          return (
+            <li key={tile.id}>
+              <NextLink href={tile.href} onClick={onNavigate} className="block">
+                <span className="relative block aspect-2/1 overflow-hidden bg-muted">
+                  {src && (
+                    <Image
+                      src={src}
+                      alt=""
+                      fill
+                      sizes="(max-width: 400px) 100vw, 22rem"
+                      className="object-cover"
+                    />
+                  )}
+                </span>
+                <span className="mt-2 block text-[15px]">{tile.title}</span>
+              </NextLink>
+            </li>
+          )
+        })}
+      </ul>
+      <ActionLink href={collectionMenu.href} onNavigate={onNavigate}>
+        View all collections
+      </ActionLink>
+    </>
+  )
+}
+
+function LinkRow({
+  href,
+  children,
+  current = false,
+  onNavigate,
+}: {
+  href: string
+  children: ReactNode
+  current?: boolean
+  onNavigate: () => void
+}) {
+  return (
+    <NextLink
+      href={href}
+      onClick={onNavigate}
+      aria-current={current ? "page" : undefined}
+      className={cn(
+        rowClass,
+        current && "underline decoration-gold underline-offset-4",
+      )}
+    >
+      {children}
+    </NextLink>
+  )
+}
+
+function DrillRow({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className={rowClass} onClick={onClick}>
+      {label}
+      <CaretRightIcon size={14} aria-hidden />
+    </button>
+  )
+}
+
+function ActionLink({
+  href,
+  children,
+  onNavigate,
+}: {
+  href: string
+  children: ReactNode
+  onNavigate: () => void
+}) {
+  return (
+    <NextLink href={href} onClick={onNavigate} className={actionClass}>
+      {children}
+    </NextLink>
+  )
+}
+
+function useDrillStack() {
+  const [stack, setStack] = useState<View[]>([ROOT])
+  const view = stack.at(-1) ?? ROOT
+
+  return {
+    view,
+    canGoBack: stack.length > 1,
+    push: (next: View) => setStack((current) => [...current, next]),
+    back: () =>
+      setStack((current) =>
+        current.length > 1 ? current.slice(0, -1) : current,
+      ),
+    reset: () => setStack([ROOT]),
+  }
+}
+
+function findDepartment(departments: MenuDepartment[], id: string) {
+  return departments.find((department) => department.id === id)
+}
+
+function findGroup(
+  departments: MenuDepartment[],
+  departmentId: string,
+  groupId: string,
+) {
+  const department = findDepartment(departments, departmentId)
+  return department
+    ? getMenuGroups(department).find((group) => group.id === groupId)
+    : undefined
+}
+
+function titleFor(view: View, departments: MenuDepartment[]) {
+  switch (view.kind) {
+    case "root":
+      return "Menu"
+    case "department":
+      return findDepartment(departments, view.departmentId)?.label ?? "Menu"
+    case "group":
+      return (
+        findGroup(departments, view.departmentId, view.groupId)?.heading ??
+        "Menu"
+      )
+    case "collections":
+      return "Collections"
+  }
 }

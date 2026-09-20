@@ -32,7 +32,7 @@
   --color-ink-foreground: var(--ink-foreground);
   --color-sale: var(--sale);
 
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-bodoni), Didot, "Bodoni MT", Georgia, serif;
 
   --text-display-xl: clamp(3rem, 7vw, 6rem);

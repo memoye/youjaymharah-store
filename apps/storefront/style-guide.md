@@ -321,7 +321,7 @@ text-display-xl
 text-display-lg
 text-display-md
 text-intro
-```
+``i`
 
 are all font-size utilities and should conflict with one another just like:
 

@@ -19,13 +19,13 @@ export function Header() {
   return (
     <header ref={headerRef} className="border-b bg-background px-5 sm:px-6">
       <div className="container-wrapper flex items-center justify-between">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between gap-6 bg-red-500 *:border *:border-black">
           <MobileNav />
 
           <Link
             href={"/"}
             className={cn(
-              "relative z-10 inline-flex py-1 transition-[filter] *:brightness-0 hover:*:brightness-100",
+              "relative z-10 hidden py-1 transition-[filter] *:brightness-0 hover:*:brightness-100 md:inline-flex",
               'before:absolute before:inset-x-0 before:bottom-0 before:-z-1 before:block before:h-2/3 before:bg-transparent before:content-[""]',
               "before:transition-[height,background-color] hover:before:h-full hover:before:bg-primary",
             )}
@@ -48,6 +48,34 @@ export function Header() {
 
           <DesktopNav anchor={headerRef} />
         </div>
+
+        <Link
+          href={"/"}
+          className={cn(
+            "relative z-10 py-1 transition-[filter] *:brightness-0 hover:*:brightness-100 md:inline-flex",
+            'before:absolute before:inset-x-0 before:bottom-0 before:-z-1 before:block before:h-2/3 before:bg-transparent before:content-[""]',
+            "before:transition-[height,background-color] hover:before:h-full hover:before:bg-primary",
+          )}
+        >
+          {
+            // brand.logo_url ? (
+            //   <Image
+            //     src={brand.logo_url}
+            //     alt={brand.name}
+            //     width={150}
+            //     height={150}
+            //     className="h-auto w-10"
+            //     title={brand.name}
+            //   />
+            // ) : (
+            <span className="font-display text-display-lg text-[15px] font-medium">
+              {brand.name}
+            </span>
+            // )
+          }
+
+          <span className="sr-only">Home</span>
+        </Link>
 
         <div className="flex h-12 items-stretch bg-red-500">
           <button className="bg-blue h-full">
