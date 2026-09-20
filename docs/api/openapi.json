@@ -6477,7 +6477,7 @@
           "Newsletter"
         ],
         "summary": "List newsletter subscribers",
-        "description": "Newest first.",
+        "description": "Newest first. Includes contact sync state, never link credentials.",
         "x-required-policies": [
           "newsletter:read"
         ],
@@ -6494,9 +6494,11 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Page size (default 50).",
+            "description": "Page size, 1 to 100 (default 50).",
             "schema": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
             }
           },
           {
@@ -6531,6 +6533,26 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "confirmed": {
+                          "type": "number"
+                        },
+                        "pending": {
+                          "type": "number"
+                        },
+                        "sync_pending": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "confirmed",
+                        "pending",
+                        "sync_pending"
+                      ],
+                      "additionalProperties": false
+                    },
                     "subscribers": {
                       "type": "array",
                       "items": {
@@ -6610,6 +6632,19 @@
                               }
                             ]
                           },
+                          "sync_pending": {
+                            "type": "boolean"
+                          },
+                          "sync_attempted_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "created_at": {
                             "type": "string"
                           },
@@ -6627,6 +6662,8 @@
                           "confirmed_at",
                           "unsubscribed_at",
                           "resend_contact_id",
+                          "sync_pending",
+                          "sync_attempted_at",
                           "created_at",
                           "updated_at"
                         ],
@@ -6644,6 +6681,7 @@
                     }
                   },
                   "required": [
+                    "stats",
                     "subscribers",
                     "count",
                     "limit",
@@ -6833,7 +6871,8 @@
                 "properties": {
                   "token": {
                     "type": "string",
-                    "minLength": 16
+                    "minLength": 16,
+                    "maxLength": 256
                   }
                 },
                 "required": [
@@ -6904,7 +6943,8 @@
                 "properties": {
                   "token": {
                     "type": "string",
-                    "minLength": 16
+                    "minLength": 16,
+                    "maxLength": 256
                   }
                 },
                 "required": [
@@ -9016,6 +9056,219 @@
           },
           "400": {
             "description": "Validation failed, the publishable key is missing, or the Search Module is not configured on this backend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/search/trending": {
+      "get": {
+        "operationId": "getStoreSearchTrending",
+        "tags": [
+          "Search"
+        ],
+        "summary": "Read trending search terms",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of terms, 1 to 10 (default 6).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent search terms with nonzero latest results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "terms": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "terms"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid publishable API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/search/suggestions": {
+      "get": {
+        "operationId": "getStoreSearchSuggestions",
+        "tags": [
+          "Search"
+        ],
+        "summary": "Suggest products, categories and collections",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Search text, 2 to 64 characters.",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Product limit, 1 to 10 (default 6).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching products and taxonomy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "handle": {
+                            "type": "string"
+                          },
+                          "thumbnail": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "handle",
+                          "thumbnail"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "handle": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "handle"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "collections": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "handle": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "handle"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "count": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "products",
+                    "categories",
+                    "collections",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid publishable API key.",
             "content": {
               "application/json": {
                 "schema": {

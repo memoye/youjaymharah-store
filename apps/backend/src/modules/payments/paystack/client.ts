@@ -83,6 +83,7 @@ export class PaystackClient {
 
     try {
       response = await fetch(`${BASE_URL}${path}`, {
+        signal: AbortSignal.timeout(15_000),
         method,
         headers: {
           Authorization: `Bearer ${this.options.secretKey}`,

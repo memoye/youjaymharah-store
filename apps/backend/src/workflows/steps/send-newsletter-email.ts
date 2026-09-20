@@ -7,10 +7,12 @@ import type BrandingModuleService from "../../modules/branding/service";
 import { NEWSLETTER_MODULE } from "../../modules/newsletter";
 import type NewsletterModuleService from "../../modules/newsletter/service";
 import { STOREFRONT_URL } from "../../modules/resend/emails/constants";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 
 export type SendNewsletterEmailInput = {
   email: string;
   token: string;
+  confirmation_token?: string;
   template: string;
   /** Skip sending without failing the workflow, e.g. for a repeat signup. */
   skip?: boolean;
@@ -44,7 +46,7 @@ export const sendNewsletterEmailStep = createStep(
       newsletterModuleService.retrieveSettings(),
     ]);
 
-    const confirmUrl = `${STOREFRONT_URL}/newsletter/confirm?token=${encodeURIComponent(input.token)}`;
+    const confirmUrl = `${STOREFRONT_URL}/newsletter/confirm?token=${encodeURIComponent(input.confirmation_token ?? "")}`;
     const unsubscribeUrl = `${STOREFRONT_URL}/newsletter/unsubscribe?token=${encodeURIComponent(input.token)}`;
 
     // Deliberately not caught: a throw is what schedules the retry. The
@@ -54,8 +56,9 @@ export const sendNewsletterEmailStep = createStep(
       to: input.email,
       channel: "email",
       template: input.template,
-      from: settings.reply_to ?? undefined,
+      ...emailIdempotency(`newsletter:${input.template}:${input.token}`),
       data: {
+        reply_to: settings.reply_to ?? undefined,
         brand,
         confirm_url: confirmUrl,
         unsubscribe_url: unsubscribeUrl,

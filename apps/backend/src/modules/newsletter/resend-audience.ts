@@ -1,5 +1,5 @@
 import { MedusaError } from "@medusajs/framework/utils";
-import { Resend } from "resend";
+import { BoundedResend } from "../resend/client";
 
 /**
  * Thin wrapper over the Resend audience APIs.
@@ -9,10 +9,10 @@ import { Resend } from "resend";
  * rather than being squeezed through the provider interface.
  */
 export class ResendAudienceClient {
-  private readonly client: Resend;
+  private readonly client: BoundedResend;
 
   constructor(apiKey = process.env.RESEND_API_KEY) {
-    this.client = new Resend(apiKey);
+    this.client = new BoundedResend(apiKey);
   }
 
   async listAudiences() {
@@ -53,11 +53,10 @@ export class ResendAudienceClient {
   async unsubscribeContact(args: { audienceId: string; email: string }) {
     const { error } = await this.client.contacts.update({
       email: args.email,
-      audienceId: args.audienceId,
       unsubscribed: true,
     });
 
-    if (error) {
+    if (error && error.statusCode !== 404) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         `Could not unsubscribe ${args.email} in Resend: ${error.message}`,

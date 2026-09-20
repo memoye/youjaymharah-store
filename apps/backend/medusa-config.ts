@@ -9,8 +9,7 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd());
  * `redis-cli --tls -u redis://...` command instead of the URL is an easy
  * mistake: every Redis module then fails deep inside the module loader with a
  * bare "Invalid URL" and the server exits. Failing here instead names the
- * variable and says what to paste. The value is truncated in the error so a
- * token never reaches the logs.
+ * variable and says what to paste, without logging any part of the value.
  */
 function resolveRedisUrl(): string | undefined {
   const raw = process.env.REDIS_URL?.trim();
@@ -19,7 +18,8 @@ function resolveRedisUrl(): string | undefined {
     return undefined;
   }
 
-  const hint = `Got "${raw.slice(0, 24)}...". Use the connection URL (rediss://default:<token>@<host>:6379), not a redis-cli command.`;
+  const hint =
+    "Use the connection URL (rediss://default:<token>@<host>:6379), not a redis-cli command.";
 
   let parsed: URL;
   try {
@@ -34,7 +34,7 @@ function resolveRedisUrl(): string | undefined {
   if (parsed.protocol !== "redis:" && parsed.protocol !== "rediss:") {
     throw new MedusaError(
       MedusaError.Types.INVALID_ARGUMENT,
-      `REDIS_URL must use the redis:// or rediss:// scheme, got "${parsed.protocol}". ${hint}`,
+      `REDIS_URL must use the redis:// or rediss:// scheme. ${hint}`,
     );
   }
 

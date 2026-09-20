@@ -1,11 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, type ComponentType } from "react";
 
-import {
-  ALLOW_EVERYTHING,
-  buildPermissionCheck,
-  type Can,
-} from "./permission-check";
+import { permissionCheckForQuery, type Can } from "./permission-check";
 import { sdk } from "./sdk";
 
 /**
@@ -27,6 +23,7 @@ export type PermissionsResult = {
   can: Can;
   /** True until the answer arrives: keep controls hidden until then. */
   isPending: boolean;
+  isError: boolean;
 };
 
 export function usePermissions(): PermissionsResult {
@@ -39,14 +36,11 @@ export function usePermissions(): PermissionsResult {
   });
 
   const can = useMemo(
-    // The route only exists while the RBAC feature flag is on. Without it
-    // nothing is restricted, so show everything rather than an empty admin.
-    () =>
-      isError ? ALLOW_EVERYTHING : buildPermissionCheck(data?.permissions),
+    () => permissionCheckForQuery(data?.permissions, isError),
     [data, isError],
   );
 
-  return { can, isPending: isPending && !isError };
+  return { can, isPending, isError };
 }
 
 /**

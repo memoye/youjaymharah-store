@@ -27,6 +27,7 @@ export const subscribeToNewsletterWorkflow = createWorkflow(
     const emailInput = transform({ signup }, ({ signup }) => ({
       email: signup.email,
       token: signup.token,
+      confirmation_token: signup.confirmation_token,
       template: signup.needs_confirmation
         ? EmailTemplates.NEWSLETTER_CONFIRM
         : EmailTemplates.NEWSLETTER_WELCOME,
@@ -68,8 +69,9 @@ export const confirmNewsletterSubscriptionWorkflow = createWorkflow(
       { subscriber, input },
       ({ subscriber, input }) => ({
         email: subscriber.email,
-        token: input.token,
+        token: subscriber.token,
         template: EmailTemplates.NEWSLETTER_WELCOME,
+        skip: !subscriber.changed,
       }),
     );
 

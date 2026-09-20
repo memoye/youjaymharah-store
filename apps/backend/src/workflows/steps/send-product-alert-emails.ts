@@ -6,6 +6,7 @@ import type BrandingModuleService from "../../modules/branding/service";
 import { PRODUCT_ALERT_MODULE } from "../../modules/product-alert";
 import type ProductAlertModuleService from "../../modules/product-alert/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 import { STOREFRONT_URL } from "../../modules/resend/emails/constants";
 import type { DueProductAlert } from "./find-due-product-alerts";
 
@@ -21,12 +22,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 /**
  * Emails each due alert and marks it sent.
  *
- * The idempotency key is the alert plus its attempt number. An alert emailed
- * but not yet marked sent (a crash between the two) reuses the same key on
- * the next run, so it is not emailed twice. A failed send moves to the next
- * attempt number instead: the notification module keeps the failed record
- * under the old key, and sending again under that key errors rather than
- * retrying.
+ * The delivery key stays the same across retries of the same alert.
  *
  * A failure is logged and never fails the run, so one bad address does not
  * hold up everyone else.
@@ -70,7 +66,10 @@ export const sendProductAlertEmailsStep = createStep(
             },
             variant_title: alert.variant_title,
           },
-          idempotency_key: `product-alert:${alert.alert_id}:${alert.failed_attempts}`,
+          ...emailIdempotency(
+            `product-alert:${alert.alert_id}`,
+            alert.failed_attempts,
+          ),
         });
       } catch (error) {
         failed += 1;

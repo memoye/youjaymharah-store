@@ -1,74 +1,76 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
-
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import type {
+  ILockingModule,
+  MedusaContainer,
+} from "@medusajs/framework/types";
 import { NEWSLETTER_MODULE } from "../../modules/newsletter";
 import { ResendAudienceClient } from "../../modules/newsletter/resend-audience";
 import type NewsletterModuleService from "../../modules/newsletter/service";
+import { newsletterLockKey } from "../../modules/newsletter/tokens";
 
 export type SyncNewsletterContactInput = {
   subscriber_id: string;
-  email: string;
-  action: "subscribe" | "unsubscribe";
-  /** Skip without failing, e.g. while a double opt-in is still pending. */
   skip?: boolean;
 };
 
-/**
- * Pushes membership to the configured Resend audience.
- *
- * Deliberately non-fatal: a Resend outage must not cost us the consent record
- * we already hold. The subscriber row is the source of truth, and a failed
- * sync is logged for a later reconciliation pass rather than rolling back the
- * signup the customer just completed.
- */
-export const syncNewsletterContactStep = createStep(
-  "sync-newsletter-contact",
-  async (input: SyncNewsletterContactInput, { container }) => {
-    if (input.skip) {
-      return new StepResponse(null);
-    }
-
-    const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-    const service: NewsletterModuleService =
-      container.resolve(NEWSLETTER_MODULE);
-
+export async function syncNewsletterContact(
+  input: SyncNewsletterContactInput,
+  container: MedusaContainer,
+) {
+  if (input.skip) return;
+  const service: NewsletterModuleService = container.resolve(NEWSLETTER_MODULE);
+  const locking: ILockingModule = container.resolve(Modules.LOCKING);
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const [found] = await service.listNewsletterSubscribers({
+    id: input.subscriber_id,
+  });
+  if (!found) return;
+  await locking.execute(newsletterLockKey(found.email), async () => {
+    const [subscriber] = await service.listNewsletterSubscribers({
+      id: found.id,
+    });
+    if (!subscriber?.sync_pending || subscriber.status === "pending") return;
+    await service.updateNewsletterSubscribers([
+      { id: subscriber.id, sync_attempted_at: new Date() },
+    ]);
     const settings = await service.retrieveSettings();
-
-    if (!settings.audience_id) {
-      logger.warn(
-        `newsletter: no Resend audience configured; ${input.email} was recorded but not synced.`,
-      );
-      return new StepResponse(null);
-    }
-
-    const client = new ResendAudienceClient();
-
+    if (!settings.audience_id) return;
     try {
-      if (input.action === "unsubscribe") {
+      const client = new ResendAudienceClient();
+      let contactId = subscriber.resend_contact_id;
+      if (subscriber.status === "unsubscribed") {
         await client.unsubscribeContact({
           audienceId: settings.audience_id,
-          email: input.email,
+          email: subscriber.email,
         });
-        return new StepResponse(null);
+      } else {
+        contactId =
+          (await client.addContact({
+            audienceId: settings.audience_id,
+            email: subscriber.email,
+          })) ?? null;
       }
-
-      const contactId = await client.addContact({
-        audienceId: settings.audience_id,
-        email: input.email,
-      });
-
-      if (contactId) {
-        await service.updateNewsletterSubscribers([
-          { id: input.subscriber_id, resend_contact_id: contactId },
-        ]);
-      }
-
-      return new StepResponse(contactId ?? null);
-    } catch (error) {
+      await service.updateNewsletterSubscribers([
+        {
+          id: subscriber.id,
+          resend_contact_id: contactId,
+          sync_pending: false,
+        },
+      ]);
+    } catch {
+      // The scheduled reconciliation reads this durable flag after an outage or restart.
       logger.error(
-        `newsletter: Resend sync failed for ${input.email}: ${(error as Error).message}`,
+        `newsletter: contact sync failed for subscriber ${subscriber.id}; queued for retry.`,
       );
-      return new StepResponse(null);
     }
+  });
+}
+
+export const syncNewsletterContactStep = createStep(
+  { name: "sync-newsletter-contact", maxRetries: 5, retryInterval: 15 },
+  async (input: SyncNewsletterContactInput, { container }) => {
+    await syncNewsletterContact(input, container);
+    return new StepResponse(null);
   },
 );

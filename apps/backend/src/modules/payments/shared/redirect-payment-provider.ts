@@ -104,7 +104,10 @@ export abstract class RedirectPaymentProvider<
     const session = this.getSessionData(input.data);
     const amountInMinor = toMinorUnit(input.amount, input.currency_code);
 
-    if (session.amount_in_minor === amountInMinor) {
+    if (
+      session.amount_in_minor === amountInMinor &&
+      session.currency_code.toUpperCase() === input.currency_code.toUpperCase()
+    ) {
       return {
         data: session as unknown as Record<string, unknown>,
         status: "pending",
@@ -141,6 +144,10 @@ export abstract class RedirectPaymentProvider<
     const session = this.getSessionData(input.data);
     const transaction = await this.verifyTransaction(session);
 
+    if (transaction.status === "successful") {
+      this.assertVerifiedPayment(session, transaction);
+    }
+
     return {
       status: this.toSessionStatus(transaction.status),
       data: { ...session, verification: transaction.raw },
@@ -164,6 +171,8 @@ export abstract class RedirectPaymentProvider<
         `[${this.getIdentifier()}] Cannot capture ${session.reference}: gateway reports "${transaction.status}".`,
       );
     }
+
+    this.assertVerifiedPayment(session, transaction);
 
     return { data: { ...session, verification: transaction.raw } };
   }
@@ -219,6 +228,15 @@ export abstract class RedirectPaymentProvider<
       return { action: "not_supported" };
     }
 
+    if (
+      !Number.isSafeInteger(parsed.amountInMinor) ||
+      (parsed.amountInMinor ?? -1) < 0 ||
+      !parsed.currencyCode ||
+      !/^[A-Za-z]{3}$/.test(parsed.currencyCode)
+    ) {
+      return { action: "not_supported" };
+    }
+
     // Medusa processes this through the event bus with `attempts: 3` and a
     // short delay, after the gateway has already been answered. With REDIS_URL
     // set (production), the Redis event bus keeps the event across restarts
@@ -231,10 +249,7 @@ export abstract class RedirectPaymentProvider<
       data: {
         session_id: parsed.sessionId,
         amount: new BigNumber(
-          fromMinorUnit(
-            parsed.amountInMinor ?? 0,
-            parsed.currencyCode ?? "NGN",
-          ),
+          fromMinorUnit(parsed.amountInMinor!, parsed.currencyCode),
         ),
       },
     };
@@ -321,6 +336,27 @@ export abstract class RedirectPaymentProvider<
         // cart complete into an order with an "awaiting" payment status instead
         // of failing the checkout outright.
         return "pending_authorization";
+    }
+  }
+
+  protected assertVerifiedPayment(
+    session: RedirectSessionData,
+    transaction: NormalizedTransaction,
+  ): void {
+    if (
+      !Number.isSafeInteger(session.amount_in_minor) ||
+      session.amount_in_minor < 0 ||
+      !Number.isSafeInteger(transaction.amountInMinor) ||
+      transaction.amountInMinor !== session.amount_in_minor ||
+      !transaction.currencyCode ||
+      transaction.currencyCode.toUpperCase() !==
+        session.currency_code?.toUpperCase() ||
+      transaction.reference !== session.reference
+    ) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        `[${this.getIdentifier()}] Verified payment does not match the expected amount, currency, and reference.`,
+      );
     }
   }
 

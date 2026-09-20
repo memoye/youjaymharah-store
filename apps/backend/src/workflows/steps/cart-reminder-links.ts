@@ -6,6 +6,7 @@ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 
 import { CART_REMINDER_MODULE } from "../../modules/cart-reminder";
 import type CartReminderModuleService from "../../modules/cart-reminder/service";
+import { canRecoverCart } from "../../modules/cart-reminder/recovery-policy";
 
 export type CartReminderTokenInput = { token: string };
 
@@ -33,11 +34,11 @@ export const restoreCartFromReminderStep = createStep(
       data: [cart],
     } = await query.graph({
       entity: "cart",
-      fields: ["id", "completed_at"],
+      fields: ["id", "completed_at", "email", "customer_id"],
       filters: { id: reminder.cart_id },
     });
 
-    if (!cart || cart.completed_at) {
+    if (!cart || !canRecoverCart(reminder, cart)) {
       throw new MedusaError(MedusaError.Types.NOT_FOUND, EXPIRED);
     }
 

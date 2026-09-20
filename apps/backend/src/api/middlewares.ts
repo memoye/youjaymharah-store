@@ -6,6 +6,7 @@ import {
 } from "@medusajs/framework/http";
 import type { BaseEntity } from "@medusajs/framework/types";
 import { z } from "@medusajs/framework/zod";
+import { rateLimit } from "./rate-limit";
 import {
   AnnouncementBar,
   AnnouncementOptionsQuery,
@@ -45,7 +46,13 @@ export type StoreNewsletterSubscribeType = z.infer<
 >;
 
 export const StoreNewsletterToken = z.object({
-  token: z.string().min(16),
+  token: z.string().min(16).max(256),
+});
+
+export const AdminNewsletterSubscribersQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
+  status: z.enum(["pending", "subscribed", "unsubscribed"]).optional(),
 });
 
 export type StoreNewsletterTokenType = z.infer<typeof StoreNewsletterToken>;
@@ -371,6 +378,51 @@ export type StoreSearchTrendingType = z.infer<typeof StoreSearchTrending>;
 
 export default defineMiddlewares({
   routes: [
+    {
+      matcher: "/store/newsletter/subscribe",
+      method: ["POST"],
+      middlewares: [rateLimit("newsletter-signup", 5)],
+    },
+    {
+      matcher: "/store/newsletter/confirm",
+      method: ["POST"],
+      middlewares: [rateLimit("newsletter-token", 30)],
+    },
+    {
+      matcher: "/store/newsletter/unsubscribe",
+      method: ["POST"],
+      middlewares: [rateLimit("newsletter-token", 30)],
+    },
+    {
+      matcher: "/store/products/:id/alerts",
+      method: ["POST"],
+      middlewares: [rateLimit("product-alert", 10)],
+    },
+    {
+      matcher: "/store/cart-reminders/*",
+      method: ["POST"],
+      middlewares: [rateLimit("cart-reminder", 30)],
+    },
+    {
+      matcher: "/store/search",
+      method: ["GET"],
+      middlewares: [rateLimit("search", 120)],
+    },
+    {
+      matcher: "/store/search/*",
+      method: ["GET"],
+      middlewares: [rateLimit("search", 120)],
+    },
+    {
+      matcher: "/admin/newsletter/subscribers",
+      method: ["GET"],
+      middlewares: [
+        validateAndTransformQuery<BaseEntity>(AdminNewsletterSubscribersQuery, {
+          isList: true,
+          defaultLimit: 50,
+        }),
+      ],
+    },
     // Custom admin routes are ungated unless they declare policies -- without
     // these entries any authenticated admin user could read and rewrite these
     // settings regardless of their role.

@@ -5,6 +5,7 @@ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 import type { DeliverySummary } from "../../modules/resend/emails/order-delivered";
 
 export type SendOrderDeliveredEmailInput = {
@@ -110,6 +111,7 @@ export const sendOrderDeliveredEmailStep = createStep(
       to: recipient,
       channel: "email",
       template: EmailTemplates.ORDER_DELIVERED,
+      ...emailIdempotency(`order-delivered:${input.fulfillment_id}`),
       data: { order, delivery, brand },
     });
 

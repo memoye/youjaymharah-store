@@ -1,4 +1,7 @@
-import { ALLOW_EVERYTHING, buildPermissionCheck } from "../permission-check";
+import {
+  permissionCheckForQuery,
+  buildPermissionCheck,
+} from "../permission-check";
 
 describe("buildPermissionCheck", () => {
   it("allows exactly what was granted", () => {
@@ -41,7 +44,9 @@ describe("buildPermissionCheck", () => {
     }
   });
 
-  it("allows everything when permissions can't be read", () => {
-    expect(ALLOW_EVERYTHING("product", "delete")).toBe(true);
+  it("denies even previously cached grants when permissions can't be read", () => {
+    expect(permissionCheckForQuery(["*:*"], true)("product", "delete")).toBe(
+      false,
+    );
   });
 });

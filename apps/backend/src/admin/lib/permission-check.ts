@@ -30,5 +30,9 @@ export function buildPermissionCheck(
     granted.has("*:*");
 }
 
-/** Used when permissions can't be read, e.g. with the RBAC flag off. */
-export const ALLOW_EVERYTHING: Can = () => true;
+export function permissionCheckForQuery(
+  permissions: readonly string[] | undefined,
+  isError: boolean,
+): Can {
+  return buildPermissionCheck(isError ? undefined : permissions);
+}

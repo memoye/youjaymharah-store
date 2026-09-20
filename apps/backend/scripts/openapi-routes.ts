@@ -85,9 +85,13 @@ const NewsletterSubscriber = z.object({
   confirmed_at: z.string().nullable(),
   unsubscribed_at: z.string().nullable(),
   resend_contact_id: z.string().nullable(),
+  sync_pending: z.boolean(),
+  sync_attempted_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
+
+const NewsletterSubscriberStats = z.object({ confirmed: z.number(), pending: z.number(), sync_pending: z.number() });
 
 const ResendAudience = z.object({
   id: z.string(),
@@ -459,6 +463,7 @@ export const TYPES: {
   {
     name: "AdminNewsletterSubscribersResponse",
     schema: z.object({
+      stats: NewsletterSubscriberStats,
       subscribers: z.array(NewsletterSubscriber),
       count: z.number(),
       limit: z.number(),
@@ -1099,14 +1104,15 @@ export const ROUTES: RouteDoc[] = [
     path: "/admin/newsletter/subscribers",
     tag: "Newsletter",
     summary: "List newsletter subscribers",
-    description: "Newest first.",
+    description:
+      "Newest first. Includes contact sync state, never link credentials.",
     auth: "admin",
     policies: ["newsletter:read"],
     query: [
       {
         name: "limit",
-        description: "Page size (default 50).",
-        schema: z.coerce.number().optional(),
+        description: "Page size, 1 to 100 (default 50).",
+        schema: z.coerce.number().int().min(1).max(100).optional(),
       },
       {
         name: "offset",
@@ -1122,6 +1128,7 @@ export const ROUTES: RouteDoc[] = [
     response: {
       description: "A page of subscribers.",
       schema: z.object({
+        stats: NewsletterSubscriberStats,
         subscribers: z.array(NewsletterSubscriber),
         count: z.number(),
         limit: z.number(),
@@ -1535,6 +1542,63 @@ export const ROUTES: RouteDoc[] = [
           "Validation failed, the publishable key is missing, or the Search Module is not configured on this backend.",
       },
     ],
+  },
+  {
+    method: "GET",
+    path: "/store/search/trending",
+    tag: "Search",
+    summary: "Read trending search terms",
+    auth: "public",
+    query: [
+      {
+        name: "limit",
+        description: "Number of terms, 1 to 10 (default 6).",
+        schema: z.coerce.number().int().min(1).max(10).optional(),
+      },
+    ],
+    response: {
+      description: "Recent search terms with nonzero latest results.",
+      schema: z.object({ terms: z.array(z.string()) }),
+    },
+  },
+  {
+    method: "GET",
+    path: "/store/search/suggestions",
+    tag: "Search",
+    summary: "Suggest products, categories and collections",
+    auth: "public",
+    query: [
+      {
+        name: "q",
+        description: "Search text, 2 to 64 characters.",
+        schema: z.string().min(2).max(64),
+      },
+      {
+        name: "limit",
+        description: "Product limit, 1 to 10 (default 6).",
+        schema: z.coerce.number().int().min(1).max(10).optional(),
+      },
+    ],
+    response: {
+      description: "Matching products and taxonomy.",
+      schema: z.object({
+        products: z.array(
+          z.object({
+            id: z.string(),
+            title: z.string(),
+            handle: z.string(),
+            thumbnail: z.string().nullable(),
+          }),
+        ),
+        categories: z.array(
+          z.object({ id: z.string(), name: z.string(), handle: z.string() }),
+        ),
+        collections: z.array(
+          z.object({ id: z.string(), title: z.string(), handle: z.string() }),
+        ),
+        count: z.number(),
+      }),
+    },
   },
   {
     method: "GET",

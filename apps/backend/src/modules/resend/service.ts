@@ -8,7 +8,7 @@ import {
   ProviderSendNotificationResultsDTO,
 } from "@medusajs/framework/types";
 import { render } from "react-email";
-import { Resend } from "resend";
+import { BoundedResend } from "./client";
 
 import { resolveEmailTemplate } from "./emails";
 
@@ -23,13 +23,13 @@ type InjectedDependencies = {
 
 class ResendNotificationProviderService extends AbstractNotificationProviderService {
   static identifier = "notification-resend";
-  private resendClient: Resend;
+  private resendClient: BoundedResend;
   private options: ResendOptions;
   private logger: Logger;
 
   constructor({ logger }: InjectedDependencies, options: ResendOptions) {
     super();
-    this.resendClient = new Resend(options.api_key);
+    this.resendClient = new BoundedResend(options.api_key);
     this.options = options;
     this.logger = logger;
   }
@@ -80,6 +80,10 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     const base = {
       from: notification.from?.trim() || this.options.from,
       to: notification.to,
+      replyTo:
+        typeof notification.data?.reply_to === "string"
+          ? notification.data.reply_to
+          : undefined,
       // An explicit subject from the caller overrides the template's default.
       subject:
         notification.content?.subject ?? resolved?.subject ?? "Notification",
@@ -112,6 +116,9 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
         : html
           ? { ...base, html }
           : { ...base, text: text as string },
+      typeof notification.provider_data?.idempotency_key === "string"
+        ? { idempotencyKey: notification.provider_data.idempotency_key }
+        : undefined,
     );
 
     if (error) {

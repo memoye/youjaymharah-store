@@ -31,6 +31,8 @@ export type NewsletterSubscriber = {
   confirmed_at: string | null;
   unsubscribed_at: string | null;
   resend_contact_id: string | null;
+  sync_pending: boolean;
+  sync_attempted_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -130,6 +132,11 @@ export type AdminNewsletterSettingsResponse = {
 };
 
 export type AdminNewsletterSubscribersResponse = {
+  stats: {
+    confirmed: number;
+    pending: number;
+    sync_pending: number;
+  };
   subscribers: {
     id: string;
     email: string;
@@ -140,6 +147,8 @@ export type AdminNewsletterSubscribersResponse = {
     confirmed_at: string | null;
     unsubscribed_at: string | null;
     resend_contact_id: string | null;
+    sync_pending: boolean;
+    sync_attempted_at: string | null;
     created_at: string;
     updated_at: string;
   }[];

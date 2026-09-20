@@ -9,6 +9,7 @@ import type CartReminderModuleService from "../../modules/cart-reminder/service"
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 import { STOREFRONT_URL } from "../../modules/resend/emails/constants";
 import { formatMoney } from "../../modules/resend/utils/format-money";
 import type { FindDueCartRemindersOutput } from "./find-due-cart-reminders";
@@ -29,10 +30,7 @@ export function cartReminderLinks(token: string) {
 /**
  * Sends each due reminder and records it, and marks finished carts.
  *
- * The idempotency key is the cart, the reminder number and the attempt: a
- * reminder sent but not yet recorded (a crash between the two) is not sent
- * twice, while a failed send retries under a new key, because the
- * notification module keeps the failed record under the old one.
+ * The delivery key is stable across retries of the same reminder stage.
  *
  * One failure never stops the run; after MAX_FAILED_ATTEMPTS the cart is
  * given up on.
@@ -108,7 +106,10 @@ export const sendCartReminderEmailsStep = createStep(
             })),
             ...cartReminderLinks(reminder.token),
           },
-          idempotency_key: `cart-reminder:${reminder.id}:${dueCart.stage}:${reminder.failed_attempts}`,
+          ...emailIdempotency(
+            `cart-reminder:${reminder.id}:${dueCart.stage}`,
+            reminder.failed_attempts,
+          ),
         });
       } catch (error) {
         failed += 1;

@@ -77,7 +77,7 @@ class SearchInsightsModuleService extends MedusaService({
       await this.createSearchTermStats([
         { term, day, searches: 1, last_result_count: resultCount },
       ]);
-    } catch {
+    } catch (error) {
       // Two searches for a new term in the same instant: the unique index
       // rejects the second insert, and the row it lost to is now there to
       // count against.
@@ -91,6 +91,8 @@ class SearchInsightsModuleService extends MedusaService({
             last_result_count: resultCount,
           },
         ]);
+      } else {
+        throw error;
       }
     }
   }
@@ -123,11 +125,14 @@ class SearchInsightsModuleService extends MedusaService({
     const totals = new Map<string, { searches: number; results: number }>();
 
     for (const row of rows) {
-      const running = totals.get(row.term) ?? { searches: 0, results: 0 };
+      const running = totals.get(row.term) ?? {
+        searches: 0,
+        results: row.last_result_count,
+      };
 
       totals.set(row.term, {
         searches: running.searches + row.searches,
-        results: Math.max(running.results, row.last_result_count),
+        results: running.results,
       });
     }
 

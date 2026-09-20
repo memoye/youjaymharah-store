@@ -5,6 +5,7 @@ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 import type { ExchangeSummary } from "../../modules/resend/emails/exchange-created";
 import { resolveReturnDestination } from "../utils/return-destination";
 
@@ -143,6 +144,7 @@ export const sendExchangeCreatedEmailStep = createStep(
       to: recipient,
       channel: "email",
       template: EmailTemplates.EXCHANGE_CREATED,
+      ...emailIdempotency(`exchange-created:${input.exchange_id}`),
       data: { order, exchange: summary, brand },
     });
 

@@ -34,7 +34,7 @@ type NewsletterSettings = {
 
 type Audience = { id: string; name: string };
 
-type Subscriber = { id: string; email: string; status: string };
+type SubscriberStats = { confirmed: number; pending: number; sync_pending: number };
 
 const SETTINGS_KEY = ["newsletter", "settings"];
 const SUBSCRIBERS_KEY = ["newsletter", "subscribers"];
@@ -54,18 +54,17 @@ const NewsletterSettingsPage = () => {
   });
 
   // Loaded on mount alongside settings so the counts are visible immediately.
-  const { data: subscriberData } = useQuery({
+  const { data: subscriberData, isError: subscriberError } = useQuery({
     queryKey: SUBSCRIBERS_KEY,
     queryFn: () =>
-      sdk.client.fetch<{ subscribers: Subscriber[]; count: number }>(
-        "/admin/newsletter/subscribers?limit=200",
+      sdk.client.fetch<{ stats: SubscriberStats }>(
+        "/admin/newsletter/subscribers?limit=1",
       ),
   });
 
   const settings = data?.settings;
-  const subscribers = subscriberData?.subscribers ?? [];
-  const confirmed = subscribers.filter((s) => s.status === "subscribed").length;
-  const pending = subscribers.filter((s) => s.status === "pending").length;
+  const confirmed = subscriberData?.stats.confirmed ?? 0;
+  const pending = subscriberData?.stats.pending ?? 0;
 
   return (
     <Container className="divide-y p-0">
@@ -105,8 +104,9 @@ const NewsletterSettingsPage = () => {
         <>
           <Row
             label="Subscribers"
-            value={`${confirmed} confirmed${pending ? `, ${pending} awaiting confirmation` : ""}`}
+            value={subscriberError ? "Unable to load counts" : !subscriberData ? "Loading counts" : `${confirmed} confirmed${pending ? `, ${pending} awaiting confirmation` : ""}`}
           />
+          <Row label="Contact sync" value={subscriberError ? "Unable to load sync status" : !subscriberData ? "Loading sync status" : subscriberData.stats.sync_pending ? `${subscriberData.stats.sync_pending} waiting to sync. Automatic retries run every five minutes; check the audience and Resend credentials if this persists.` : "No contacts waiting to sync"} />
           <Row
             label="Resend audience"
             value={settings.audience_id ?? "Not selected"}

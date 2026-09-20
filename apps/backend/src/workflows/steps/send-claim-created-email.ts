@@ -5,6 +5,7 @@ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 import type { ClaimSummary } from "../../modules/resend/emails/claim-created";
 import { resolveReturnDestination } from "../utils/return-destination";
 
@@ -160,6 +161,7 @@ export const sendClaimCreatedEmailStep = createStep(
       to: recipient,
       channel: "email",
       template: EmailTemplates.CLAIM_CREATED,
+      ...emailIdempotency(`claim-created:${input.claim_id}`),
       data: { order, claim: summary, brand },
     });
 

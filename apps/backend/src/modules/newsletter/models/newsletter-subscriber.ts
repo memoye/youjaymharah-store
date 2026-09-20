@@ -21,9 +21,11 @@ export const NewsletterSubscriber = model
     consent_at: model.dateTime().nullable(),
     confirmed_at: model.dateTime().nullable(),
     unsubscribed_at: model.dateTime().nullable(),
-    /** Single-use token backing the confirm and unsubscribe links. */
+    /** Unsubscribe credential; also keys a separate, expiring confirmation signature. */
     token: model.text(),
     resend_contact_id: model.text().nullable(),
+    sync_pending: model.boolean().default(true),
+    sync_attempted_at: model.dateTime().nullable(),
   })
   .indexes([
     { on: ["email"], unique: true, where: "deleted_at IS NULL" },

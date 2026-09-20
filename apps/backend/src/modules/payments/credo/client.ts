@@ -30,17 +30,15 @@ const GATEWAY_REFERENCE_KEYS = ["credoReference", "transRef", "reference"];
  * Credo's transaction status codes.
  * https://docs.credocentral.com/docs/concepts#transaction-statuses
  *
- * Refunded (1) and Refund (2) map to `successful` on purpose: the customer's
- * money did move, and Medusa tracks refunded amounts on the Payment record
- * rather than the session, so collapsing them into `failed` would wrongly
- * present a paid-then-refunded order as never paid.
+ * Refunded transactions cannot authorize a new order. Already captured
+ * payments retain their accounting history in Medusa's Payment records.
  *
  * Review (6) stays `pending` — flagged for manual review is not yet money.
  */
 const STATUS_CODES: Record<string, CredoTransactionState> = {
   "0": "successful", // Successful   — payment completed successfully
-  "1": "successful", // Refunded     — transaction has been refunded
-  "2": "successful", // Refund       — queued for refund
+  "1": "canceled", // Refunded     — transaction has been refunded
+  "2": "canceled", // Refund       — queued for refund
   "3": "failed", // Failed       — payment failed
   "4": "successful", // Settle       — queued for settlement
   "5": "successful", // Settled      — funds have been paid out
@@ -58,8 +56,8 @@ const STATUS_CODES: Record<string, CredoTransactionState> = {
 const STATUS_LABELS: Record<string, CredoTransactionState> = {
   successful: "successful",
   success: "successful",
-  refunded: "successful",
-  refund: "successful",
+  refunded: "canceled",
+  refund: "canceled",
   settle: "successful",
   settled: "successful",
   failed: "failed",
@@ -135,9 +133,13 @@ export class CredoClient {
 
     return {
       state: normalizeStatus(body.status),
-      amountInMinor: toNumber(body.amount ?? body.transAmount),
+      amountInMinor: toNumber(body.transAmount ?? body.amount),
       currencyCode:
-        typeof body.currency === "string" ? body.currency : undefined,
+        typeof body.currencyCode === "string"
+          ? body.currencyCode
+          : typeof body.currency === "string"
+            ? body.currency
+            : undefined,
       raw: body,
     };
   }
@@ -152,6 +154,7 @@ export class CredoClient {
 
     try {
       response = await fetch(`${this.baseUrl}${path}`, {
+        signal: AbortSignal.timeout(15_000),
         method,
         headers: {
           // No `Bearer` prefix — Credo takes the raw key.

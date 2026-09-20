@@ -20,7 +20,8 @@ The store manager can't do these; whoever deploys must.
 
 1. **Production environment.** Point `DATABASE_URL` at a fresh production
    database, not `youjaymharah-dev`. Set strong `JWT_SECRET` /
-   `COOKIE_SECRET`, set the CORS variables to the real domains, and set
+   `COOKIE_SECRET` (independent random values, at least 32 characters), configure
+   production Redis, set the CORS variables to the real domains, and set
    `STORE_NAME`, `SUPPORT_EMAIL`, `STOREFRONT_URL` and `ADMIN_URL`.
 2. **First admin.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` before migrating;
    the first migration creates this user as Super Admin. Hand the credentials
@@ -44,6 +45,9 @@ The store manager can't do these; whoever deploys must.
    verified in Resend. Every email depends on it: order confirmation,
    shipping, delivery, changes and cancellation; returns, exchanges, claims and
    refunds; email verification and password resets; and team invites.
+
+See [Security and reliability](security-and-reliability.md) for deployment
+checks, test coverage, remaining dependency advisories, and operational limits.
 
 ## 2. What already exists on day one
 
@@ -125,6 +129,12 @@ Work through these in order; each relies on the ones before it.
      product first to copy its columns).
 9. **Review newsletter sign-up.** `Settings › Newsletter`: consent text,
    success message, reply-to and the checkout label.
+   Confirmation links expire after 24 hours; the shopper can sign up again for
+   a new link. Signing up repeatedly within a minute does not send more emails.
+   The **Contact sync** row shows contacts waiting for Resend. Retries run every
+   five minutes; a persistent backlog needs a developer to check the selected
+   audience and API credentials. Before sending campaigns, have the developer
+   verify that Resend-originated unsubscribes are reflected in store consent.
 10. **Run one real test order end to end.** Buy a cheap item on the live site
     through Paystack; confirm the order, the captured payment and the
     confirmation email; fulfil, ship with tracking (check the shipping email),

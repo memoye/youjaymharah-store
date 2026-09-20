@@ -77,6 +77,10 @@ class PaystackPaymentProvider extends RedirectPaymentProvider<PaystackOptions> {
 
     return {
       status: result.state,
+      reference:
+        typeof result.raw.reference === "string"
+          ? result.raw.reference
+          : undefined,
       amountInMinor: result.amountInMinor,
       currencyCode: result.currencyCode,
       raw: result.raw,

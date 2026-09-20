@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { MedusaError } from "@medusajs/framework/utils";
 import type { ProviderWebhookPayload } from "@medusajs/framework/types";
@@ -122,6 +122,10 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
 
     return {
       status: result.state,
+      reference:
+        typeof result.raw.businessRef === "string"
+          ? result.raw.businessRef
+          : undefined,
       amountInMinor: result.amountInMinor,
       currencyCode: result.currencyCode,
       raw: result.raw,
@@ -145,14 +149,19 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
 
     const body = (payload.data ?? {}) as Record<string, unknown>;
     const data = (body.data ?? body) as Record<string, unknown>;
+    if (body.event && !["transaction.successful", "transaction.failed"].includes(String(body.event))) {
+      return { action: "not_supported" };
+    }
     const state = normalizeStatus(data.status);
+
+    const amount = data.transAmount ?? data.amount;
+    const currency = data.currencyCode ?? data.currency;
 
     return {
       action: CREDO_STATE_ACTIONS[state],
       sessionId: readSessionId(data),
-      amountInMinor: typeof data.amount === "number" ? data.amount : undefined,
-      currencyCode:
-        typeof data.currency === "string" ? data.currency : undefined,
+      amountInMinor: typeof amount === "number" ? amount : undefined,
+      currencyCode: typeof currency === "string" ? currency : undefined,
     };
   }
 
@@ -164,6 +173,22 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
    * actually decides whether money moved.
    */
   private assertSignature(payload: ProviderWebhookPayload["payload"]): void {
+    const hmacSignature = payload.headers?.["credo-signature"];
+    if (typeof hmacSignature === "string") {
+      if (!payload.rawData) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Raw webhook body is required.");
+      }
+      const expected = createHmac("sha512", this.options_.secretKey)
+        .update(payload.rawData)
+        .digest("hex");
+      const actual = Buffer.from(hmacSignature.toLowerCase());
+      const signature = Buffer.from(expected);
+      if (actual.length !== signature.length || !timingSafeEqual(actual, signature)) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Credo webhook signature did not match.");
+      }
+      return;
+    }
+
     const { webhookToken, businessCode } = this.options_;
 
     if (!webhookToken || !businessCode) {
@@ -192,7 +217,12 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
       .update(`${webhookToken}${businessCode}`)
       .digest("hex");
 
-    if (received.toLowerCase() !== expected) {
+    const actual = Buffer.from(received.toLowerCase());
+    const signature = Buffer.from(expected);
+    if (
+      actual.length !== signature.length ||
+      !timingSafeEqual(actual, signature)
+    ) {
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
         "X-Credo-Signature did not match.",

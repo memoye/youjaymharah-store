@@ -5,6 +5,7 @@ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
 
 export type SendOrderCanceledEmailInput = { id: string };
 
@@ -79,6 +80,7 @@ export const sendOrderCanceledEmailStep = createStep(
       to: recipient,
       channel: "email",
       template: EmailTemplates.ORDER_CANCELED,
+      ...emailIdempotency(`order-canceled:${input.id}`),
       data: { order, brand },
     });
 

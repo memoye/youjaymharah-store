@@ -69,6 +69,7 @@ export type NormalizedTransactionStatus =
 
 export type NormalizedTransaction = {
   status: NormalizedTransactionStatus;
+  reference?: string;
   amountInMinor?: number;
   currencyCode?: string;
   raw: Record<string, unknown>;
