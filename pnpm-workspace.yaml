@@ -11,6 +11,13 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 overrides:
+  "multer@>=2.0.0 <2.3.0": "2.3.0"
+  "lodash@>=4.0.0 <4.17.24": "4.18.1"
+  "qs@>=6.0.0 <6.16.0": "6.16.0"
+  "ajv@>=8.0.0 <8.18.0": "8.18.0"
+  "morgan@>=1.0.0 <1.12.0": "1.12.0"
+  "js-yaml@>=4.0.0 <4.3.2": "4.3.2"
+  "uuid@>=11.0.0 <11.1.1": "11.1.1"
   "@types/react": "19.0.5"
   "@types/react-dom": "19.0.5"
   # @medusajs/admin-vite-plugin pins fdir to exactly 6.1.1, whose optional
