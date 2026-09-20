@@ -120,7 +120,7 @@ export function DepartmentPanel({
         </div>
       </div>
 
-      {promos.length > 0 && (
+      {[promos].length > 0 && (
         <div
           className={cn(
             "hidden shrink-0 gap-4 lg:flex",
@@ -155,7 +155,7 @@ function PromoCard({
   return (
     <MenuLink
       href={promo.href}
-      className="group relative min-h-[21rem] flex-1 overflow-hidden bg-muted"
+      className="group relative min-h-84 flex-1 overflow-hidden bg-muted"
     >
       <Image
         src={promo.mobile_image_url ?? promo.image_url}
