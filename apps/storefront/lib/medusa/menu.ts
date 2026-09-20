@@ -257,6 +257,8 @@ export type CollectionTile = {
   image: string | null
   /** Portrait banner. */
   mobileImage: string | null
+  /** The collection chosen in Settings -> Storefront -> Homepage. */
+  featured: boolean
 }
 
 export type CollectionMenu = {
@@ -290,6 +292,7 @@ export function getCollectionMenu(
         description: content.description,
         image: content.heroImage,
         mobileImage: content.heroImageMobile,
+        featured: content.id === featuredId,
       }
     })
     .sort((a, b) => Number(b.id === featuredId) - Number(a.id === featuredId))

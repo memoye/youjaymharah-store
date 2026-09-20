@@ -16,10 +16,6 @@ import { ArrowRightIcon } from "@phosphor-icons/react"
 
 type NavigationMenuLinkProps = React.ComponentProps<typeof NavigationMenuLink>
 
-/**
- * A menu link that routes client-side and closes the menu. Drops the kit's
- * padded, shaded link look for plain text; pass `className` to style it.
- */
 export function MenuLink({
   href,
   className,
@@ -42,30 +38,23 @@ export function MenuLink({
 }
 
 const headingClass =
-  "text-sm font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+  "text-[13px] font-medium tracking-[0.08em] text-muted-foreground uppercase"
 
 const linkClass =
-  "leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
+  "text-[15px] leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
 
 const actionClass =
   "text-xs font-medium tracking-[0.06em] uppercase underline-offset-4 hover:underline"
 
-/**
- * The image transition, kept identical for promos and collection tiles and
- * switched off for anyone who asked for less motion.
- */
 const imageClass =
   "object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 
-/**
- * A department's mega menu: category columns on the left, the curated promo
- * cards (Settings -> Storefront -> Navigation, at most two) filling the right
- * side, and "Shop all" under the columns.
- *
- * The panel is as tall as its content up to the space below the header
- * (`--available-height`, set by the menu positioner); past that the category
- * side scrolls on its own so the promos stay put.
- */
+const scrimClass =
+  "bg-linear-to-t from-black/85 from-5% via-black/30 via-55% to-transparent p-6 pt-32 text-white"
+
+const bannerTitleClass =
+  "font-display text-balance decoration-gold decoration-[1.5px] underline-offset-10"
+
 export function DepartmentPanel({
   department,
   promos,
@@ -110,7 +99,7 @@ export function DepartmentPanel({
           ))}
         </div>
 
-        <div className="mt-10 border-t pt-5">
+        <div className="mt-12">
           <MenuLink
             href={department.href}
             className={cn("inline-flex items-center gap-2", actionClass)}
@@ -120,11 +109,11 @@ export function DepartmentPanel({
         </div>
       </div>
 
-      {[promos].length > 0 && (
+      {promos.length > 0 && (
         <div
           className={cn(
-            "hidden shrink-0 gap-4 lg:flex",
-            promos.length > 1 ? "w-104 xl:w-136" : "w-76 xl:w-[24rem]",
+            "group/promos hidden shrink-0 gap-4 lg:flex",
+            promos.length > 1 ? "w-104 xl:w-136" : "w-76 xl:w-96",
           )}
         >
           {promos.map((promo) => (
@@ -140,11 +129,6 @@ export function DepartmentPanel({
   )
 }
 
-/**
- * A promo card, stretched to the panel's height. On its own it gets the
- * editorial Bodoni title; paired, the tiles are too narrow for Bodoni, so the
- * titles stay in Montserrat.
- */
 function PromoCard({
   promo,
   alone,
@@ -155,7 +139,7 @@ function PromoCard({
   return (
     <MenuLink
       href={promo.href}
-      className="group relative min-h-84 flex-1 overflow-hidden bg-muted"
+      className="group relative min-h-84 flex-1 overflow-hidden bg-muted transition-opacity duration-500 ease-out group-hover/promos:opacity-70 hover:opacity-100! motion-reduce:transition-none"
     >
       <Image
         src={promo.mobile_image_url ?? promo.image_url}
@@ -169,26 +153,32 @@ function PromoCard({
         className={imageClass}
       />
 
-      <span className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-3 bg-gradient-to-t from-black/65 via-black/35 to-transparent p-6 pt-16 text-white">
+      <span
+        className={cn(
+          "absolute inset-x-0 bottom-0 flex flex-col items-start gap-3",
+          scrimClass,
+        )}
+      >
         <span
           className={cn(
-            "block text-balance",
-            alone
-              ? "font-display text-[2rem] leading-[1.05] xl:text-display-md"
-              : "text-[13px] leading-5 font-medium tracking-[0.02em]",
+            bannerTitleClass,
+            "text-[2rem] leading-[1.05] group-hover:underline",
+            alone && "xl:text-display-md",
           )}
         >
           {promo.title}
         </span>
 
-        <span
-          className={cn(
-            actionClass,
-            "inline-flex items-center gap-2 text-white/85 group-hover:text-white",
-          )}
-        >
-          Shop now <ArrowRightIcon />
-        </span>
+        {alone && (
+          <span
+            className={cn(
+              actionClass,
+              "inline-flex items-center gap-2 text-white/80 transition-colors group-hover:text-white",
+            )}
+          >
+            Shop now <ArrowRightIcon />
+          </span>
+        )}
       </span>
     </MenuLink>
   )
@@ -221,80 +211,103 @@ function ColumnHeading({
   return <p className={headingClass}>{column.heading}</p>
 }
 
-/**
- * One tile per collection, with its portrait banner in the shop menu and its
- * landscape banner in the collections menu.
- */
-export function CollectionTileLink({
-  tile,
-  shape,
-  sizes,
-  className,
-}: {
-  tile: CollectionTile
-  shape: "portrait" | "landscape"
-  sizes: string
-  className?: string
-}) {
-  const src =
-    shape === "portrait"
-      ? (tile.mobileImage ?? tile.image)
-      : (tile.image ?? tile.mobileImage)
-
-  return (
-    <MenuLink href={tile.href} className={cn("group block", className)}>
-      <span
-        className={cn(
-          "relative block overflow-hidden bg-muted",
-          shape === "portrait" ? "aspect-4/5" : "aspect-2/1",
-        )}
-      >
-        {src && (
-          <Image
-            src={src}
-            className={imageClass}
-            sizes={sizes}
-            fill
-            alt={tile.title || ""}
-          />
-        )}
-      </span>
-      <span className="mt-3 block text-[13px] font-medium">{tile.title}</span>
-    </MenuLink>
-  )
-}
-
-/** The collections menu: a row of banners and "View all collections". */
 export function CollectionsPanel({ menu }: { menu: CollectionMenu }) {
+  const emphasise = menu.tiles.length > 2 && menu.tiles.some((t) => t.featured)
+
   return (
-    <div className="container-wrapper max-h-[var(--available-height,80vh)] overflow-y-auto px-5 pt-10 pb-8 sm:px-6">
-      <ul
-        className="grid gap-6"
-        style={{
-          gridTemplateColumns: `repeat(${menu.tiles.length}, minmax(0, 1fr))`,
-        }}
-      >
-        {menu.tiles.map((tile) => (
-          <li key={tile.id}>
-            <CollectionTileLink
-              tile={tile}
-              shape="landscape"
-              sizes="(min-width: 1600px) 380px, 25vw"
-            />
-            {tile.description && (
-              <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground">
-                {tile.description}
-              </p>
-            )}
-          </li>
-        ))}
+    <div className="dark max-h-(--available-height,80vh) overflow-y-auto bg-background text-foreground">
+      <ul className="group/banners flex h-88 items-stretch gap-px bg-border xl:h-104">
+        {menu.tiles.map((tile) => {
+          const lead = emphasise && tile.featured
+
+          return (
+            <li
+              key={tile.id}
+              className={cn("flex min-w-0", lead ? "flex-[1.6]" : "flex-1")}
+            >
+              <CollectionBanner tile={tile} lead={lead} />
+            </li>
+          )
+        })}
       </ul>
 
-      <div className="mt-10 border-t pt-5">
-        <MenuLink href={menu.href} className={actionClass}>
-          View all collections
+      <div className="container-wrapper px-5 py-6 sm:px-6">
+        <MenuLink
+          href={menu.href}
+          className={cn("inline-flex items-center gap-2", actionClass)}
+        >
+          View all collections <ArrowRightIcon />
         </MenuLink>
       </div>
     </div>
+  )
+}
+
+function CollectionBanner({
+  tile,
+  lead,
+}: {
+  tile: CollectionTile
+  lead: boolean
+}) {
+  const src = lead
+    ? (tile.image ?? tile.mobileImage)
+    : (tile.mobileImage ?? tile.image)
+
+  return (
+    <MenuLink
+      href={tile.href}
+      className="group relative flex h-full w-full flex-col justify-end overflow-hidden bg-muted transition-opacity duration-500 ease-out group-hover/banners:opacity-70 hover:opacity-100! motion-reduce:transition-none"
+    >
+      {src && (
+        <Image
+          src={src}
+          alt=""
+          fill
+          sizes={lead ? "(min-width: 1600px) 620px, 40vw" : "25vw"}
+          className={imageClass}
+        />
+      )}
+
+      <span
+        className={cn(
+          "relative flex w-full flex-col items-start gap-2",
+          scrimClass,
+        )}
+      >
+        <span
+          className={cn(
+            bannerTitleClass,
+            lead
+              ? "text-display-md leading-[1.02] underline xl:text-[3rem]"
+              : "text-[2rem] leading-[1.05]",
+          )}
+        >
+          {tile.title}
+        </span>
+
+        {tile.description && (
+          <span
+            className={cn(
+              "line-clamp-2 text-[13px] leading-5 text-white/70",
+              lead ? "max-w-[46ch]" : "max-w-[32ch]",
+            )}
+          >
+            {tile.description}
+          </span>
+        )}
+
+        {lead && (
+          <span
+            className={cn(
+              actionClass,
+              "mt-1 inline-flex items-center gap-2 text-white/80 transition-colors group-hover:text-white",
+            )}
+          >
+            Shop the collection <ArrowRightIcon />
+          </span>
+        )}
+      </span>
+    </MenuLink>
   )
 }

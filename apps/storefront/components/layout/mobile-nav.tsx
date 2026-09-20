@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react"
 import Image from "next/image"
 import { useState, type ReactNode } from "react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Drawer,
   DrawerClose,
@@ -48,7 +49,6 @@ type NavProps = {
 const rowClass =
   "flex min-h-12 w-full px-4 items-center justify-between gap-4 border-b py-3 text-left text-[15px] outline-none focus-visible:underline"
 
-
 const actionClass =
   "mt-6 px-4 inline-flex items-center gap-2 text-[12px] font-medium tracking-[0.06em] uppercase font-medium underline underline-offset-4"
 
@@ -80,23 +80,28 @@ export function MobileNav() {
         <span className="sr-only">toggle side menu</span>
       </DrawerTrigger>
       <DrawerContent>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-0 pb-10">
-          <Header
-            title={titleFor(view, menu.departments)}
-            canGoBack={canGoBack}
-            onBack={back}
-          />
-          <nav aria-label="Catalogue">
-            <Panel
-              view={view}
-              menu={menu}
-              collectionMenu={collectionMenu}
-              activeHref={active.href ?? "#"}
-              onDrill={push}
-              onNavigate={() => setOpen(false)}
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="overscroll-contain"
+        >
+          <div className="flex flex-col pb-10">
+            <Header
+              title={titleFor(view, menu.departments)}
+              canGoBack={canGoBack}
+              onBack={back}
             />
-          </nav>
-        </div>
+            <nav aria-label="Catalogue">
+              <Panel
+                view={view}
+                menu={menu}
+                collectionMenu={collectionMenu}
+                activeHref={active.href ?? "#"}
+                onDrill={push}
+                onNavigate={() => setOpen(false)}
+              />
+            </nav>
+          </div>
+        </ScrollArea>
       </DrawerContent>
     </Drawer>
   )
@@ -348,31 +353,64 @@ function CollectionsPanel({
   collectionMenu,
   onNavigate,
 }: Pick<NavProps, "collectionMenu" | "onNavigate">) {
+  const lead = collectionMenu.tiles.length > 2
+
   return (
     <>
-      <ul className="flex flex-col gap-6 pt-2">
+      <ul>
         {collectionMenu.tiles.map((tile) => {
           const src = tile.image ?? tile.mobileImage
+          const featured = lead && tile.featured
+
           return (
-            <li key={tile.id}>
-              <NextLink href={tile.href} onClick={onNavigate} className="block">
-                <span className="relative block aspect-2/1 overflow-hidden bg-muted">
-                  {src && (
-                    <Image
-                      src={src}
-                      alt=""
-                      fill
-                      sizes="(max-width: 400px) 100vw, 22rem"
-                      className="object-cover"
-                    />
+            <li key={tile.id} className="border-b last:border-b-0">
+              <NextLink
+                href={tile.href}
+                onClick={onNavigate}
+                className={cn(
+                  "relative flex flex-col justify-end overflow-hidden bg-muted",
+                  featured ? "h-72" : "h-52",
+                )}
+              >
+                {src && (
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
+                  />
+                )}
+
+                <span className="relative flex flex-col items-start gap-1.5 bg-gradient-to-t from-black/85 from-5% via-black/30 via-55% to-transparent p-4 pt-24 text-white">
+                  <span
+                    className={cn(
+                      "line-clamp-2 font-display text-balance",
+                      featured
+                        ? "text-display-md leading-[1.02]"
+                        : "text-[2rem] leading-[1.05]",
+                    )}
+                  >
+                    {tile.title}
+                  </span>
+
+                  {tile.description && (
+                    <span
+                      className={cn(
+                        "text-[13px] leading-5 text-white/70",
+                        featured ? "line-clamp-2" : "line-clamp-1",
+                      )}
+                    >
+                      {tile.description}
+                    </span>
                   )}
                 </span>
-                <span className="mt-2 block text-[15px]">{tile.title}</span>
               </NextLink>
             </li>
           )
         })}
       </ul>
+
       <ActionLink href={collectionMenu.href} onNavigate={onNavigate}>
         View all collections
       </ActionLink>
