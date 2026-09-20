@@ -21,6 +21,18 @@ jobs:
     name: Lint, type-check and build
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: medusa_test
+          POSTGRES_PASSWORD: migration_test_only
+          POSTGRES_DB: medusa_migration_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U medusa_test -d medusa_migration_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +46,33 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Backend regression tests
+        working-directory: apps/backend
+        run: pnpm run test:unit
+
       - name: Build backend (generates types, lints, type-checks, compiles)
         working-directory: apps/backend
         run: pnpm run build
+
+      - name: Fresh database migrations and repeat-run smoke test
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: postgres://medusa_test:migration_test_only@localhost:5432/medusa_migration_test
+          STORE_CORS: http://localhost:8000
+          ADMIN_CORS: http://localhost:9000
+          AUTH_CORS: http://localhost:9000
+          JWT_SECRET: migration_test_jwt_secret_not_for_production
+          COOKIE_SECRET: migration_test_cookie_secret_not_for_production
+          RESEND_API_KEY: re_migration_test
+          RESEND_FROM_EMAIL: test@example.com
+          CREDO_PUBLIC_KEY: migration_test
+          CREDO_SECRET_KEY: migration_test
+          PAYSTACK_SECRET_KEY: sk_test_migration
+          S3_FILE_URL: https://example.com
+          S3_BUCKET: migration-test
+          S3_REGION: us-east-1
+          S3_ACCESS_KEY_ID: migration_test
+          S3_SECRET_ACCESS_KEY: migration_test
+        run: |
+          pnpm exec medusa db:migrate --skip-scripts
+          pnpm exec medusa db:migrate --skip-scripts

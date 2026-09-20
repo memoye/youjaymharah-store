@@ -1,5 +1,7 @@
 {
-  "namespaces": ["public"],
+  "namespaces": [
+    "public"
+  ],
   "name": "public",
   "tables": [
     {
@@ -211,7 +213,9 @@
         },
         {
           "keyName": "newsletter_settings_pkey",
-          "columnNames": ["id"],
+          "columnNames": [
+            "id"
+          ],
           "composite": false,
           "constraint": true,
           "primary": true,
@@ -269,7 +273,11 @@
           "scale": null,
           "default": null,
           "comment": null,
-          "enumItems": ["pending", "subscribed", "unsubscribed"],
+          "enumItems": [
+            "pending",
+            "subscribed",
+            "unsubscribed"
+          ],
           "mappedType": "enum"
         },
         "source": {
@@ -384,6 +392,38 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "sync_pending": {
+          "name": "sync_pending",
+          "type": "boolean",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "true",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "boolean"
+        },
+        "sync_attempted_at": {
+          "name": "sync_attempted_at",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
@@ -465,7 +505,9 @@
         },
         {
           "keyName": "newsletter_subscriber_pkey",
-          "columnNames": ["id"],
+          "columnNames": [
+            "id"
+          ],
           "composite": false,
           "constraint": true,
           "primary": true,
