@@ -15,7 +15,7 @@ jest.setTimeout(120_000);
 medusaIntegrationTestRunner({
   inApp: true,
   dbName: "medusa-payment-safety-integration",
-  testSuite: ({ getContainer }) => {
+  testSuite: ({ getContainer, utils }) => {
     describe("payment module persistence with mocked gateway HTTP", () => {
       let service: IPaymentModuleService;
       let verification: Record<string, unknown>;
@@ -70,7 +70,10 @@ medusaIntegrationTestRunner({
             return new Response(JSON.stringify({ status: true, data }));
           });
       });
-      afterEach(() => {
+      afterEach(async () => {
+        // Keep gateway mocks installed until subscriber workflows have settled.
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        await utils.waitWorkflowExecutions();
         jest.restoreAllMocks();
       });
 
@@ -98,13 +101,11 @@ medusaIntegrationTestRunner({
         const channel = await container
           .resolve(Modules.SALES_CHANNEL)
           .createSalesChannels({ name: "Isolated checkout channel" });
-        const region = await container
-          .resolve(Modules.REGION)
-          .createRegions({
-            name: "Isolated NG region",
-            currency_code: "ngn",
-            countries: ["ng"],
-          });
+        const region = await container.resolve(Modules.REGION).createRegions({
+          name: "Isolated NG region",
+          currency_code: "ngn",
+          countries: ["ng"],
+        });
         const profile = await container
           .resolve(Modules.FULFILLMENT)
           .createShippingProfiles({
@@ -264,7 +265,9 @@ medusaIntegrationTestRunner({
             sendRefundIssuedEmailWorkflow(getContainer()).run({
               input: { refund_id: event.data.id },
             }),
-          ).rejects.toThrow();
+          ).rejects.toMatchObject({
+            message: expect.stringContaining("could not be retrieved"),
+          });
         }
         expect(
           await getContainer()
@@ -304,13 +307,11 @@ medusaIntegrationTestRunner({
           input: { id: cart.id },
         });
         expect(second.result.id).toBe(first.result.id);
-        const { data: links } = await container
-          .resolve("query")
-          .graph({
-            entity: "order_cart",
-            fields: ["order_id", "cart_id"],
-            filters: { cart_id: cart.id },
-          });
+        const { data: links } = await container.resolve("query").graph({
+          entity: "order_cart",
+          fields: ["order_id", "cart_id"],
+          filters: { cart_id: cart.id },
+        });
         expect(links).toEqual([
           expect.objectContaining({
             order_id: first.result.id,
@@ -335,18 +336,18 @@ medusaIntegrationTestRunner({
         const container = getContainer();
         await expect(
           completeCartWorkflow(container).run({ input: { id: cart.id } }),
-        ).rejects.toThrow("does not match");
+        ).rejects.toMatchObject({
+          message: expect.stringContaining("does not match"),
+        });
         expect(
           (await container.resolve(Modules.CART).retrieveCart(cart.id))
             .completed_at,
         ).toBeNull();
-        const { data: links } = await container
-          .resolve("query")
-          .graph({
-            entity: "order_cart",
-            fields: ["order_id"],
-            filters: { cart_id: cart.id },
-          });
+        const { data: links } = await container.resolve("query").graph({
+          entity: "order_cart",
+          fields: ["order_id"],
+          filters: { cart_id: cart.id },
+        });
         expect(links).toHaveLength(0);
         expect(
           await container.resolve(Modules.ORDER).listOrders({}),

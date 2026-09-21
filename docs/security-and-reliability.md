@@ -33,17 +33,77 @@ These are application controls, not a substitute for perimeter protection. Confi
 
 ## Deployment checklist
 
-1. Use the declared Node 22.12+ (22.x) runtime. The local verification environment was Node 24 and reported an engine mismatch.
+Production providers and the owner-approved 30-day operational / 90-day security
+log policy are recorded in [Production operations](production-operations.md).
+Hosted enforcement, alerts and backup settings are still pending; the policy
+does not authorize purging commerce, consent or unfinished workflow records.
+
+1. Use the declared Node 22.12+ (22.x) runtime. The isolated integration checks were run on Node 22.20 and PostgreSQL 15.
 2. Take a database backup before deployment; apply `pnpm exec medusa db:migrate` from `apps/backend`. No catalog reseed is required for this pass. Do not roll back the additive newsletter migration while the new app is running.
 3. Set `NODE_ENV=production`, a working `REDIS_URL`, and independent random JWT/cookie secrets of at least 32 characters. Startup rejects missing Redis or short secrets; build does not require these runtime secrets. Redis must use a non-evicting policy. Keep production/staging infrastructure isolated.
 4. Use HTTPS, exact CORS origins, private database/Redis connectivity, and TLS certificate verification. Never place secret credentials in public environment variables. Redis-validation errors no longer print any part of its URL.
 5. Restart application and worker processes after migration. Verify that the five-minute newsletter job runs and queued counts fall. Check the audience and Resend API permissions if records stay queued.
 6. Complete sandbox payment tests: correct payment, underpayment, currency/reference mismatch, duplicate and malformed webhooks, refunds, and delayed payment verification. Unit tests mock the gateways; they do not establish live-provider compatibility.
 7. Configure the [Resend webhook endpoint and signing secret](resend-webhooks.md), then test with a test audience before sending broadcasts. Outbound sync checks the existing contact and never deliberately resets a Resend unsubscribe; such contacts remain queued for review. Resubscribing them requires verified renewed consent and an explicit update in Resend. Local delivery blocks also require developer review; signing up again does not clear them.
-8. Verify the fresh-database migration and security HTTP/database integration CI jobs. The local migration exercised the existing database; the isolated PostgreSQL checks still need a successful CI run. Suites now include webhook persistence, Marketing/Support/role-less admin permissions, payment verification persistence, repeated authorization, partial-refund events, failed refunds and competing refunds. Cart-to-order cases cover successful completion, replay and rollback after underpayment. Gateway and email HTTP are mocked. The checkout fixture deliberately excludes shipping and managed inventory; shipping, tax, stock reservations and browser checkout still need coverage.
+8. Verify the fresh-database migration and security HTTP/database integration CI jobs on the deployment commit. These checks can also run locally against a disposable cluster using the command below; a local pass does not verify GitHub Actions. Suites include webhook persistence, Marketing/Support/role-less admin permissions, payment verification persistence, repeated authorization, partial-refund events, failed refunds and competing refunds. Physical checkout coverage includes flat-rate shipping, tax-inclusive/exclusive pricing, missing shipping, inventory reservations, replay, underpayment rollback/retry, stock changes and two carts competing for the last unit. Gateway and email HTTP are mocked. Browser checkout and Redis-backed multi-worker concurrency still need verification.
 9. Alert on payment verification failures, prolonged newsletter sync backlog, failed workflows/jobs, 429/503 rates, and mail failures. Exercise a backup restoration before launch.
 
-## Remaining dependency findings
+## Local isolated verification
+
+Verified locally on September 21, 2026: fresh migrations and their repeat run,
+all 25 HTTP/database integration cases (four suites), and 105 unit tests.
+GitHub Actions still needs verification on the deployment commit.
+
+With Node 22 and PostgreSQL 15 binaries installed (no running database service required):
+
+```bash
+cd apps/backend
+pnpm run test:isolated
+# Focused rerun; the selected suite still migrates its own fresh database:
+pnpm run test:isolated --tests-only integration-tests/http/payment-safety.spec.ts
+pnpm run test:isolated --tests-only integration-tests/http/physical-checkout.spec.ts
+```
+
+The script creates a password-protected temporary cluster on a random loopback
+port, overrides application/provider credentials with test values, runs fresh
+migrations twice, and executes the HTTP integration suites. It stops and removes
+that cluster on success or test failure. It never uses the application's database
+or runs catalog seeds. PostgreSQL binaries are detected in the Apple Silicon
+Homebrew and Debian PostgreSQL 15 locations; elsewhere, set `POSTGRES_BIN` to the
+directory containing `initdb`, `pg_ctl` and `createdb`. Run as a non-root user.
+
+Medusa 2.19's test utility enables TLS unless `DB_HOST` is literally `localhost`;
+the script accounts for this. Do not point the raw integration command at an
+application database: the test utility creates, restores and drops its test
+databases. `MEDUSA_TEST_DB_ISOLATED=1` is an acknowledgement, not isolation by
+itself. CI uses its own disposable PostgreSQL service.
+
+These tests use local event bus/locking implementations. They do not verify
+Redis restart recovery, distributed locking, live gateway compatibility, or
+delivery through Resend. Database-template restores can log closed pooled
+connections; the Jest assertions and exit code determine the result.
+
+The physical-checkout fixture creates a real sales channel, region, tax rate,
+shipping profile/option, warehouse and inventory level. Carts and shipping
+methods go through Medusa's standard workflows, not hard-coded cart totals.
+Assertions compare the cart, payment collection, gateway minor-unit amount,
+order and capture totals. Replay must retain one reservation/capture;
+underpayment must release the reservation and permit a correctly paid retry;
+competing carts must leave one live order and no payment on the losing cart.
+The fixture is deliberately a single warehouse, one variant and flat-rate
+shipping; it does not cover discounts, multi-warehouse allocation or fulfillment.
+
+## Backend/admin pending
+
+- Verify the CI run on the deployment commit and extend the role/route permission matrix beyond Marketing, Support and role-less users.
+- Extend checkout coverage to discounts, multi-warehouse allocation and fulfillment/cancellation stock changes; core shipping/tax/reservation cases are covered locally.
+- Exercise Redis-backed retries and locking across workers/restarts, real payment sandbox callbacks, and Resend callbacks against a test audience.
+- Add durable email delivery tracking beyond the provider's 24-hour deduplication window.
+- Configure alerting, edge/proxy limits, backups and restore drills from the deployment checklist. Apply the approved log-retention policy through the hosted providers; see [Production operations](production-operations.md) for decisions and remaining setup gates.
+- Review/configure the approved trending vocabulary and log-retention policy. An admin vocabulary editor is a nice-to-have; repeated requests can still influence ranking.
+- Resolve the remaining dependency findings below through compatible upstream upgrades or tested overrides.
+
+### Remaining dependency findings
 
 The production audit after compatible overrides reports **0 critical, 0 high, 2 moderate** findings. Overrides are in `pnpm-workspace.yaml`; the lockfile was regenerated by pnpm. Remove overrides when the upstream packages adopt safe versions.
 
@@ -54,4 +114,11 @@ The production audit after compatible overrides reports **0 critical, 0 high, 2 
 
 Major-version overrides were not forced in this pass. Re-run `pnpm audit --prod` routinely; this result is a point-in-time check, not a security certification.
 
-Other follow-ups: get the isolated integration suites green in CI, extend coverage to the remaining role/route matrix and shipping/tax/inventory/browser checkout paths, and add durable email delivery tracking beyond the provider's deduplication window. Review and configure the approved trending vocabulary before enabling it; an admin vocabulary editor is not included. Ranking can still be influenced by repeated requests, and request/proxy/search-provider logs need their own privacy policy.
+## Storefront pending (separate workstream)
+
+- Browser-level checkout verification, including gateway return/cancel, duplicate completion, shipping/tax presentation and stock changes during checkout.
+- Verify newsletter opt-in and pending-confirmation/unsubscribe states against the hardened backend contracts.
+- Complete and verify customer-facing order tracking and self-service returns as described in the [storefront build guide](storefront-build-order.md). Returns also require configured backend shipping options and an agreed returns policy.
+- Validate shopper-address attribution if API calls pass through a storefront server proxy, so rate limits do not group all customers under one address.
+
+This backend verification pass does not certify storefront UI completion or accessibility; assess those separately against the current storefront.

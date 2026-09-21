@@ -31,7 +31,8 @@ const env = {
   ...process.env,
   NODE_ENV: "test",
   MEDUSA_TEST_DB_ISOLATED: "1",
-  DB_HOST: "127.0.0.1",
+  // Medusa's test runner treats only the literal "localhost" as non-TLS.
+  DB_HOST: "localhost",
   DB_PORT: String(port),
   DB_USERNAME: "medusa_test",
   DB_PASSWORD: "migration_test_only",

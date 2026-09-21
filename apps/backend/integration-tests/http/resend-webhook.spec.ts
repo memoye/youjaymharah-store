@@ -2,15 +2,9 @@ import { createHmac } from "node:crypto";
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils";
 import { NEWSLETTER_MODULE } from "../../src/modules/newsletter";
 import type NewsletterModuleService from "../../src/modules/newsletter/service";
+import { requireIsolatedDatabase } from "../helpers/isolated-database";
 
-if (
-  process.env.MEDUSA_TEST_DB_ISOLATED !== "1" ||
-  !["localhost", "127.0.0.1"].includes(process.env.DB_HOST ?? "")
-) {
-  throw new Error(
-    "Integration tests require MEDUSA_TEST_DB_ISOLATED=1 and an explicitly configured localhost PostgreSQL test instance. Never use the application database.",
-  );
-}
+requireIsolatedDatabase();
 
 const secretBytes = Buffer.from("isolated-integration-webhook-secret");
 const secret = `whsec_${secretBytes.toString("base64")}`;
@@ -47,6 +41,8 @@ medusaIntegrationTestRunner({
           .update(`${id}.${timestamp}.${raw}`)
           .digest("base64");
         return api.post("/webhooks/resend", rawOverride ?? raw, {
+          // Axios otherwise trims JSON strings, undoing the tampering fixture.
+          transformRequest: [(body: string) => body],
           headers: {
             "Content-Type": "application/json",
             "svix-id": id,

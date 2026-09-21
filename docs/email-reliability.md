@@ -71,6 +71,10 @@ replay an old refund workflow input containing only `payment_id`; the new
 input requires `refund_id`.
 
 Unit tests cover identities, skipped notifications and snapshot retry behavior.
-The new PostgreSQL integration suites are wired into CI but still need their
-first successful isolated run. They do not send live gateway requests or prove
-live-provider compatibility.
+The PostgreSQL integration suites passed locally against an isolated database;
+CI still needs verification on the deployment commit. They do not send live
+gateway requests or prove live-provider compatibility.
+
+The approved [log-retention policy](production-operations.md) does not purge
+notification/workflow data or email delivery/deduplication records. Those need
+a separate lifecycle policy that preserves recovery and replay protection.

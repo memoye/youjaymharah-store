@@ -1,13 +1,15 @@
 import { MedusaService } from "@medusajs/framework/utils";
 
 import { SearchTermStat } from "./models/search-term-stat";
-import { approvedSearchTerm, approvedTrendingTerms } from "./approved-terms";
+import { SearchVocabulary } from "./models/search-vocabulary";
+import { approvedSearchTerm, approvedTrendingTerms, validateVocabulary } from "./approved-terms";
 export { normaliseTerm } from "./approved-terms";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** How many day rows one trending read will look at. */
 const READ_LIMIT = 5000;
+export const SEARCH_VOCABULARY_ID = "search_vocabulary_default";
 
 export const TRENDING_DEFAULTS = {
   window_days: 7,
@@ -23,13 +25,25 @@ const startOfDay = (date: Date) =>
 
 class SearchInsightsModuleService extends MedusaService({
   SearchTermStat,
+  SearchVocabulary,
 }) {
+  async readVocabulary() {
+    const [stored] = await this.listSearchVocabularies({ id: SEARCH_VOCABULARY_ID });
+    return stored
+      ? { terms: validateVocabulary(stored.terms.items), revision: stored.revision, source: "admin" as const }
+      : { terms: approvedTrendingTerms(), revision: null, source: "environment" as const };
+  }
+
+  async approveTerm(raw: unknown) {
+    return approvedSearchTerm(raw, (await this.readVocabulary()).terms);
+  }
+
   /**
    * Adds one search to today's tally for a term. Ignores terms
    * the reviewed vocabulary excludes, including legacy queued input.
    */
   async recordSearch(rawTerm: string, resultCount: number) {
-    const term = approvedSearchTerm(rawTerm);
+    const term = await this.approveTerm(rawTerm);
 
     if (!term || !Number.isSafeInteger(resultCount) || resultCount < 0) {
       return;
@@ -88,7 +102,7 @@ class SearchInsightsModuleService extends MedusaService({
     limit?: number;
     min_searches?: number;
   } = {}): Promise<string[]> {
-    const approved = approvedTrendingTerms();
+    const approved = (await this.readVocabulary()).terms;
     if (!approved.length) return [];
     const since = startOfDay(new Date(Date.now() - (window_days - 1) * DAY_MS));
 

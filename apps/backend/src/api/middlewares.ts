@@ -7,6 +7,7 @@ import {
 import type { BaseEntity } from "@medusajs/framework/types";
 import { z } from "@medusajs/framework/zod";
 import { rateLimit } from "./rate-limit";
+import { UpdateSearchVocabulary } from "../modules/search-insights/vocabulary-input";
 import {
   AnnouncementBar,
   AnnouncementOptionsQuery,

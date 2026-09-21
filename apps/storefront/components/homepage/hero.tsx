@@ -114,8 +114,8 @@ function Copy({
   inverted?: boolean
 }) {
   return (
-    <div className="flex max-w-4xl flex-col items-center gap-6">
-      {content.eyebrow && (
+    <div className="container-wrapper flex flex-col items-center justify-between gap-6 lg:flex-row lg:items-end lg:px-12 lg:text-start">
+      {/*{content.eyebrow && (
         <p
           className={cn(
             "text-[13px] font-medium tracking-[0.18em] uppercase",
@@ -124,20 +124,21 @@ function Copy({
         >
           {content.eyebrow}
         </p>
-      )}
+      )}*/}
+      <div className="max-w-4xl space-y-6">
+        {content.title && <h1 className={headlineClass}>{content.title}</h1>}
 
-      {content.title && <h1 className={headlineClass}>{content.title}</h1>}
-
-      {content.description && (
-        <p
-          className={cn(
-            "max-w-[46ch] text-intro text-pretty",
-            inverted ? "text-white/85" : "text-muted-foreground",
-          )}
-        >
-          {content.description}
-        </p>
-      )}
+        {content.description && (
+          <p
+            className={cn(
+              "max-w-[46ch] text-intro text-pretty",
+              inverted ? "text-white/85" : "text-muted-foreground",
+            )}
+          >
+            {content.description}
+          </p>
+        )}
+      </div>
 
       {content.cta && (
         <NextLink

@@ -35,7 +35,18 @@ export function approvedTrendingTerms(
   }
 }
 
-export function approvedSearchTerm(raw: unknown): string | null {
+export function validateVocabulary(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "Use at most 100 reviewed phrases.");
+  }
+  const terms = value.map(normaliseTerm);
+  if (terms.some((term) => term === null)) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "Each phrase must contain 2–64 letters, spaces, apostrophes or hyphens. Do not include personal information.");
+  }
+  return [...new Set(terms as string[])];
+}
+
+export function approvedSearchTerm(raw: unknown, approved = approvedTrendingTerms()): string | null {
   const term = normaliseTerm(raw);
-  return term && approvedTrendingTerms().includes(term) ? term : null;
+  return term && approved.includes(term) ? term : null;
 }
