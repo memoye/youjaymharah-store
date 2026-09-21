@@ -22,6 +22,10 @@
   ],
   "tags": [
     {
+      "name": "Search",
+      "description": "Full-text product search over the Search Module's index, with counted facets for refining a results page."
+    },
+    {
       "name": "Storefront",
       "description": "Settings the storefront renders with, edited from Settings › Storefront: home page content (hero, featured collection), sharing & search defaults (title, description, share image, social profiles, indexing, Search Console verification) and product display (New badge days). The public route also includes the brand."
     },
@@ -58,15 +62,220 @@
       "description": "Products a shopper has saved. One entry per product, optionally remembering the colour and size they chose. Signed-in customers use /store/customers/me/wishlist; guests use /store/wishlists, where the wishlist ID works like a guest cart's ID, and the guest list is merged into the customer's at sign-in."
     },
     {
-      "name": "Search",
-      "description": "Full-text product search over the Search Module's index, with counted facets for refining a results page."
-    },
-    {
       "name": "Scaffolding",
       "description": "Placeholder routes left by the Medusa starter. They return 200 with no body and can be deleted."
     }
   ],
   "paths": {
+    "/admin/search-vocabulary": {
+      "get": {
+        "operationId": "getAdminSearchVocabulary",
+        "tags": [
+          "Search"
+        ],
+        "summary": "Get approved trending-search phrases",
+        "x-required-policies": [
+          "storefront_settings:read"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current phrases and concurrency revision. Environment fallback applies only before the first admin save.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "vocabulary": {
+                      "type": "object",
+                      "properties": {
+                        "terms": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "revision": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "admin",
+                            "environment"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "terms",
+                        "revision",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "vocabulary"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postAdminSearchVocabulary",
+        "tags": [
+          "Search"
+        ],
+        "summary": "Replace approved trending-search phrases",
+        "description": "Up to 100 reviewed phrases; normalized and deduplicated. An empty list disables trending. Send the revision from GET to prevent overwriting another admin's changes.",
+        "x-required-policies": [
+          "storefront_settings:update"
+        ],
+        "security": [
+          {
+            "adminJwt": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "terms": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 256
+                    }
+                  },
+                  "revision": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "terms",
+                  "revision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved vocabulary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "vocabulary": {
+                      "type": "object",
+                      "properties": {
+                        "terms": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "revision": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "const": "admin"
+                        }
+                      },
+                      "required": [
+                        "terms",
+                        "revision",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "vocabulary"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid phrase list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid admin token or session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision is stale; reload before saving.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/store/announcements": {
       "get": {
         "operationId": "getStoreAnnouncements",

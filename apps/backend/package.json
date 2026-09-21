@@ -20,6 +20,7 @@
     "lint": "medusa lint",
     "seed:demo": "medusa exec ./src/scripts/seed-demo-catalog.ts",
     "seed:announcements": "medusa exec ./src/scripts/seed-announcements.ts",
+    "seed:search-vocabulary": "medusa exec ./src/scripts/seed-search-vocabulary.ts",
     "codegen": "ts-node scripts/generate-openapi.ts",
     "dev:email": "email dev --dir ./src/modules/resend/emails",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",

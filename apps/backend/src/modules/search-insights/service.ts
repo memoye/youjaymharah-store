@@ -2,7 +2,11 @@ import { MedusaService } from "@medusajs/framework/utils";
 
 import { SearchTermStat } from "./models/search-term-stat";
 import { SearchVocabulary } from "./models/search-vocabulary";
-import { approvedSearchTerm, approvedTrendingTerms, validateVocabulary } from "./approved-terms";
+import {
+  approvedSearchTerm,
+  approvedTrendingTerms,
+  validateVocabulary,
+} from "./approved-terms";
 export { normaliseTerm } from "./approved-terms";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -28,10 +32,20 @@ class SearchInsightsModuleService extends MedusaService({
   SearchVocabulary,
 }) {
   async readVocabulary() {
-    const [stored] = await this.listSearchVocabularies({ id: SEARCH_VOCABULARY_ID });
+    const [stored] = await this.listSearchVocabularies({
+      id: SEARCH_VOCABULARY_ID,
+    });
     return stored
-      ? { terms: validateVocabulary(stored.terms.items), revision: stored.revision, source: "admin" as const }
-      : { terms: approvedTrendingTerms(), revision: null, source: "environment" as const };
+      ? {
+          terms: validateVocabulary(stored.terms.items),
+          revision: stored.revision,
+          source: "admin" as const,
+        }
+      : {
+          terms: approvedTrendingTerms(),
+          revision: null,
+          source: "environment" as const,
+        };
   }
 
   async approveTerm(raw: unknown) {

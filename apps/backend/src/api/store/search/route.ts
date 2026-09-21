@@ -7,7 +7,8 @@ import { MedusaError, Modules, ProductStatus } from "@medusajs/framework/utils";
 
 import type { StoreSearchProductsType } from "../../middlewares";
 import { SEARCH_PERFORMED_EVENT } from "../../../subscribers/search-performed";
-import { approvedSearchTerm } from "../../../modules/search-insights/approved-terms";
+import { SEARCH_INSIGHTS_MODULE } from "../../../modules/search-insights";
+import type SearchInsightsModuleService from "../../../modules/search-insights/service";
 
 /**
  * Faceted so a results page can offer refinements next to the hits, and count
@@ -96,7 +97,10 @@ const recordTerm = async (
   resultCount: number,
 ) => {
   try {
-    const approved = approvedSearchTerm(term);
+    const service: SearchInsightsModuleService = req.scope.resolve(
+      SEARCH_INSIGHTS_MODULE,
+    );
+    const approved = await service.approveTerm(term);
     if (!approved || !Number.isSafeInteger(resultCount) || resultCount < 0)
       return;
     await req.scope.resolve(Modules.EVENT_BUS).emit({

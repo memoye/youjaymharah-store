@@ -4,7 +4,30 @@ Trending is a ranking of reviewed public phrases, not a public log of whatever
 shoppers type. With no approved phrases configured, searches still work, but
 trending returns an empty list and collects no new term statistics.
 
-## Enable a reviewed vocabulary
+## Manage reviewed phrases in admin
+
+Open **Settings > Trending searches**. Marketing, Store Managers and the owner
+can edit using the existing `storefront_settings:update` permission; staff with
+read access only can view the list. Enter one reviewed catalog phrase per line
+and save. The editor normalizes case/spacing, removes duplicates, and accepts
+up to 100 phrases of 2–64 letters, spaces, apostrophes or hyphens each.
+
+An empty saved list disables collection and public trending. Requests and
+workers read the database without a process-local cache or restart. Requests
+already in flight may finish with the list they read. Queued searches are
+rechecked by the subscriber and recording step/service. Stale admin saves are
+rejected; use **Reload latest** and review the new list before saving again.
+
+This is an approval list, not a manual ranking or a list of private searches.
+It does not import customer queries or invent approved terms. Approval does not
+bypass popularity thresholds or current product visibility.
+
+Before deploying this editor, run `pnpm exec medusa db:migrate --skip-scripts`
+from `apps/backend` to create `search_vocabulary`. No catalog seed is needed.
+Do not run the new code before its migration or drop that table while the
+new application is running.
+
+## Initial environment fallback
 
 A developer sets `SEARCH_TRENDING_TERMS` on the backend, for example:
 
@@ -12,7 +35,13 @@ A developer sets `SEARCH_TRENDING_TERMS` on the backend, for example:
 SEARCH_TRENDING_TERMS='["dresses","linen","bags"]'
 ```
 
-Restart the backend and workers together. The list accepts up to 100 phrases,
+Before the first admin save, restart backend and workers to change this fallback.
+The first admin save makes the database authoritative, even for an empty list;
+environment settings cannot re-enable removed phrases. Database errors do not
+fall back to environment settings. Keep the legacy variable valid or remove it;
+startup still validates it. New environments default to an empty vocabulary.
+
+The fallback accepts up to 100 phrases,
 each 2–64 characters long, using letters, spaces, apostrophes or hyphens.
 Malformed configuration fails startup without printing its value. Terms are
 normalized for Unicode compatibility, casing and whitespace; matching is
@@ -22,9 +51,8 @@ the shopper's original query and retains its existing matching behavior.
 Marketing or the store owner should approve the phrases as public catalogue
 language before the developer enables them. Do not add names, contact details,
 order references, private product labels or customer messages. Syntax checks
-cannot decide whether a phrase is personal information. There is no admin
-vocabulary editor in this pass, and these examples are not seeded into the
-database or enabled automatically.
+cannot decide whether a phrase is personal information. These examples are not
+seeded into the database or enabled automatically.
 
 ## Collection and visibility
 
@@ -67,6 +95,9 @@ analytics and the search provider. This feature only controls the trending
 pipeline; it is not a guarantee that arbitrary search text is never logged
 anywhere in the system.
 
-No database migration or seed is needed. Unit tests cover pre-queue filtering,
+The editor requires the additive vocabulary migration, not a catalog seed.
+Unit tests cover database authority, empty-list disabling, pre-queue filtering,
 normalization, rejected configuration, hidden legacy rows, minimum counts and
-sales-channel visibility. PostgreSQL integration checks remain a CI task.
+sales-channel visibility. Targeted PostgreSQL checks cover admin permissions,
+validation, persistence and stale-save conflicts; CI still needs verification
+on the deployment commit.

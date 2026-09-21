@@ -14,6 +14,7 @@ import {
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
 } from "@medusajs/medusa/core-flows";
+import { seedSearchVocabularyWorkflow } from "../workflows/seed-search-vocabulary";
 
 /**
  * Seeds the minimum a real store needs to boot: sales channel, publishable
@@ -182,6 +183,7 @@ export default async function initial_data_seed({
   logger.info("Finished seeding stock location.");
 
   await seedAdminUser(container, logger);
+  await seedSearchVocabularyWorkflow(container).run({ input: {} });
 }
 
 async function seedAdminUser(

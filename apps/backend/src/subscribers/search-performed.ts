@@ -2,7 +2,8 @@ import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
 import { recordSearchTermWorkflow } from "../workflows/search-insights";
-import { approvedSearchTerm } from "../modules/search-insights/approved-terms";
+import { SEARCH_INSIGHTS_MODULE } from "../modules/search-insights";
+import type SearchInsightsModuleService from "../modules/search-insights/service";
 
 export const SEARCH_PERFORMED_EVENT = "search.performed";
 
@@ -15,10 +16,12 @@ export default async function searchPerformedHandler({
   container,
 }: SubscriberArgs<{ term: string; result_count: number }>) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const term = approvedSearchTerm(data.term);
-  if (!term) return;
-
   try {
+    const service: SearchInsightsModuleService = container.resolve(
+      SEARCH_INSIGHTS_MODULE,
+    );
+    const term = await service.approveTerm(data.term);
+    if (!term) return;
     await recordSearchTermWorkflow(container).run({
       input: { term, result_count: data.result_count },
     });

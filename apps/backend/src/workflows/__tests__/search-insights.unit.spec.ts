@@ -4,6 +4,7 @@ import { recordSearchTerm } from "../steps/record-search-term";
 import {
   approvedTrendingTerms,
   approvedSearchTerm,
+  validateVocabulary,
 } from "../../modules/search-insights/approved-terms";
 import { visibleTrendingTerms } from "../get-trending-search-terms";
 import { GET as searchProducts } from "../../api/store/search/route";
@@ -11,13 +12,60 @@ import { GET as searchProducts } from "../../api/store/search/route";
 const originalTerms = process.env.SEARCH_TRENDING_TERMS;
 beforeEach(() => {
   process.env.SEARCH_TRENDING_TERMS = '["linen","removed","dresses"]';
+  jest
+    .spyOn(SearchInsightsModuleService.prototype, "listSearchVocabularies")
+    .mockResolvedValue([]);
 });
 afterEach(() => {
+  jest.restoreAllMocks();
   if (originalTerms === undefined) delete process.env.SEARCH_TRENDING_TERMS;
   else process.env.SEARCH_TRENDING_TERMS = originalTerms;
 });
 
 describe("search insights", () => {
+  it("treats an explicitly empty admin list as authoritative over the environment", async () => {
+    const service = Object.create(SearchInsightsModuleService.prototype);
+    service.listSearchVocabularies = jest
+      .fn()
+      .mockResolvedValue([{ terms: { items: [] }, revision: "saved" }]);
+    service.listSearchTermStats = jest.fn();
+    expect(await service.readVocabulary()).toEqual({
+      terms: [],
+      revision: "saved",
+      source: "admin",
+    });
+    await service.recordSearch("linen", 3);
+    expect(await service.listTrendingTerms()).toEqual([]);
+    expect(service.listSearchTermStats).not.toHaveBeenCalled();
+  });
+  it("rechecks the current database vocabulary without caching removed phrases", async () => {
+    const service = Object.create(SearchInsightsModuleService.prototype);
+    service.listSearchVocabularies = jest
+      .fn()
+      .mockResolvedValueOnce([{ terms: { items: ["linen"] }, revision: "one" }])
+      .mockResolvedValue([{ terms: { items: [] }, revision: "two" }]);
+    expect(await service.approveTerm("linen")).toBe("linen");
+    expect(await service.approveTerm("linen")).toBeNull();
+    service.listSearchTermStats = jest.fn();
+    await service.recordSearch("linen", 3);
+    expect(service.listSearchTermStats).not.toHaveBeenCalled();
+  });
+  it("does not fall back to environment terms on a database error", async () => {
+    const service = Object.create(SearchInsightsModuleService.prototype);
+    service.listSearchVocabularies = jest
+      .fn()
+      .mockRejectedValue(new Error("database unavailable"));
+    await expect(service.approveTerm("linen")).rejects.toThrow(
+      "database unavailable",
+    );
+  });
+  it("normalizes and deduplicates reviewed input, rejecting invalid and oversized lists", () => {
+    expect(
+      validateVocabulary([" LINEN ", "linen", "Summer   dresses"]),
+    ).toEqual(["linen", "summer dresses"]);
+    expect(() => validateVocabulary(["private@example.com"])).toThrow();
+    expect(() => validateVocabulary(Array(101).fill("linen"))).toThrow();
+  });
   it("serializes concurrent increments for the same normalized term", async () => {
     let searches = 10;
     const service = Object.create(SearchInsightsModuleService.prototype);
@@ -163,18 +211,24 @@ describe("search insights", () => {
       const emit = jest.fn();
       const search = {
         listRetrievableFields: () => ["id"],
-        search: jest
-          .fn()
-          .mockResolvedValue({
-            hits: [],
-            metadata: { count: 3, take: 20, skip: 0 },
-          }),
+        search: jest.fn().mockResolvedValue({
+          hits: [],
+          metadata: { count: 3, take: 20, skip: 0 },
+        }),
       };
       const req = {
         validatedQuery: { q, limit: 20, offset: 0 },
         publishable_key_context: { sales_channel_ids: ["channel_1"] },
         scope: {
-          resolve: (key: string) => (key === "search" ? search : { emit }),
+          resolve: (key: string) =>
+            key === "search"
+              ? search
+              : key === "searchInsights"
+                ? {
+                    approveTerm: async (term: string) =>
+                      approvedSearchTerm(term),
+                  }
+                : { emit },
         },
       };
       const res = { json: jest.fn() };

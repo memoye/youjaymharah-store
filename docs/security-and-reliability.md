@@ -14,7 +14,7 @@
 - Password reset, verification, invite, refund and order-edit emails now use event-specific delivery keys and separate preparation from sending. A send retry reuses the prepared recipient, token, branding and data. Refund mail listens to `payment.refund.created` and queries its exact refund ID instead of guessing the newest refund on a payment. Order edits use their action IDs so later edits are not suppressed. See [Email retry behavior](email-reliability.md).
 - Cart recovery expires seven days after the last reminder and checks the cart's email and customer ownership. Completed, stopped, recovered, or failed reminders cannot restore a cart. Stop-reminder links do not expire.
 - Search increments are serialized through Medusa's locking module. Trending aggregation uses the newest result count, and persistence failures are no longer silently swallowed. Trending and suggestion routes are included in generated API documentation.
-- Trending collection and publication now require an explicitly reviewed `SEARCH_TRENDING_TERMS` list. The default is empty. Unapproved text is filtered before entering the trending event/workflow pipeline, and legacy unapproved rows cannot appear in public results. A phrase needs five searches in seven days and a current published product match in the requesting sales channels. Counts still measure requests, not unique shoppers. See [Search privacy](search-privacy.md).
+- Trending collection and publication now require an explicitly reviewed vocabulary managed in **Settings > Trending searches**. `SEARCH_TRENDING_TERMS` is only an initial fallback before the first admin save; the default is empty. Unapproved text is filtered before entering the trending event/workflow pipeline, and legacy unapproved rows cannot appear in public results. A phrase needs five searches in seven days and a current published product match in the requesting sales channels. Counts still measure requests, not unique shoppers. See [Search privacy](search-privacy.md).
 - The menu-card rename migration is conditional, with explicit approval to amend that historical migration. CI now runs unit tests and includes fresh PostgreSQL migration and repeat-run checks. The backend exposes a `test` script so root Turbo tests include it.
 
 ## Public request throttling
@@ -100,7 +100,7 @@ shipping; it does not cover discounts, multi-warehouse allocation or fulfillment
 - Exercise Redis-backed retries and locking across workers/restarts, real payment sandbox callbacks, and Resend callbacks against a test audience.
 - Add durable email delivery tracking beyond the provider's 24-hour deduplication window.
 - Configure alerting, edge/proxy limits, backups and restore drills from the deployment checklist. Apply the approved log-retention policy through the hosted providers; see [Production operations](production-operations.md) for decisions and remaining setup gates.
-- Review/configure the approved trending vocabulary and log-retention policy. An admin vocabulary editor is a nice-to-have; repeated requests can still influence ranking.
+- Populate the reviewed trending vocabulary in **Settings > Trending searches** and enforce the approved log-retention policy. The editor is implemented; repeated requests can still influence ranking.
 - Resolve the remaining dependency findings below through compatible upstream upgrades or tested overrides.
 
 ### Remaining dependency findings

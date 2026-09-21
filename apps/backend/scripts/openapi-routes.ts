@@ -1,4 +1,5 @@
 import { z } from "@medusajs/framework/zod";
+import { UpdateSearchVocabulary } from "../src/modules/search-insights/vocabulary-input";
 import {
   AnnouncementBar,
   PublicAnnouncements,
@@ -626,6 +627,50 @@ export const TYPES: {
 ];
 
 export const ROUTES: RouteDoc[] = [
+  {
+    method: "GET",
+    path: "/admin/search-vocabulary",
+    tag: "Search",
+    summary: "Get approved trending-search phrases",
+    auth: "admin",
+    policies: ["storefront_settings:read"],
+    response: {
+      description:
+        "Current phrases and concurrency revision. Environment fallback applies only before the first admin save.",
+      schema: z.object({
+        vocabulary: z.object({
+          terms: z.array(z.string()),
+          revision: z.string().nullable(),
+          source: z.enum(["admin", "environment"]),
+        }),
+      }),
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/search-vocabulary",
+    tag: "Search",
+    summary: "Replace approved trending-search phrases",
+    auth: "admin",
+    policies: ["storefront_settings:update"],
+    body: UpdateSearchVocabulary,
+    description:
+      "Up to 100 reviewed phrases; normalized and deduplicated. An empty list disables trending. Send the revision from GET to prevent overwriting another admin's changes.",
+    response: {
+      description: "Saved vocabulary.",
+      schema: z.object({
+        vocabulary: z.object({
+          terms: z.array(z.string()),
+          revision: z.string(),
+          source: z.literal("admin"),
+        }),
+      }),
+    },
+    errors: [
+      { status: 400, description: "Invalid phrase list." },
+      { status: 409, description: "Revision is stale; reload before saving." },
+    ],
+  },
   {
     method: "GET",
     path: "/store/announcements",

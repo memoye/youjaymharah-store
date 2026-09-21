@@ -112,13 +112,22 @@ try {
   started = true;
   run(join(bin, "createdb"), ["medusa_migration_test"]);
   const args = process.argv.slice(2);
+  const generateModule = args[0] === "--generate-migration" ? args[1] : null;
+  if (
+    args[0] === "--generate-migration" &&
+    (!generateModule || args.length !== 2)
+  ) {
+    throw new Error("Usage: test:isolated --generate-migration <module-name>");
+  }
   const testsOnly = args[0] === "--tests-only";
   if (testsOnly) args.shift();
   if (!testsOnly) {
     run("pnpm", ["exec", "medusa", "db:migrate", "--skip-scripts"]);
     run("pnpm", ["exec", "medusa", "db:migrate", "--skip-scripts"]);
   }
-  run("pnpm", ["run", "test:integration:http", ...args]);
+  if (generateModule)
+    run("pnpm", ["exec", "medusa", "db:generate", generateModule]);
+  else run("pnpm", ["run", "test:integration:http", ...args]);
 } finally {
   if (started)
     run(join(bin, "pg_ctl"), ["-D", data, "-m", "fast", "-w", "stop"]);

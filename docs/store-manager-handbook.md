@@ -53,6 +53,13 @@ checks, test coverage, remaining dependency advisories, and operational limits.
 
 ## 2. What already exists on day one
 
+For trending searches, open **Settings > Trending searches** and approve up to
+100 catalog phrases, one per line. Use no customer names, contact details or
+private messages. Saving an empty list disables trending; normal product search
+still works. Phrases only appear after five searches in seven days and a current
+published product match. Marketing, Store Managers and the owner can edit;
+Support is read-only. See [Search privacy](search-privacy.md).
+
 | Record                  | Created as                                                         | You still need to                                                         |
 | ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
 | Store                   | "Youjaymharah", NGN default, USD secondary                         | Check the name; remove USD if you won't sell in dollars                   |

@@ -106,6 +106,80 @@ medusaIntegrationTestRunner({
           api.get("/admin/newsletter/subscribers?limit=101", auth),
         ).rejects.toMatchObject({ response: { status: 400 } });
       });
+
+      it("lets Marketing save reviewed phrases and rejects stale writes", async () => {
+        const auth = await login("role_marketing");
+        const initial = (await api.get("/admin/search-vocabulary", auth)).data
+          .vocabulary;
+        const saved = (
+          await api.post(
+            "/admin/search-vocabulary",
+            { terms: [" LINEN ", "linen"], revision: initial.revision },
+            auth,
+          )
+        ).data.vocabulary;
+        expect(saved.terms).toEqual(["linen"]);
+        expect(saved.source).toBe("admin");
+        expect(saved.revision).not.toBe(initial.revision);
+        await expect(
+          api.post(
+            "/admin/search-vocabulary",
+            { terms: ["dresses"], revision: initial.revision },
+            auth,
+          ),
+        ).rejects.toMatchObject({ response: { status: 409 } });
+        expect(
+          (await api.get("/admin/search-vocabulary", auth)).data.vocabulary,
+        ).toEqual(saved);
+        await api.post(
+          "/admin/search-vocabulary",
+          { terms: [], revision: saved.revision },
+          auth,
+        );
+        expect(
+          (await api.get("/admin/search-vocabulary", auth)).data.vocabulary,
+        ).toMatchObject({ terms: [], source: "admin" });
+        const service = getContainer().resolve("searchInsights");
+        await service.recordSearch("linen", 20);
+        expect(await service.listSearchTermStats({})).toHaveLength(0);
+      });
+
+      it("keeps Support vocabulary access read-only and denies anonymous access", async () => {
+        const auth = await login("role_support");
+        expect((await api.get("/admin/search-vocabulary", auth)).status).toBe(
+          200,
+        );
+        await expect(
+          api.post(
+            "/admin/search-vocabulary",
+            { terms: [], revision: null },
+            auth,
+          ),
+        ).rejects.toMatchObject({ response: { status: 403 } });
+        await expect(api.get("/admin/search-vocabulary")).rejects.toMatchObject(
+          { response: { status: 401 } },
+        );
+      });
+
+      it("rejects invalid vocabulary input without saving it", async () => {
+        const auth = await login("role_marketing");
+        for (const terms of [
+          ["customer@example.com"],
+          Array(101).fill("linen"),
+        ]) {
+          await expect(
+            api.post(
+              "/admin/search-vocabulary",
+              { terms, revision: null },
+              auth,
+            ),
+          ).rejects.toMatchObject({ response: { status: 400 } });
+        }
+        expect(
+          (await api.get("/admin/search-vocabulary", auth)).data.vocabulary
+            .revision,
+        ).toBeNull();
+      });
     });
   },
 });

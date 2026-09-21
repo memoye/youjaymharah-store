@@ -380,6 +380,17 @@ export type StoreSearchTrendingType = z.infer<typeof StoreSearchTrending>;
 export default defineMiddlewares({
   routes: [
     {
+      matcher: "/admin/search-vocabulary",
+      method: ["GET"],
+      policies: [{ resource: "storefront_settings", operation: "read" }],
+    },
+    {
+      matcher: "/admin/search-vocabulary",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(UpdateSearchVocabulary)],
+      policies: [{ resource: "storefront_settings", operation: "update" }],
+    },
+    {
       matcher: "/webhooks/resend",
       method: ["POST"],
       bodyParser: { preserveRawBody: true, sizeLimit: "64kb" },

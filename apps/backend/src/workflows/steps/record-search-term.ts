@@ -8,7 +8,6 @@ import type {
 
 import { SEARCH_INSIGHTS_MODULE } from "../../modules/search-insights";
 import type SearchInsightsModuleService from "../../modules/search-insights/service";
-import { approvedSearchTerm } from "../../modules/search-insights/approved-terms";
 
 export type RecordSearchTermInput = {
   term: string;
@@ -19,11 +18,11 @@ export async function recordSearchTerm(
   input: RecordSearchTermInput,
   container: MedusaContainer,
 ) {
-  const term = approvedSearchTerm(input.term);
-  if (!term) return;
   const service: SearchInsightsModuleService = container.resolve(
     SEARCH_INSIGHTS_MODULE,
   );
+  const term = await service.approveTerm(input.term);
+  if (!term) return;
   const locking: ILockingModule = container.resolve(Modules.LOCKING);
   const key = createHash("sha256").update(term).digest("hex");
   await locking.execute(`search-term:${key}`, () =>
