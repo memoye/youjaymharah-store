@@ -35,26 +35,38 @@ export const GET = async (
         "resend_contact_id",
         "sync_pending",
         "sync_attempted_at",
+        "provider_consent_at",
+        "email_suppressed_at",
+        "email_suppression_reason",
         "created_at",
         "updated_at",
       ],
     },
   );
 
-  const [confirmed, pending, syncPending] = await Promise.all([
-    service.listAndCountNewsletterSubscribers(
-      { status: "subscribed" },
-      { select: ["id"], take: 1 },
-    ),
-    service.listAndCountNewsletterSubscribers(
-      { status: "pending" },
-      { select: ["id"], take: 1 },
-    ),
-    service.listAndCountNewsletterSubscribers(
-      { status: ["subscribed", "unsubscribed"], sync_pending: true },
-      { select: ["id"], take: 1 },
-    ),
-  ]);
+  const [confirmed, pending, syncPending, suppressed, webhookPending] =
+    await Promise.all([
+      service.listAndCountNewsletterSubscribers(
+        { status: "subscribed" },
+        { select: ["id"], take: 1 },
+      ),
+      service.listAndCountNewsletterSubscribers(
+        { status: "pending" },
+        { select: ["id"], take: 1 },
+      ),
+      service.listAndCountNewsletterSubscribers(
+        { status: ["subscribed", "unsubscribed"], sync_pending: true },
+        { select: ["id"], take: 1 },
+      ),
+      service.listAndCountNewsletterSubscribers(
+        { email_suppressed_at: { $ne: null } },
+        { select: ["id"], take: 1 },
+      ),
+      service.listAndCountResendWebhookEvents(
+        { processed_at: null },
+        { select: ["id"], take: 1 },
+      ),
+    ]);
   res.json({
     subscribers,
     count,
@@ -64,6 +76,8 @@ export const GET = async (
       confirmed: confirmed[1],
       pending: pending[1],
       sync_pending: syncPending[1],
+      suppressed: suppressed[1],
+      webhook_pending: webhookPending[1],
     },
   });
 };

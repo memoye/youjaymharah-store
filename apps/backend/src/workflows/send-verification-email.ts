@@ -2,11 +2,12 @@ import {
   createWorkflow,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk";
+import { sendPreparedEmailStep } from "./steps/send-prepared-email";
 
 import {
-  sendVerificationEmailStep,
+  prepareVerificationEmailStep,
   type SendVerificationEmailInput,
-} from "./steps/send-verification-email";
+} from "./steps/prepare-verification-email";
 
 /**
  * Runs on auth.verification_requested through the subscriber, i.e. when the
@@ -16,8 +17,8 @@ import {
 export const sendVerificationEmailWorkflow = createWorkflow(
   "send-verification-email",
   function (input: SendVerificationEmailInput) {
-    const result = sendVerificationEmailStep(input);
-
-    return new WorkflowResponse(result);
+    const prepared = prepareVerificationEmailStep(input);
+    sendPreparedEmailStep(prepared.notification);
+    return new WorkflowResponse(prepared.result);
   },
 );

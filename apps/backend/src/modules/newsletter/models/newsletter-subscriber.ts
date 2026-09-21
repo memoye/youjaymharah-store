@@ -26,6 +26,11 @@ export const NewsletterSubscriber = model
     resend_contact_id: model.text().nullable(),
     sync_pending: model.boolean().default(true),
     sync_attempted_at: model.dateTime().nullable(),
+    provider_consent_at: model.dateTime().nullable(),
+    email_suppressed_at: model.dateTime().nullable(),
+    email_suppression_reason: model
+      .enum(["hard_bounce", "complaint", "provider_suppression"])
+      .nullable(),
   })
   .indexes([
     { on: ["email"], unique: true, where: "deleted_at IS NULL" },

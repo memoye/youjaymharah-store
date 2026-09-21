@@ -113,6 +113,8 @@ function toSchema(schema: z.ZodType, io: "input" | "output") {
 
 function securityFor(auth: RouteDoc["auth"]) {
   switch (auth) {
+    case "webhook":
+      return [{ resendWebhookSignature: [] }];
     case "admin":
       // Either an admin bearer token or the dashboard's session cookie.
       return [{ adminJwt: [] }, { adminSession: [] }];
@@ -165,12 +167,14 @@ function operationFor(route: RouteDoc) {
         ]
       : route.auth === "customer"
         ? [{ status: 401, description: "No customer is logged in." }]
-        : [
-            {
-              status: 400,
-              description: "Missing or invalid publishable API key.",
-            },
-          ];
+        : route.auth === "webhook"
+          ? []
+          : [
+              {
+                status: 400,
+                description: "Missing or invalid publishable API key.",
+              },
+            ];
 
   const listed = new Set((route.errors ?? []).map((e) => e.status));
 
@@ -267,6 +271,13 @@ function buildSpec() {
     paths,
     components: {
       securitySchemes: {
+        resendWebhookSignature: {
+          type: "apiKey",
+          in: "header",
+          name: "svix-signature",
+          description:
+            "Resend signature over the original body, accompanied by svix-id and svix-timestamp. Verified with the webhook signing secret.",
+        },
         publishableKey: {
           type: "apiKey",
           in: "header",

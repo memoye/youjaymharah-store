@@ -1,15 +1,17 @@
-import type { INotificationModuleService } from "@medusajs/framework/types";
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
+import type { PreparedEmail } from "./send-prepared-email";
 import type { OrderUpdateSummary } from "../../modules/resend/emails/order-updated";
 
 export type SendOrderUpdatedEmailInput = {
   /** order-edit.confirmed's `order_id`. */
   order_id: string;
+  action_ids: string[];
 };
 
 export type SendOrderUpdatedEmailOutput = {
@@ -17,21 +19,26 @@ export type SendOrderUpdatedEmailOutput = {
   sent_to: string | null;
 };
 
-export const sendOrderUpdatedEmailStep = createStep(
+export const prepareOrderUpdatedEmailStep = createStep(
   {
-    name: "send-order-updated-email",
-    // Transient Resend/network failures are retried by the workflow engine.
-    // Permanent conditions below use StepResponse.permanentFailure instead.
+    name: "prepare-order-updated-email",
     maxRetries: 5,
     retryInterval: 15,
   },
   async (input: SendOrderUpdatedEmailInput, { container }) => {
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
     const query = container.resolve(ContainerRegistrationKeys.QUERY);
-    const notificationModuleService: INotificationModuleService =
-      container.resolve(Modules.NOTIFICATION);
     const brandingModuleService: BrandingModuleService =
       container.resolve(BRANDING_MODULE);
+
+    if (
+      !input.action_ids?.length ||
+      input.action_ids.some((id) => typeof id !== "string" || !id)
+    ) {
+      return StepResponse.permanentFailure(
+        "send-order-updated-email: missing stable edit action IDs.",
+      );
+    }
 
     const {
       data: [order],
@@ -70,9 +77,12 @@ export const sendOrderUpdatedEmailStep = createStep(
       logger.info(
         `send-order-updated-email: order ${order.id} has no email or has notifications off; skipping.`,
       );
-      return new StepResponse<SendOrderUpdatedEmailOutput>({
-        order_id: order.id,
-        sent_to: null,
+      return new StepResponse<PreparedEmail<SendOrderUpdatedEmailOutput>>({
+        notification: null,
+        result: {
+          order_id: order.id,
+          sent_to: null,
+        },
       });
     }
 
@@ -91,21 +101,24 @@ export const sendOrderUpdatedEmailStep = createStep(
 
     const brand = await brandingModuleService.retrieveSettings();
 
-    // Deliberately not caught: a throw is what schedules the retry.
-    await notificationModuleService.createNotifications({
-      to: recipient,
-      channel: "email",
-      template: EmailTemplates.ORDER_UPDATED,
-      data: { order, update, brand },
-    });
-
-    logger.info(
-      `send-order-updated-email: order update email sent to ${recipient} for order #${order.display_id}.`,
-    );
-
-    return new StepResponse<SendOrderUpdatedEmailOutput>({
-      order_id: order.id,
-      sent_to: recipient,
+    return new StepResponse<PreparedEmail<SendOrderUpdatedEmailOutput>>({
+      notification: {
+        to: recipient,
+        channel: "email",
+        template: EmailTemplates.ORDER_UPDATED,
+        ...emailIdempotency(
+          JSON.stringify([
+            "order-updated",
+            order.id,
+            [...new Set(input.action_ids)].sort(),
+          ]),
+        ),
+        data: { order, update, brand },
+      },
+      result: {
+        order_id: order.id,
+        sent_to: recipient,
+      },
     });
   },
 );

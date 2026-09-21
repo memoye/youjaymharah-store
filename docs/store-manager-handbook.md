@@ -45,6 +45,8 @@ The store manager can't do these; whoever deploys must.
    verified in Resend. Every email depends on it: order confirmation,
    shipping, delivery, changes and cancellation; returns, exchanges, claims and
    refunds; email verification and password resets; and team invites.
+   Configure the [Resend webhook](resend-webhooks.md) and its separate signing
+   secret so provider unsubscribes and delivery problems reach the store.
 
 See [Security and reliability](security-and-reliability.md) for deployment
 checks, test coverage, remaining dependency advisories, and operational limits.
@@ -135,6 +137,11 @@ Work through these in order; each relies on the ones before it.
    five minutes; a persistent backlog needs a developer to check the selected
    audience and API credentials. Before sending campaigns, have the developer
    verify that Resend-originated unsubscribes are reflected in store consent.
+   **Delivery blocks** counts addresses blocked after a hard bounce, spam
+   complaint or provider suppression. This is separate from consent: do not
+   sign someone up again to bypass a block; ask a developer to review it.
+   **Webhook processing** counts received provider updates still being
+   processed. Recovery runs every minute; report a persistent backlog.
 10. **Run one real test order end to end.** Buy a cheap item on the live site
     through Paystack; confirm the order, the captured payment and the
     confirmation email; fulfil, ship with tracking (check the shipping email),
@@ -402,6 +409,13 @@ Customers and guest orders are under `Customers`. Use groups (VIP, stylists,
 staff) to target promotions and price lists. Export orders and products to CSV
 for bookkeeping. If a customer never received an email, a Super Admin can
 check `Settings › Workflows` for the failed send.
+
+Email retries reuse the same prepared message. A new password-reset link,
+renewed invitation, partial refund or confirmed order edit is a separate
+message. Verification emails show an expiry time in UTC; requesting a new
+link is safer than using an old email that arrived late. If a send remains
+failed, ask the developer to review it before repeatedly resending. See
+[Email retry behavior](email-reliability.md) for technical limits.
 
 ## 5. Team roles
 

@@ -37,7 +37,7 @@ import {
  * route file exists that is not listed here (or vice versa).
  */
 
-export type RouteAuth = "public" | "customer" | "admin";
+export type RouteAuth = "public" | "customer" | "admin" | "webhook";
 
 export type RouteDoc = {
   method: "GET" | "POST" | "DELETE";
@@ -87,6 +87,11 @@ const NewsletterSubscriber = z.object({
   resend_contact_id: z.string().nullable(),
   sync_pending: z.boolean(),
   sync_attempted_at: z.string().nullable(),
+  provider_consent_at: z.string().nullable(),
+  email_suppressed_at: z.string().nullable(),
+  email_suppression_reason: z
+    .enum(["hard_bounce", "complaint", "provider_suppression"])
+    .nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -95,6 +100,8 @@ const NewsletterSubscriberStats = z.object({
   confirmed: z.number(),
   pending: z.number(),
   sync_pending: z.number(),
+  suppressed: z.number(),
+  webhook_pending: z.number(),
 });
 
 const ResendAudience = z.object({
@@ -1603,6 +1610,36 @@ export const ROUTES: RouteDoc[] = [
         count: z.number(),
       }),
     },
+  },
+  {
+    method: "POST",
+    path: "/webhooks/resend",
+    tag: "Newsletter",
+    summary: "Receive signed Resend consent and suppression events",
+    description:
+      "Requires svix-id, svix-timestamp, and svix-signature computed over the original request bytes. No publishable key or customer session is used. Supports contact.updated opt-outs, permanent email.bounced, email.complained, email.suppressed and suppression.added. Other events are acknowledged without changing consent. Delivery limit: 64 KiB.",
+    auth: "webhook",
+    body: z.object({
+      type: z.string(),
+      created_at: z.string(),
+      data: z.record(z.string(), z.unknown()),
+    }),
+    response: {
+      description: "Acknowledged after workflow handling; duplicates are safe.",
+      schema: z.object({ received: z.literal(true) }),
+    },
+    errors: [
+      {
+        status: 400,
+        description: "Invalid signature, delivery timestamp or event body.",
+      },
+      { status: 503, description: "Signing secret is not configured." },
+      {
+        status: 500,
+        description:
+          "Processing failed. Retry the delivery; pending receipts are also recovered by a scheduled job.",
+      },
+    ],
   },
   {
     method: "GET",

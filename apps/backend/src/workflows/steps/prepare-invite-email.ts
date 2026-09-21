@@ -1,13 +1,12 @@
-import type {
-  INotificationModuleService,
-  IUserModuleService,
-} from "@medusajs/framework/types";
+import type { IUserModuleService } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
+import type { PreparedEmail } from "./send-prepared-email";
 import { ADMIN_URL } from "../../modules/resend/emails/constants";
 
 export type SendInviteEmailInput = { id: string };
@@ -17,12 +16,9 @@ export type SendInviteEmailOutput = {
   sent_to: string | null;
 };
 
-export const sendInviteEmailStep = createStep(
+export const prepareInviteEmailStep = createStep(
   {
-    name: "send-invite-email",
-    // Transient Resend/network failures are retried by the workflow engine.
-    // Permanent conditions below use StepResponse.permanentFailure instead, so
-    // they fail immediately rather than burning five attempts.
+    name: "prepare-invite-email",
     maxRetries: 5,
     retryInterval: 15,
   },
@@ -31,8 +27,6 @@ export const sendInviteEmailStep = createStep(
     const userModuleService: IUserModuleService = container.resolve(
       Modules.USER,
     );
-    const notificationModuleService: INotificationModuleService =
-      container.resolve(Modules.NOTIFICATION);
     const brandingModuleService: BrandingModuleService =
       container.resolve(BRANDING_MODULE);
 
@@ -49,9 +43,12 @@ export const sendInviteEmailStep = createStep(
       logger.info(
         `send-invite-email: invite ${invite.id} is already accepted.`,
       );
-      return new StepResponse<SendInviteEmailOutput>({
-        invite_id: invite.id,
-        sent_to: null,
+      return new StepResponse<PreparedEmail<SendInviteEmailOutput>>({
+        notification: null,
+        result: {
+          invite_id: invite.id,
+          sent_to: null,
+        },
       });
     }
 
@@ -59,19 +56,20 @@ export const sendInviteEmailStep = createStep(
     const url = `${ADMIN_URL}/app/invite?token=${encodeURIComponent(invite.token)}`;
     const brand = await brandingModuleService.retrieveSettings();
 
-    // Deliberately not caught: a throw is what schedules the retry.
-    await notificationModuleService.createNotifications({
-      to: invite.email,
-      channel: "email",
-      template: EmailTemplates.INVITE_USER,
-      data: { url, email: invite.email, brand },
-    });
-
-    logger.info(`send-invite-email: invite email sent to ${invite.email}.`);
-
-    return new StepResponse<SendInviteEmailOutput>({
-      invite_id: invite.id,
-      sent_to: invite.email,
+    return new StepResponse<PreparedEmail<SendInviteEmailOutput>>({
+      notification: {
+        to: invite.email,
+        channel: "email",
+        template: EmailTemplates.INVITE_USER,
+        ...emailIdempotency(
+          JSON.stringify(["invite", invite.id, invite.email, invite.token]),
+        ),
+        data: { url, email: invite.email, brand },
+      },
+      result: {
+        invite_id: invite.id,
+        sent_to: invite.email,
+      },
     });
   },
 );

@@ -379,6 +379,11 @@ export type StoreSearchTrendingType = z.infer<typeof StoreSearchTrending>;
 export default defineMiddlewares({
   routes: [
     {
+      matcher: "/webhooks/resend",
+      method: ["POST"],
+      bodyParser: { preserveRawBody: true, sizeLimit: "64kb" },
+    },
+    {
       matcher: "/store/newsletter/subscribe",
       method: ["POST"],
       middlewares: [rateLimit("newsletter-signup", 5)],

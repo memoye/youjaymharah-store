@@ -6544,12 +6544,20 @@
                         },
                         "sync_pending": {
                           "type": "number"
+                        },
+                        "suppressed": {
+                          "type": "number"
+                        },
+                        "webhook_pending": {
+                          "type": "number"
                         }
                       },
                       "required": [
                         "confirmed",
                         "pending",
-                        "sync_pending"
+                        "sync_pending",
+                        "suppressed",
+                        "webhook_pending"
                       ],
                       "additionalProperties": false
                     },
@@ -6645,6 +6653,41 @@
                               }
                             ]
                           },
+                          "provider_consent_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "email_suppressed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "email_suppression_reason": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "hard_bounce",
+                                  "complaint",
+                                  "provider_suppression"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "created_at": {
                             "type": "string"
                           },
@@ -6664,6 +6707,9 @@
                           "resend_contact_id",
                           "sync_pending",
                           "sync_attempted_at",
+                          "provider_consent_at",
+                          "email_suppressed_at",
+                          "email_suppression_reason",
                           "created_at",
                           "updated_at"
                         ],
@@ -9280,6 +9326,103 @@
         }
       }
     },
+    "/webhooks/resend": {
+      "post": {
+        "operationId": "postWebhooksResend",
+        "tags": [
+          "Newsletter"
+        ],
+        "summary": "Receive signed Resend consent and suppression events",
+        "description": "Requires svix-id, svix-timestamp, and svix-signature computed over the original request bytes. No publishable key or customer session is used. Supports contact.updated opt-outs, permanent email.bounced, email.complained, email.suppressed and suppression.added. Other events are acknowledged without changing consent. Delivery limit: 64 KiB.",
+        "security": [
+          {
+            "resendWebhookSignature": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "type",
+                  "created_at",
+                  "data"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acknowledged after workflow handling; duplicates are safe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "received": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "received"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid signature, delivery timestamp or event body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Processing failed. Retry the delivery; pending receipts are also recovered by a scheduled job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing secret is not configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/custom": {
       "get": {
         "operationId": "getAdminCustom",
@@ -9364,6 +9507,12 @@
   },
   "components": {
     "securitySchemes": {
+      "resendWebhookSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "svix-signature",
+        "description": "Resend signature over the original body, accompanied by svix-id and svix-timestamp. Verified with the webhook signing secret."
+      },
       "publishableKey": {
         "type": "apiKey",
         "in": "header",

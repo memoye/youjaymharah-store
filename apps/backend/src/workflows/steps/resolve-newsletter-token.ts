@@ -34,7 +34,9 @@ export async function resolveNewsletterToken(
     const [subscriber] = await service.listNewsletterSubscribers(filter);
     if (
       !subscriber ||
-      (input.action === "confirm" && !canConfirm(subscriber, input.token))
+      (input.action === "confirm" &&
+        (subscriber.email_suppressed_at ||
+          !canConfirm(subscriber, input.token)))
     )
       throw invalid();
     const status = input.action === "confirm" ? "subscribed" : "unsubscribed";

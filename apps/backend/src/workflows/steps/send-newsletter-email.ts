@@ -41,6 +41,18 @@ export const sendNewsletterEmailStep = createStep(
     const newsletterModuleService: NewsletterModuleService =
       container.resolve(NEWSLETTER_MODULE);
 
+    const [subscriber] =
+      await newsletterModuleService.listNewsletterSubscribers({
+        email: input.email,
+      });
+    if (
+      !subscriber ||
+      subscriber.email_suppressed_at ||
+      subscriber.status === "unsubscribed" ||
+      subscriber.token !== input.token
+    )
+      return new StepResponse(null);
+
     const [brand, settings] = await Promise.all([
       brandingModuleService.retrieveSettings(),
       newsletterModuleService.retrieveSettings(),

@@ -38,6 +38,8 @@ type SubscriberStats = {
   confirmed: number;
   pending: number;
   sync_pending: number;
+  suppressed: number;
+  webhook_pending: number;
 };
 
 const SETTINGS_KEY = ["newsletter", "settings"];
@@ -131,6 +133,26 @@ const NewsletterSettingsPage = () => {
           <Row
             label="Resend audience"
             value={settings.audience_id ?? "Not selected"}
+          />
+          <Row
+            label="Delivery blocks"
+            value={
+              subscriberError
+                ? "Unable to load delivery status"
+                : !subscriberData
+                  ? "Loading delivery status"
+                  : `${subscriberData.stats.suppressed} blocked by bounces, complaints or provider suppression. Review with a developer; signing up again does not clear a block.`
+            }
+          />
+          <Row
+            label="Webhook processing"
+            value={
+              subscriberError
+                ? "Unable to load webhook status"
+                : !subscriberData
+                  ? "Loading webhook status"
+                  : `${subscriberData.stats.webhook_pending} pending. Automatic recovery runs every minute.`
+            }
           />
           <Row
             label="Opt-in"

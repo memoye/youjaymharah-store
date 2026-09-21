@@ -2,6 +2,7 @@ import { MedusaService } from "@medusajs/framework/utils";
 
 import { NewsletterSettings } from "./models/newsletter-settings";
 import { NewsletterSubscriber } from "./models/newsletter-subscriber";
+import { ResendWebhookEvent } from "./models/resend-webhook-event";
 
 /** The single settings row every newsletter read and write addresses. */
 export const NEWSLETTER_SETTINGS_ID = "newsletter_settings_default";
@@ -12,6 +13,7 @@ export const DEFAULT_CONSENT_TEXT =
 class NewsletterModuleService extends MedusaService({
   NewsletterSubscriber,
   NewsletterSettings,
+  ResendWebhookEvent,
 }) {
   /**
    * Returns settings, creating them on first access so the admin page never

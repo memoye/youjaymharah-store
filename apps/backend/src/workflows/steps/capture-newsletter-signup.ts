@@ -36,7 +36,12 @@ export async function captureNewsletterSignup(
       existing?.consent_at &&
       now.getTime() - new Date(existing.consent_at).getTime() <
         SIGNUP_COOLDOWN_MS;
-    if (existing && (existing.status === "subscribed" || coolingDown)) {
+    if (
+      existing &&
+      (existing.status === "subscribed" ||
+        existing.email_suppressed_at ||
+        coolingDown)
+    ) {
       return {
         id: existing.id,
         email,

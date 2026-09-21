@@ -33,6 +33,9 @@ export type NewsletterSubscriber = {
   resend_contact_id: string | null;
   sync_pending: boolean;
   sync_attempted_at: string | null;
+  provider_consent_at: string | null;
+  email_suppressed_at: string | null;
+  email_suppression_reason: "hard_bounce" | "complaint" | "provider_suppression" | null;
   created_at: string;
   updated_at: string;
 };
@@ -136,6 +139,8 @@ export type AdminNewsletterSubscribersResponse = {
     confirmed: number;
     pending: number;
     sync_pending: number;
+    suppressed: number;
+    webhook_pending: number;
   };
   subscribers: {
     id: string;
@@ -149,6 +154,9 @@ export type AdminNewsletterSubscribersResponse = {
     resend_contact_id: string | null;
     sync_pending: boolean;
     sync_attempted_at: string | null;
+    provider_consent_at: string | null;
+    email_suppressed_at: string | null;
+    email_suppression_reason: "hard_bounce" | "complaint" | "provider_suppression" | null;
     created_at: string;
     updated_at: string;
   }[];

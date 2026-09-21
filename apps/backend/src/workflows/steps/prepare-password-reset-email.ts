@@ -1,10 +1,10 @@
-import type { INotificationModuleService } from "@medusajs/framework/types";
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 
 import { BRANDING_MODULE } from "../../modules/branding";
 import type BrandingModuleService from "../../modules/branding/service";
 import { EmailTemplates } from "../../modules/resend/emails";
+import { emailIdempotency } from "../../modules/resend/idempotency";
+import type { PreparedEmail } from "./send-prepared-email";
 import {
   ADMIN_URL,
   STOREFRONT_URL,
@@ -21,18 +21,13 @@ export type SendPasswordResetEmailOutput = {
   actor_type: string;
 };
 
-export const sendPasswordResetEmailStep = createStep(
+export const preparePasswordResetEmailStep = createStep(
   {
-    name: "send-password-reset-email",
-    // A lost reset email locks someone out with no recourse but to start over,
-    // so this is the send most worth retrying.
+    name: "prepare-password-reset-email",
     maxRetries: 5,
     retryInterval: 15,
   },
   async (input: SendPasswordResetEmailInput, { container }) => {
-    const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-    const notificationModuleService: INotificationModuleService =
-      container.resolve(Modules.NOTIFICATION);
     const brandingModuleService: BrandingModuleService =
       container.resolve(BRANDING_MODULE);
 
@@ -55,21 +50,25 @@ export const sendPasswordResetEmailStep = createStep(
 
     const brand = await brandingModuleService.retrieveSettings();
 
-    // Deliberately not caught: a throw is what schedules the retry.
-    await notificationModuleService.createNotifications({
-      to: input.email,
-      channel: "email",
-      template: EmailTemplates.PASSWORD_RESET,
-      data: { url, email: input.email, brand },
-    });
-
-    logger.info(
-      `send-password-reset-email: reset email sent to ${input.email} (${input.actor_type}).`,
-    );
-
-    return new StepResponse<SendPasswordResetEmailOutput>({
-      sent_to: input.email,
-      actor_type: input.actor_type,
+    return new StepResponse<PreparedEmail<SendPasswordResetEmailOutput>>({
+      notification: {
+        to: input.email,
+        channel: "email",
+        template: EmailTemplates.PASSWORD_RESET,
+        ...emailIdempotency(
+          JSON.stringify([
+            "password-reset",
+            input.actor_type,
+            input.email,
+            input.token,
+          ]),
+        ),
+        data: { url, email: input.email, brand },
+      },
+      result: {
+        sent_to: input.email,
+        actor_type: input.actor_type,
+      },
     });
   },
 );

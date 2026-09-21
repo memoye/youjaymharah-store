@@ -35,6 +35,15 @@ export async function syncNewsletterContact(
       id: found.id,
     });
     if (!subscriber?.sync_pending || subscriber.status === "pending") return;
+    if (
+      subscriber.email_suppressed_at &&
+      subscriber.status !== "unsubscribed"
+    ) {
+      await service.updateNewsletterSubscribers([
+        { id: subscriber.id, sync_pending: false },
+      ]);
+      return;
+    }
     await service.updateNewsletterSubscribers([
       { id: subscriber.id, sync_attempted_at: new Date() },
     ]);

@@ -6,7 +6,11 @@ import { sendOrderUpdatedEmailWorkflow } from "../workflows/send-order-updated-e
 export default async function orderEditConfirmedHandler({
   event: { data, name: eventName },
   container,
-}: SubscriberArgs<{ order_id: string; no_notification?: boolean }>) {
+}: SubscriberArgs<{
+  order_id: string;
+  actions: { id: string }[];
+  no_notification?: boolean;
+}>) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
 
   // The admin's "Send notification" switch on an order edit is stored on the
@@ -21,7 +25,10 @@ export default async function orderEditConfirmedHandler({
   // Fire-and-forget: the workflow engine owns delivery and retries from here.
   try {
     await sendOrderUpdatedEmailWorkflow(container).run({
-      input: { order_id: data.order_id },
+      input: {
+        order_id: data.order_id,
+        action_ids: data.actions?.map((action) => action.id) ?? [],
+      },
     });
   } catch (error) {
     logger.warn(

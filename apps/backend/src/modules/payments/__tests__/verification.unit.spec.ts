@@ -160,4 +160,53 @@ describe("verified payments", () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(result.data?.currency_code).toBe("USD");
   });
+
+  it("accepts a signed Paystack event using the original bytes and major-unit amount", async () => {
+    const data = {
+      event: "charge.success",
+      data: { ...good, metadata: { session_id: session.session_id } },
+    };
+    const rawData = JSON.stringify(data);
+    const headers = {
+      "x-paystack-signature": createHmac("sha512", "test")
+        .update(rawData)
+        .digest("hex"),
+    };
+    const result = await paystack().getWebhookActionAndData({
+      data,
+      rawData: Buffer.from(rawData),
+      headers,
+    });
+    expect(result.action).toBe("captured");
+    expect(result.data?.session_id).toBe(session.session_id);
+    expect(Number(result.data?.amount)).toBe(10000);
+    expect(
+      (
+        await paystack().getWebhookActionAndData({
+          data,
+          rawData: rawData + " ",
+          headers,
+        })
+      ).action,
+    ).toBe("failed");
+  });
+
+  it.each([{}, { "x-paystack-signature": "not-a-signature" }])(
+    "rejects unsigned or malformed Paystack signatures: %j",
+    async (headers) => {
+      const data = {
+        event: "charge.success",
+        data: { ...good, metadata: { session_id: session.session_id } },
+      };
+      expect(
+        (
+          await paystack().getWebhookActionAndData({
+            data,
+            rawData: JSON.stringify(data),
+            headers,
+          })
+        ).action,
+      ).toBe("failed");
+    },
+  );
 });

@@ -10,6 +10,7 @@ export type EmailVerificationEmailProps = {
   email?: string;
   /** How long the link stays valid, for the copy only. */
   expires_in?: string;
+  expires_at?: string;
   /** Live store branding, supplied by the sending step. */
   brand?: BrandSummary;
 };
@@ -18,6 +19,7 @@ function EmailVerificationEmailComponent({
   url,
   email,
   expires_in,
+  expires_at,
   brand,
 }: EmailVerificationEmailProps) {
   const storeName = brand?.name || STORE_NAME;
@@ -44,9 +46,11 @@ function EmailVerificationEmailComponent({
         </Section>
 
         <Text className="text-gray-600">
-          {expires_in
-            ? `This link expires in ${expires_in}.`
-            : "This link expires shortly for your security."}{" "}
+          {expires_at
+            ? `This link expires at ${new Date(expires_at).toUTCString()}.`
+            : expires_in
+              ? `This link expires in ${expires_in}.`
+              : "This link expires shortly for your security."}{" "}
           If the button does not work, paste this address into your browser:
         </Text>
         <Text className="text-sm break-all text-blue-600">{url}</Text>

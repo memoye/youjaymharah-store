@@ -2,11 +2,12 @@ import {
   createWorkflow,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk";
+import { sendPreparedEmailStep } from "./steps/send-prepared-email";
 
 import {
-  sendPasswordResetEmailStep,
+  preparePasswordResetEmailStep,
   type SendPasswordResetEmailInput,
-} from "./steps/send-password-reset-email";
+} from "./steps/prepare-password-reset-email";
 
 /**
  * Runs on auth.password_reset through the subscriber. The workflow engine owns
@@ -16,8 +17,8 @@ import {
 export const sendPasswordResetEmailWorkflow = createWorkflow(
   "send-password-reset-email",
   function (input: SendPasswordResetEmailInput) {
-    const result = sendPasswordResetEmailStep(input);
-
-    return new WorkflowResponse(result);
+    const prepared = preparePasswordResetEmailStep(input);
+    sendPreparedEmailStep(prepared.notification);
+    return new WorkflowResponse(prepared.result);
   },
 );

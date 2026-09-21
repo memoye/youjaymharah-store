@@ -2,11 +2,12 @@ import {
   createWorkflow,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk";
+import { sendPreparedEmailStep } from "./steps/send-prepared-email";
 
 import {
-  sendInviteEmailStep,
+  prepareInviteEmailStep,
   type SendInviteEmailInput,
-} from "./steps/send-invite-email";
+} from "./steps/prepare-invite-email";
 
 /**
  * Runs on invite.created and invite.resent through the subscriber. Keeping the
@@ -17,8 +18,8 @@ import {
 export const sendInviteEmailWorkflow = createWorkflow(
   "send-invite-email",
   function (input: SendInviteEmailInput) {
-    const result = sendInviteEmailStep(input);
-
-    return new WorkflowResponse(result);
+    const prepared = prepareInviteEmailStep(input);
+    sendPreparedEmailStep(prepared.notification);
+    return new WorkflowResponse(prepared.result);
   },
 );

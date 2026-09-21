@@ -30,7 +30,11 @@ export class ResendAudienceClient {
 
   async addContact(args: { audienceId: string; email: string }) {
     const existing = await this.client.contacts.get({ email: args.email });
-    if (existing.error && existing.error.statusCode !== 404) {
+    if (
+      existing.error &&
+      existing.error.statusCode !== 404 &&
+      existing.error.name !== "not_found"
+    ) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         "Could not check the Resend contact's subscription state.",
@@ -81,7 +85,7 @@ export class ResendAudienceClient {
       unsubscribed: true,
     });
 
-    if (error && error.statusCode !== 404) {
+    if (error && error.statusCode !== 404 && error.name !== "not_found") {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         `Could not unsubscribe ${args.email} in Resend: ${error.message}`,

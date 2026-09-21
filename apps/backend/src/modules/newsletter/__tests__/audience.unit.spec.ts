@@ -5,6 +5,44 @@ afterEach(() => {
   global.fetch = originalFetch;
 });
 
+it("creates a new contact when the SDK returns not_found without statusCode", async () => {
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ name: "not_found", message: "Contact not found" }),
+        { status: 404 },
+      ),
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify({ id: "new-contact" })));
+  expect(
+    await new ResendAudienceClient("re_test").addContact({
+      email: "buyer@example.com",
+      audienceId: "segment",
+    }),
+  ).toBe("new-contact");
+  expect(JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body)).toEqual(
+    { email: "buyer@example.com", segments: [{ id: "segment" }] },
+  );
+});
+
+it("treats unsubscribing an absent contact as already complete", async () => {
+  global.fetch = jest
+    .fn()
+    .mockResolvedValue(
+      new Response(
+        JSON.stringify({ name: "not_found", message: "Contact not found" }),
+        { status: 404 },
+      ),
+    );
+  await expect(
+    new ResendAudienceClient("re_test").unsubscribeContact({
+      email: "buyer@example.com",
+      audienceId: "segment",
+    }),
+  ).resolves.toBeUndefined();
+});
+
 it("does not re-enable an externally unsubscribed contact", async () => {
   global.fetch = jest
     .fn()

@@ -1,0 +1,111 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils";
+import { createUsersWorkflow } from "@medusajs/medusa/core-flows";
+import { Modules } from "@medusajs/framework/utils";
+import { provisionRbacRoles } from "../../src/lib/rbac-roles";
+import { NEWSLETTER_MODULE } from "../../src/modules/newsletter";
+import type NewsletterModuleService from "../../src/modules/newsletter/service";
+import { requireIsolatedDatabase } from "../helpers/isolated-database";
+
+requireIsolatedDatabase();
+jest.setTimeout(120_000);
+
+medusaIntegrationTestRunner({
+  inApp: true,
+  dbName: "medusa-admin-permissions-integration",
+  testSuite: ({ api, getContainer }) => {
+    describe("custom admin API permissions", () => {
+      beforeEach(async () => {
+        await provisionRbacRoles(getContainer());
+      });
+
+      async function login(role: string | null) {
+        const container = getContainer();
+        const email = `${role ?? "roleless"}@example.com`;
+        const password = "isolated-test-password-only";
+        const { result: users } = await createUsersWorkflow(container).run({
+          input: { users: [{ email, roles: role ? [role] : [] }] },
+        });
+        const auth = container.resolve(Modules.AUTH);
+        const { authIdentity, error } = await auth.register("emailpass", {
+          body: { email, password },
+        });
+        if (error || !authIdentity)
+          throw new Error("Could not register test identity");
+        await auth.updateAuthIdentities({
+          id: authIdentity.id,
+          app_metadata: { user_id: users[0].id },
+        });
+        const { data } = await api.post("/auth/user/emailpass", {
+          email,
+          password,
+        });
+        return { headers: { Authorization: `Bearer ${data.token}` } };
+      }
+
+      it("allows Marketing newsletter management but denies branding writes and customer data", async () => {
+        const auth = await login("role_marketing");
+        expect((await api.get("/admin/newsletter/settings", auth)).status).toBe(
+          200,
+        );
+        expect(
+          (
+            await api.post(
+              "/admin/newsletter/settings",
+              { enabled: false },
+              auth,
+            )
+          ).status,
+        ).toBe(200);
+        await expect(
+          api.post("/admin/branding", { name: "Unauthorized" }, auth),
+        ).rejects.toMatchObject({ response: { status: 403 } });
+        await expect(api.get("/admin/customers", auth)).rejects.toMatchObject({
+          response: { status: 403 },
+        });
+        await expect(api.get("/admin/orders", auth)).rejects.toMatchObject({
+          response: { status: 403 },
+        });
+      });
+
+      it("denies Support newsletter access and storefront-settings writes", async () => {
+        const auth = await login("role_support");
+        await expect(
+          api.get("/admin/newsletter/subscribers", auth),
+        ).rejects.toMatchObject({ response: { status: 403 } });
+        await expect(
+          api.post("/admin/storefront-settings", {}, auth),
+        ).rejects.toMatchObject({ response: { status: 403 } });
+      });
+
+      it("does not grant a logged-in roleless user protected settings access", async () => {
+        const auth = await login(null);
+        await expect(
+          api.get("/admin/newsletter/settings", auth),
+        ).rejects.toMatchObject({ response: { status: 403 } });
+      });
+
+      it("returns a bounded subscriber list without consent credentials", async () => {
+        const service: NewsletterModuleService =
+          getContainer().resolve(NEWSLETTER_MODULE);
+        await service.createNewsletterSubscribers([
+          {
+            email: "subscriber@example.com",
+            token: "private-unsubscribe-token",
+            status: "pending",
+          },
+        ]);
+        const auth = await login("role_marketing");
+        const { data } = await api.get(
+          "/admin/newsletter/subscribers?limit=1",
+          auth,
+        );
+        expect(data.subscribers).toHaveLength(1);
+        expect(data.subscribers[0]).not.toHaveProperty("token");
+        expect(JSON.stringify(data)).not.toContain("private-unsubscribe-token");
+        await expect(
+          api.get("/admin/newsletter/subscribers?limit=101", auth),
+        ).rejects.toMatchObject({ response: { status: 400 } });
+      });
+    });
+  },
+});
