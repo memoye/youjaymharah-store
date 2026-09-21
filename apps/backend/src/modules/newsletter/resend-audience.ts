@@ -29,9 +29,34 @@ export class ResendAudienceClient {
   }
 
   async addContact(args: { audienceId: string; email: string }) {
+    const existing = await this.client.contacts.get({ email: args.email });
+    if (existing.error && existing.error.statusCode !== 404) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        "Could not check the Resend contact's subscription state.",
+      );
+    }
+    if (existing.data?.unsubscribed) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Contact is unsubscribed in Resend. Review renewed consent before resubscribing there.",
+      );
+    }
+    if (existing.data?.id) {
+      const { error } = await this.client.contacts.segments.add({
+        contactId: existing.data.id,
+        segmentId: args.audienceId,
+      });
+      if (error) {
+        throw new MedusaError(
+          MedusaError.Types.UNEXPECTED_STATE,
+          "Could not add the existing contact to the Resend segment.",
+        );
+      }
+      return existing.data.id;
+    }
     const { data, error } = await this.client.contacts.create({
       email: args.email,
-      unsubscribed: false,
       segments: [{ id: args.audienceId }],
     });
 

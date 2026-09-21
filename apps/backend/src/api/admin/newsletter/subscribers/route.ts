@@ -42,9 +42,28 @@ export const GET = async (
   );
 
   const [confirmed, pending, syncPending] = await Promise.all([
-    service.listAndCountNewsletterSubscribers({ status: "subscribed" }, { select: ["id"], take: 1 }),
-    service.listAndCountNewsletterSubscribers({ status: "pending" }, { select: ["id"], take: 1 }),
-    service.listAndCountNewsletterSubscribers({ status: ["subscribed", "unsubscribed"], sync_pending: true }, { select: ["id"], take: 1 }),
+    service.listAndCountNewsletterSubscribers(
+      { status: "subscribed" },
+      { select: ["id"], take: 1 },
+    ),
+    service.listAndCountNewsletterSubscribers(
+      { status: "pending" },
+      { select: ["id"], take: 1 },
+    ),
+    service.listAndCountNewsletterSubscribers(
+      { status: ["subscribed", "unsubscribed"], sync_pending: true },
+      { select: ["id"], take: 1 },
+    ),
   ]);
-  res.json({ subscribers, count, limit, offset, stats: { confirmed: confirmed[1], pending: pending[1], sync_pending: syncPending[1] } });
+  res.json({
+    subscribers,
+    count,
+    limit,
+    offset,
+    stats: {
+      confirmed: confirmed[1],
+      pending: pending[1],
+      sync_pending: syncPending[1],
+    },
+  });
 };

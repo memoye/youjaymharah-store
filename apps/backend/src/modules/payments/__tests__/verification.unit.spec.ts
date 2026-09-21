@@ -98,17 +98,54 @@ describe("verified payments", () => {
       "does not match",
     );
   });
-  it.each([1, 2])("does not authorize a refunded Credo transaction (status %s)", async (status) => {
-    gatewayResponse({ status, transAmount: 1000000, currencyCode: "NGN", businessRef: "ref123" });
-    expect((await credo().authorizePayment({ data: session })).status).toBe("canceled");
-  });
+  it.each([1, 2])(
+    "does not authorize a refunded Credo transaction (status %s)",
+    async (status) => {
+      gatewayResponse({
+        status,
+        transAmount: 1000000,
+        currencyCode: "NGN",
+        businessRef: "ref123",
+      });
+      expect((await credo().authorizePayment({ data: session })).status).toBe(
+        "canceled",
+      );
+    },
+  );
   it("validates a Credo body signature and rejects tampered payloads", async () => {
-    const data = { event: "transaction.successful", data: { status: 0, transAmount: 1000000, currencyCode: "NGN", metadata: { customFields: [{ variable_name: "medusa_session_id", value: "payses_123" }] } } };
+    const data = {
+      event: "transaction.successful",
+      data: {
+        status: 0,
+        transAmount: 1000000,
+        currencyCode: "NGN",
+        metadata: {
+          customFields: [
+            { variable_name: "medusa_session_id", value: "payses_123" },
+          ],
+        },
+      },
+    };
     const rawData = JSON.stringify(data);
-    const signature = createHmac("sha512", "test").update(rawData).digest("hex");
-    const payload = { data, rawData, headers: { "credo-signature": signature } };
-    expect((await credo().getWebhookActionAndData(payload)).action).toBe("captured");
-    expect((await credo().getWebhookActionAndData({ ...payload, rawData: `${rawData} ` })).action).toBe("failed");
+    const signature = createHmac("sha512", "test")
+      .update(rawData)
+      .digest("hex");
+    const payload = {
+      data,
+      rawData,
+      headers: { "credo-signature": signature },
+    };
+    expect((await credo().getWebhookActionAndData(payload)).action).toBe(
+      "captured",
+    );
+    expect(
+      (
+        await credo().getWebhookActionAndData({
+          ...payload,
+          rawData: `${rawData} `,
+        })
+      ).action,
+    ).toBe("failed");
   });
   it("reinitializes on a currency-only change", async () => {
     gatewayResponse({

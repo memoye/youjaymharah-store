@@ -2,7 +2,9 @@ import type { Logger } from "@medusajs/framework/types";
 import ResendNotificationProviderService from "../service";
 import { emailIdempotency } from "../idempotency";
 
-jest.mock("../emails", () => ({ resolveEmailTemplate: jest.fn(() => undefined) }));
+jest.mock("../emails", () => ({
+  resolveEmailTemplate: jest.fn(() => undefined),
+}));
 
 const originalFetch = global.fetch;
 afterEach(() => {

@@ -91,7 +91,11 @@ const NewsletterSubscriber = z.object({
   updated_at: z.string(),
 });
 
-const NewsletterSubscriberStats = z.object({ confirmed: z.number(), pending: z.number(), sync_pending: z.number() });
+const NewsletterSubscriberStats = z.object({
+  confirmed: z.number(),
+  pending: z.number(),
+  sync_pending: z.number(),
+});
 
 const ResendAudience = z.object({
   id: z.string(),

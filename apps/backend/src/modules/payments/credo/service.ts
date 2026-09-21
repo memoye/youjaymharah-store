@@ -149,7 +149,12 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
 
     const body = (payload.data ?? {}) as Record<string, unknown>;
     const data = (body.data ?? body) as Record<string, unknown>;
-    if (body.event && !["transaction.successful", "transaction.failed"].includes(String(body.event))) {
+    if (
+      body.event &&
+      !["transaction.successful", "transaction.failed"].includes(
+        String(body.event),
+      )
+    ) {
       return { action: "not_supported" };
     }
     const state = normalizeStatus(data.status);
@@ -166,25 +171,32 @@ class CredoPaymentProvider extends RedirectPaymentProvider<CredoOptions> {
   }
 
   /**
-   * Credo signs webhooks with SHA-512 over the webhook token concatenated with
-   * the business code. Both are configuration, not per-request values, so this
-   * is a shared-secret check rather than a body signature — it proves the caller
-   * is Credo but not that the body is untampered. `verifyTransaction` is what
-   * actually decides whether money moved.
+   * Credo documents both body HMACs and a legacy shared-secret header.
+   * Legacy acceptance requires explicit token/business-code configuration;
+   * an invalid body HMAC must never fall back to that weaker check.
    */
   private assertSignature(payload: ProviderWebhookPayload["payload"]): void {
     const hmacSignature = payload.headers?.["credo-signature"];
     if (typeof hmacSignature === "string") {
       if (!payload.rawData) {
-        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Raw webhook body is required.");
+        throw new MedusaError(
+          MedusaError.Types.NOT_ALLOWED,
+          "Raw webhook body is required.",
+        );
       }
       const expected = createHmac("sha512", this.options_.secretKey)
         .update(payload.rawData)
         .digest("hex");
       const actual = Buffer.from(hmacSignature.toLowerCase());
       const signature = Buffer.from(expected);
-      if (actual.length !== signature.length || !timingSafeEqual(actual, signature)) {
-        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Credo webhook signature did not match.");
+      if (
+        actual.length !== signature.length ||
+        !timingSafeEqual(actual, signature)
+      ) {
+        throw new MedusaError(
+          MedusaError.Types.NOT_ALLOWED,
+          "Credo webhook signature did not match.",
+        );
       }
       return;
     }

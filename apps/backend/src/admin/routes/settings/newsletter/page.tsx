@@ -34,7 +34,11 @@ type NewsletterSettings = {
 
 type Audience = { id: string; name: string };
 
-type SubscriberStats = { confirmed: number; pending: number; sync_pending: number };
+type SubscriberStats = {
+  confirmed: number;
+  pending: number;
+  sync_pending: number;
+};
 
 const SETTINGS_KEY = ["newsletter", "settings"];
 const SUBSCRIBERS_KEY = ["newsletter", "subscribers"];
@@ -104,9 +108,26 @@ const NewsletterSettingsPage = () => {
         <>
           <Row
             label="Subscribers"
-            value={subscriberError ? "Unable to load counts" : !subscriberData ? "Loading counts" : `${confirmed} confirmed${pending ? `, ${pending} awaiting confirmation` : ""}`}
+            value={
+              subscriberError
+                ? "Unable to load counts"
+                : !subscriberData
+                  ? "Loading counts"
+                  : `${confirmed} confirmed${pending ? `, ${pending} awaiting confirmation` : ""}`
+            }
           />
-          <Row label="Contact sync" value={subscriberError ? "Unable to load sync status" : !subscriberData ? "Loading sync status" : subscriberData.stats.sync_pending ? `${subscriberData.stats.sync_pending} waiting to sync. Automatic retries run every five minutes; check the audience and Resend credentials if this persists.` : "No contacts waiting to sync"} />
+          <Row
+            label="Contact sync"
+            value={
+              subscriberError
+                ? "Unable to load sync status"
+                : !subscriberData
+                  ? "Loading sync status"
+                  : subscriberData.stats.sync_pending
+                    ? `${subscriberData.stats.sync_pending} waiting to sync. Automatic retries run every five minutes; check the audience and Resend credentials if this persists.`
+                    : "No contacts waiting to sync"
+            }
+          />
           <Row
             label="Resend audience"
             value={settings.audience_id ?? "Not selected"}

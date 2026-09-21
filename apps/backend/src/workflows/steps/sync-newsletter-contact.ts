@@ -1,5 +1,9 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+  Modules,
+} from "@medusajs/framework/utils";
 import type {
   ILockingModule,
   MedusaContainer,
@@ -58,10 +62,13 @@ export async function syncNewsletterContact(
           sync_pending: false,
         },
       ]);
-    } catch {
+    } catch (error) {
       // The scheduled reconciliation reads this durable flag after an outage or restart.
       logger.error(
-        `newsletter: contact sync failed for subscriber ${subscriber.id}; queued for retry.`,
+        error instanceof MedusaError &&
+          error.type === MedusaError.Types.NOT_ALLOWED
+          ? `newsletter: subscriber ${subscriber.id} is unsubscribed in Resend; renewed consent requires review before resubscribing.`
+          : `newsletter: contact sync failed for subscriber ${subscriber.id}; queued for retry.`,
       );
     }
   });
