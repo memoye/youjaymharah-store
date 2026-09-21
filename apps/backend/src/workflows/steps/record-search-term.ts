@@ -8,7 +8,7 @@ import type {
 
 import { SEARCH_INSIGHTS_MODULE } from "../../modules/search-insights";
 import type SearchInsightsModuleService from "../../modules/search-insights/service";
-import { normaliseTerm } from "../../modules/search-insights/service";
+import { approvedSearchTerm } from "../../modules/search-insights/approved-terms";
 
 export type RecordSearchTermInput = {
   term: string;
@@ -19,7 +19,7 @@ export async function recordSearchTerm(
   input: RecordSearchTermInput,
   container: MedusaContainer,
 ) {
-  const term = normaliseTerm(input.term);
+  const term = approvedSearchTerm(input.term);
   if (!term) return;
   const service: SearchInsightsModuleService = container.resolve(
     SEARCH_INSIGHTS_MODULE,

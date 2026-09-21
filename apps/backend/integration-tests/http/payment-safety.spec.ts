@@ -3,6 +3,11 @@ import { Modules } from "@medusajs/framework/utils";
 import type { IPaymentModuleService } from "@medusajs/framework/types";
 import { requireIsolatedDatabase } from "../helpers/isolated-database";
 import { sendRefundIssuedEmailWorkflow } from "../../src/workflows/send-refund-issued-email";
+import {
+  completeCartWorkflow,
+  createPaymentCollectionForCartWorkflow,
+  createProductsWorkflow,
+} from "@medusajs/medusa/core-flows";
 
 requireIsolatedDatabase();
 jest.setTimeout(120_000);
@@ -25,6 +30,14 @@ medusaIntegrationTestRunner({
           .spyOn(global, "fetch")
           .mockImplementation(async (url, options) => {
             const target = new URL(String(url));
+            if (
+              target.origin === "https://api.resend.com" &&
+              target.pathname === "/emails"
+            ) {
+              return new Response(
+                JSON.stringify({ id: "isolated-checkout-email" }),
+              );
+            }
             if (target.origin !== "https://api.paystack.co")
               throw new Error(
                 "Unexpected external request in isolated payment test",
@@ -78,6 +91,85 @@ medusaIntegrationTestRunner({
         const payment = await service.authorizePaymentSession(pending.id, {});
         if (!payment) throw new Error("Expected an authorized payment");
         return payment;
+      }
+
+      async function checkoutCart() {
+        const container = getContainer();
+        const channel = await container
+          .resolve(Modules.SALES_CHANNEL)
+          .createSalesChannels({ name: "Isolated checkout channel" });
+        const region = await container
+          .resolve(Modules.REGION)
+          .createRegions({
+            name: "Isolated NG region",
+            currency_code: "ngn",
+            countries: ["ng"],
+          });
+        const profile = await container
+          .resolve(Modules.FULFILLMENT)
+          .createShippingProfiles({
+            name: "Isolated checkout profile",
+            type: "default",
+          });
+        const { result: products } = await createProductsWorkflow(
+          container,
+        ).run({
+          input: {
+            products: [
+              {
+                title: "Isolated checkout product",
+                handle: "isolated-checkout-product",
+                status: "published",
+                shipping_profile_id: profile.id,
+                sales_channels: [{ id: channel.id }],
+                options: [{ title: "Size", values: ["One"] }],
+                variants: [
+                  {
+                    title: "One",
+                    manage_inventory: false,
+                    options: { Size: "One" },
+                    prices: [{ currency_code: "ngn", amount: 100 }],
+                  },
+                ],
+              },
+            ],
+          },
+        });
+        const variant = products[0].variants[0];
+        const cart = await container.resolve(Modules.CART).createCarts({
+          currency_code: "ngn",
+          region_id: region.id,
+          sales_channel_id: channel.id,
+          email: "checkout@example.com",
+          shipping_address: {
+            first_name: "Test",
+            last_name: "Buyer",
+            address_1: "Test address",
+            city: "Lagos",
+            country_code: "ng",
+          },
+          items: [
+            {
+              title: "Isolated checkout product",
+              variant_id: variant.id,
+              quantity: 1,
+              unit_price: 100,
+              requires_shipping: false,
+              is_tax_inclusive: false,
+            },
+          ],
+        });
+        const { result: collection } =
+          await createPaymentCollectionForCartWorkflow(container).run({
+            input: { cart_id: cart.id },
+          });
+        await service.createPaymentSession(collection.id, {
+          provider_id: "pp_paystack_paystack",
+          currency_code: "ngn",
+          amount: 100,
+          data: { payer: { email: "checkout@example.com" } },
+        });
+        return { cart, collection };
       }
       function emittedRefunds(spy: jest.SpyInstance) {
         return spy.mock.calls
@@ -200,6 +292,65 @@ medusaIntegrationTestRunner({
             String(url).endsWith("/refund"),
           ),
         ).toHaveLength(1);
+      });
+
+      it("completes a paid cart once, preserving one order, payment and capture on replay", async () => {
+        const { cart, collection } = await checkoutCart();
+        const container = getContainer();
+        const first = await completeCartWorkflow(container).run({
+          input: { id: cart.id },
+        });
+        const second = await completeCartWorkflow(container).run({
+          input: { id: cart.id },
+        });
+        expect(second.result.id).toBe(first.result.id);
+        const { data: links } = await container
+          .resolve("query")
+          .graph({
+            entity: "order_cart",
+            fields: ["order_id", "cart_id"],
+            filters: { cart_id: cart.id },
+          });
+        expect(links).toEqual([
+          expect.objectContaining({
+            order_id: first.result.id,
+            cart_id: cart.id,
+          }),
+        ]);
+        expect(
+          (await container.resolve(Modules.CART).retrieveCart(cart.id))
+            .completed_at,
+        ).not.toBeNull();
+        const paid = await service.retrievePaymentCollection(collection.id, {
+          relations: ["payments", "payments.captures"],
+        });
+        expect(paid.payments).toHaveLength(1);
+        expect(paid.payments?.[0]?.captures).toHaveLength(1);
+        expect(Number(paid.payments?.[0]?.captures?.[0]?.amount)).toBe(100);
+      });
+
+      it("does not leave a completed cart or live order after underpayment fails verification", async () => {
+        const { cart } = await checkoutCart();
+        verification.amount = 1;
+        const container = getContainer();
+        await expect(
+          completeCartWorkflow(container).run({ input: { id: cart.id } }),
+        ).rejects.toThrow("does not match");
+        expect(
+          (await container.resolve(Modules.CART).retrieveCart(cart.id))
+            .completed_at,
+        ).toBeNull();
+        const { data: links } = await container
+          .resolve("query")
+          .graph({
+            entity: "order_cart",
+            fields: ["order_id"],
+            filters: { cart_id: cart.id },
+          });
+        expect(links).toHaveLength(0);
+        expect(
+          await container.resolve(Modules.ORDER).listOrders({}),
+        ).toHaveLength(0);
       });
     });
   },

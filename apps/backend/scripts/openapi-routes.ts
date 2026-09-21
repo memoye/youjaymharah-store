@@ -1568,7 +1568,8 @@ export const ROUTES: RouteDoc[] = [
       },
     ],
     response: {
-      description: "Recent search terms with nonzero latest results.",
+      description:
+        "Reviewed phrases with at least five searches in seven days and current published product matches in the requesting sales channels. Empty when SEARCH_TRENDING_TERMS is unset. No shopper-entered terms outside that list are published.",
       schema: z.object({ terms: z.array(z.string()) }),
     },
   },

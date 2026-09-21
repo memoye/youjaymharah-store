@@ -1,13 +1,10 @@
 import { MedusaService } from "@medusajs/framework/utils";
 
 import { SearchTermStat } from "./models/search-term-stat";
+import { approvedSearchTerm, approvedTrendingTerms } from "./approved-terms";
+export { normaliseTerm } from "./approved-terms";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Longer terms are sentences pasted in, not searches worth trending. */
-const MAX_TERM_LENGTH = 64;
-
-const MIN_TERM_LENGTH = 2;
 
 /** How many day rows one trending read will look at. */
 const READ_LIMIT = 5000;
@@ -15,8 +12,7 @@ const READ_LIMIT = 5000;
 export const TRENDING_DEFAULTS = {
   window_days: 7,
   limit: 6,
-  /** One shopper searching once is not a trend. */
-  min_searches: 2,
+  min_searches: 5,
 } as const;
 
 /** UTC midnight, the bucket a search is counted in. */
@@ -25,36 +21,17 @@ const startOfDay = (date: Date) =>
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
   );
 
-/**
- * Terms to count. Returns null for anything that is not a search worth
- * remembering: too short, too long, an email or URL someone pasted into the
- * box, or a bare number, which is an order lookup rather than a trend.
- */
-export const normaliseTerm = (raw: string): string | null => {
-  const term = raw.toLowerCase().replace(/\s+/g, " ").trim();
-
-  if (term.length < MIN_TERM_LENGTH || term.length > MAX_TERM_LENGTH) {
-    return null;
-  }
-
-  if (term.includes("@") || term.includes("http") || /^[\d\s-]+$/.test(term)) {
-    return null;
-  }
-
-  return term;
-};
-
 class SearchInsightsModuleService extends MedusaService({
   SearchTermStat,
 }) {
   /**
    * Adds one search to today's tally for a term. Ignores terms
-   * `normaliseTerm` rejects, so callers can hand over raw input.
+   * the reviewed vocabulary excludes, including legacy queued input.
    */
   async recordSearch(rawTerm: string, resultCount: number) {
-    const term = normaliseTerm(rawTerm);
+    const term = approvedSearchTerm(rawTerm);
 
-    if (!term) {
+    if (!term || !Number.isSafeInteger(resultCount) || resultCount < 0) {
       return;
     }
 
@@ -111,10 +88,12 @@ class SearchInsightsModuleService extends MedusaService({
     limit?: number;
     min_searches?: number;
   } = {}): Promise<string[]> {
+    const approved = approvedTrendingTerms();
+    if (!approved.length) return [];
     const since = startOfDay(new Date(Date.now() - (window_days - 1) * DAY_MS));
 
     const rows = await this.listSearchTermStats(
-      { day: { $gte: since } },
+      { day: { $gte: since }, term: approved },
       {
         select: ["term", "searches", "last_result_count"],
         take: READ_LIMIT,
@@ -125,6 +104,7 @@ class SearchInsightsModuleService extends MedusaService({
     const totals = new Map<string, { searches: number; results: number }>();
 
     for (const row of rows) {
+      if (!approved.includes(row.term)) continue;
       const running = totals.get(row.term) ?? {
         searches: 0,
         results: row.last_result_count,

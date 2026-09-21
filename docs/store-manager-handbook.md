@@ -335,6 +335,13 @@ leave items in their shopping bag.
 
 ### Search & sharing
 
+The search dropdown's trending phrases come from a reviewed list configured
+by the developer, not arbitrary shopper messages. Ask Marketing or the owner
+to approve ordinary catalogue phrases such as "dresses" and "linen". A phrase
+appears only after five searches in seven days and while it still finds visible
+products. An empty trending list does not mean product search is broken.
+There is no admin editor for this list yet. See [Search privacy](search-privacy.md).
+
 `Settings › Storefront` controls how the store looks in Google and when a link
 is shared on WhatsApp, Instagram or X. Marketing edits **Sharing & search**; the
 store owner edits **Brand**.

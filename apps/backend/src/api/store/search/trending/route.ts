@@ -4,8 +4,7 @@ import type {
 } from "@medusajs/framework/http";
 
 import type { StoreSearchTrendingType } from "../../../middlewares";
-import { SEARCH_INSIGHTS_MODULE } from "../../../../modules/search-insights";
-import type SearchInsightsModuleService from "../../../../modules/search-insights/service";
+import { getTrendingSearchTermsWorkflow } from "../../../../workflows/get-trending-search-terms";
 
 /**
  * What shoppers have been searching for lately, busiest first, for an empty
@@ -19,11 +18,13 @@ export const GET = async (
   req: MedusaStoreRequest<unknown, StoreSearchTrendingType>,
   res: MedusaResponse,
 ) => {
-  const service: SearchInsightsModuleService = req.scope.resolve(
-    SEARCH_INSIGHTS_MODULE,
-  );
-
   const { limit } = req.validatedQuery;
-
-  res.json({ terms: await service.listTrendingTerms({ limit }) });
+  const { result } = await getTrendingSearchTermsWorkflow(req.scope).run({
+    input: {
+      limit,
+      sales_channel_ids: req.publishable_key_context.sales_channel_ids,
+    },
+  });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ terms: result });
 };
