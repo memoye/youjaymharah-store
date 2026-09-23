@@ -55,6 +55,7 @@ const env = {
   ADMIN_PASSWORD: "",
   SEARCH_TRENDING_TERMS: "[]",
   RESEND_API_KEY: "re_migration_test",
+  EMAIL_DELIVERY_ENCRYPTION_KEY: "0123456789abcdef".repeat(4),
   RESEND_FROM_EMAIL: "test@example.com",
   RESEND_WEBHOOK_SECRET: "",
   CREDO_PUBLIC_KEY: "migration_test",

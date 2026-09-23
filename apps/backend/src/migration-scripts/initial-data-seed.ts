@@ -1,8 +1,5 @@
 import { MedusaContainer } from "@medusajs/framework";
-import {
-  ContainerRegistrationKeys,
-  Modules,
-} from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import {
   createApiKeysWorkflow,
   createRegionsWorkflow,

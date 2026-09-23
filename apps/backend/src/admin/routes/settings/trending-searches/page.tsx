@@ -51,12 +51,14 @@ function VocabularyEditor({ vocabulary }: { vocabulary: Vocabulary }) {
       }}
     >
       <div className="bg-ui-bg-subtle rounded-lg border p-4">
-        <Heading level="h2">Approval controls trending, not product search</Heading>
+        <Heading level="h2">
+          Approval controls trending, not product search
+        </Heading>
         <Text size="small">
           Shoppers can search for any phrase, even if it is not on this list.
-          Unapproved phrases still return normal product search results, but
-          are not counted for trending, shown in trending suggestions, or
-          collected into a pending-approval list.
+          Unapproved phrases still return normal product search results, but are
+          not counted for trending, shown in trending suggestions, or collected
+          into a pending-approval list.
         </Text>
         <Text size="small" className="mt-2">
           Removing a phrase stops future trending counts and hides it from

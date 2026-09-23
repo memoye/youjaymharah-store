@@ -19,13 +19,32 @@ rechecked by the subscriber and recording step/service. Stale admin saves are
 rejected; use **Reload latest** and review the new list before saving again.
 
 This is an approval list, not a manual ranking or a list of private searches.
-It does not import customer queries or invent approved terms. Approval does not
+It does not import customer queries or create a pending-approval queue. Approval does not
 bypass popularity thresholds or current product visibility.
 
 Before deploying this editor, run `pnpm exec medusa db:migrate --skip-scripts`
 from `apps/backend` to create `search_vocabulary`. No catalog seed is needed.
 Do not run the new code before its migration or drop that table while the
 new application is running.
+
+## Initial seed
+
+The initial store seed adds 20 common clothing/fabric phrases: `dress`,
+`dresses`, `linen`, `cotton`, `silk`, `wool`, `shirt`, `shirts`, `t-shirt`,
+`top`, `tops`, `trousers`, `skirt`, `skirts`, `blazer`, `coat`, `jacket`,
+`cardigan`, `jumper`, and `jumpsuit`. Review these in the admin editor for your
+catalog. Seeding does not create products, departments, or artificial search
+counts; the normal popularity and product-visibility checks still apply.
+
+Existing stores whose initial seed already ran can use
+`pnpm run seed:search-vocabulary` from `apps/backend` after migrating.
+Do not rerun the whole initial store seed just to add phrases.
+The focused seed never overwrites a saved list, including an intentionally
+empty list, and is safe to rerun. It shares the admin-save lock.
+
+When `SEARCH_TRENDING_TERMS` is explicitly configured, the seed uses that list
+instead of the starter terms; `[]` preserves an intentionally disabled setup.
+Leave the variable blank or unset to use the starter terms on first seed.
 
 ## Initial environment fallback
 
@@ -35,11 +54,11 @@ A developer sets `SEARCH_TRENDING_TERMS` on the backend, for example:
 SEARCH_TRENDING_TERMS='["dresses","linen","bags"]'
 ```
 
-Before the first admin save, restart backend and workers to change this fallback.
-The first admin save makes the database authoritative, even for an empty list;
+Before the first admin save or seed, restart backend and workers to change this fallback.
+The first admin save or seed makes the database authoritative, even for an empty list;
 environment settings cannot re-enable removed phrases. Database errors do not
 fall back to environment settings. Keep the legacy variable valid or remove it;
-startup still validates it. New environments default to an empty vocabulary.
+startup still validates it. Without a seed or environment configuration, the vocabulary is empty.
 
 The fallback accepts up to 100 phrases,
 each 2–64 characters long, using letters, spaces, apostrophes or hyphens.
@@ -51,8 +70,8 @@ the shopper's original query and retains its existing matching behavior.
 Marketing or the store owner should approve the phrases as public catalogue
 language before the developer enables them. Do not add names, contact details,
 order references, private product labels or customer messages. Syntax checks
-cannot decide whether a phrase is personal information. These examples are not
-seeded into the database or enabled automatically.
+cannot decide whether a phrase is personal information. The environment example
+is separate from the starter vocabulary listed above.
 
 ## Collection and visibility
 

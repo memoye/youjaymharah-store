@@ -20,4 +20,21 @@ describe("production infrastructure checks", () => {
       }),
     ).toThrow("JWT_SECRET");
   });
+  it("requires the email snapshot key before starting production", () => {
+    const env = {
+      NODE_ENV: "production",
+      REDIS_URL: "redis://localhost",
+      JWT_SECRET: "j".repeat(32),
+      COOKIE_SECRET: "c".repeat(32),
+    };
+    expect(() => validateProductionEnvironment(env)).toThrow(
+      "EMAIL_DELIVERY_ENCRYPTION_KEY",
+    );
+    expect(() =>
+      validateProductionEnvironment({
+        ...env,
+        EMAIL_DELIVERY_ENCRYPTION_KEY: "ab".repeat(32),
+      }),
+    ).not.toThrow();
+  });
 });

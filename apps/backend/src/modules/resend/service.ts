@@ -4,6 +4,7 @@ import {
 } from "@medusajs/framework/utils";
 import {
   Logger,
+  ILockingModule,
   ProviderSendNotificationDTO,
   ProviderSendNotificationResultsDTO,
 } from "@medusajs/framework/types";
@@ -11,14 +12,21 @@ import { render } from "react-email";
 import { BoundedResend } from "./client";
 
 import { resolveEmailTemplate } from "./emails";
+import type EmailDeliveryModuleService from "../email-delivery/service";
+import { deliverEmail } from "./delivery";
+import { snapshotKey } from "./snapshot";
+import type { CreateEmailOptions } from "resend";
 
 type ResendOptions = {
   api_key: string;
   from: string;
+  encryption_key?: string;
 };
 
 type InjectedDependencies = {
   logger: Logger;
+  emailDelivery: EmailDeliveryModuleService;
+  locking: ILockingModule;
 };
 
 class ResendNotificationProviderService extends AbstractNotificationProviderService {
@@ -26,12 +34,19 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
   private resendClient: BoundedResend;
   private options: ResendOptions;
   private logger: Logger;
+  private deliveries: EmailDeliveryModuleService;
+  private locking: ILockingModule;
 
-  constructor({ logger }: InjectedDependencies, options: ResendOptions) {
+  constructor(
+    { logger, emailDelivery, locking }: InjectedDependencies,
+    options: ResendOptions,
+  ) {
     super();
     this.resendClient = new BoundedResend(options.api_key);
     this.options = options;
     this.logger = logger;
+    this.deliveries = emailDelivery;
+    this.locking = locking;
   }
 
   static validateOptions(options: Record<any, any>) {
@@ -60,6 +75,46 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
       );
     }
 
+    const key = notification.provider_data?.idempotency_key;
+    if (typeof key !== "string" || !/^email:[a-f\d]{64}$/.test(key)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Email requires a stable delivery identity from emailIdempotency.",
+      );
+    }
+    return deliverEmail({
+      service: this.deliveries,
+      locking: this.locking,
+      key,
+      encryptionKey: snapshotKey(this.options.encryption_key),
+      prepare: () => this.prepare(notification),
+      send: async (payload, idempotencyKey) => {
+        try {
+          const { data, error } = await this.resendClient.emails.send(payload, {
+            idempotencyKey,
+          });
+          if (error || typeof data?.id !== "string" || !data.id)
+            throw new MedusaError(
+              MedusaError.Types.UNEXPECTED_STATE,
+              "Provider did not confirm acceptance",
+            );
+          return data.id;
+        } catch {
+          this.logger.error(
+            "Email provider acceptance was not confirmed; delivery retry/review is required.",
+          );
+          throw new MedusaError(
+            MedusaError.Types.UNEXPECTED_STATE,
+            "Email provider acceptance was not confirmed; retry uses the saved delivery snapshot.",
+          );
+        }
+      },
+    });
+  }
+
+  private async prepare(
+    notification: ProviderSendNotificationDTO,
+  ): Promise<CreateEmailOptions> {
     // A React Email template under ./emails wins when the name matches one.
     const resolved = resolveEmailTemplate(
       notification.template,
@@ -88,7 +143,9 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
       subject:
         notification.content?.subject ?? resolved?.subject ?? "Notification",
       attachments: notification.attachments?.map((attachment) => ({
-        content: attachment.content,
+        content: Buffer.isBuffer(attachment.content)
+          ? attachment.content.toString("base64")
+          : attachment.content,
         filename: attachment.filename,
         contentType: attachment.content_type,
         contentId: attachment.id,
@@ -110,35 +167,11 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
 
     // `CreateEmailOptions` requires at least one of react/html/text, so the
     // branches stay separate rather than spreading a possibly-undefined body.
-    const { data, error } = await this.resendClient.emails.send(
-      rendered
-        ? { ...base, ...rendered }
-        : html
-          ? { ...base, html }
-          : { ...base, text: text as string },
-      typeof notification.provider_data?.idempotency_key === "string"
-        ? { idempotencyKey: notification.provider_data.idempotency_key }
-        : undefined,
-    );
-
-    if (error) {
-      // Throwing is what makes a failed send retry: the calling workflow step
-      // fails and runs again per its `maxRetries`/`retryInterval`. With
-      // REDIS_URL set (production), the Redis workflow engine keeps those
-      // retries across restarts and deploys; only local dev on the in-memory
-      // engine loses them. Callers that must not fail on a bad address catch
-      // the error themselves.
-      this.logger.error(
-        `Resend failed to send "${notification.template}" to ${notification.to}: ${error.message}`,
-      );
-
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        `Resend rejected the email: ${error.message}`,
-      );
-    }
-
-    return { id: data?.id };
+    return rendered
+      ? { ...base, ...rendered }
+      : html
+        ? { ...base, html, ...(text ? { text } : {}) }
+        : { ...base, text: text as string };
   }
 }
 

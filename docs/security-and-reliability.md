@@ -12,9 +12,10 @@
 - Newsletter Reply-To no longer replaces the verified sender. Resend requests have a 15-second deadline. Newsletter, initial order/cancellation/shipment/delivery, return, claim, exchange, product-alert, and cart-reminder emails carry stable provider delivery keys.
 - Provider delivery identity is distinct from Medusa notification-attempt identity. Medusa 2.19's failed-key retry path generates a new notification ID without inserting that ID. Reminder/alert retry records therefore retain attempt-specific database keys, while Resend receives a stable key. [Resend deduplication expires after 24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys); this is not an exactly-once guarantee.
 - Password reset, verification, invite, refund and order-edit emails now use event-specific delivery keys and separate preparation from sending. A send retry reuses the prepared recipient, token, branding and data. Refund mail listens to `payment.refund.created` and queries its exact refund ID instead of guessing the newest refund on a payment. Order edits use their action IDs so later edits are not suppressed. See [Email retry behavior](email-reliability.md).
+- Email acceptance receipts now persist beyond Resend's deduplication window. Pending rendered payloads are encrypted; confirmed acceptance clears the payload and blocks later duplicate sends. Uncertain outcomes older than 23 hours require review instead of automatic resend. This does not prove inbox delivery or retroactively deduplicate pre-rollout sends.
 - Cart recovery expires seven days after the last reminder and checks the cart's email and customer ownership. Completed, stopped, recovered, or failed reminders cannot restore a cart. Stop-reminder links do not expire.
 - Search increments are serialized through Medusa's locking module. Trending aggregation uses the newest result count, and persistence failures are no longer silently swallowed. Trending and suggestion routes are included in generated API documentation.
-- Trending collection and publication now require an explicitly reviewed vocabulary managed in **Settings > Trending searches**. `SEARCH_TRENDING_TERMS` is only an initial fallback before the first admin save; the default is empty. Unapproved text is filtered before entering the trending event/workflow pipeline, and legacy unapproved rows cannot appear in public results. A phrase needs five searches in seven days and a current published product match in the requesting sales channels. Counts still measure requests, not unique shoppers. See [Search privacy](search-privacy.md).
+- Trending collection and publication now require an explicitly reviewed vocabulary managed in **Settings > Trending searches**. `SEARCH_TRENDING_TERMS` is only an initial fallback before the first admin save or seed. The initial seed provides common clothing/fabric phrases unless a saved or explicitly configured list exists; without seeding or configuration the list is empty. Unapproved text is filtered before entering the trending event/workflow pipeline, and legacy unapproved rows cannot appear in public results. A phrase needs five searches in seven days and a current published product match in the requesting sales channels. Counts still measure requests, not unique shoppers. See [Search privacy](search-privacy.md).
 - The menu-card rename migration is conditional, with explicit approval to amend that historical migration. CI now runs unit tests and includes fresh PostgreSQL migration and repeat-run checks. The backend exposes a `test` script so root Turbo tests include it.
 
 ## Public request throttling
@@ -50,8 +51,8 @@ does not authorize purging commerce, consent or unfinished workflow records.
 
 ## Local isolated verification
 
-Verified locally on September 21, 2026: fresh migrations and their repeat run,
-all 25 HTTP/database integration cases (four suites), and 105 unit tests.
+Verified locally on September 23, 2026: fresh migrations and their repeat run,
+all 30 HTTP/database integration cases (five suites), and 128 unit tests.
 GitHub Actions still needs verification on the deployment commit.
 
 With Node 22 and PostgreSQL 15 binaries installed (no running database service required):
@@ -98,7 +99,7 @@ shipping; it does not cover discounts, multi-warehouse allocation or fulfillment
 - Verify the CI run on the deployment commit and extend the role/route permission matrix beyond Marketing, Support and role-less users.
 - Extend checkout coverage to discounts, multi-warehouse allocation and fulfillment/cancellation stock changes; core shipping/tax/reservation cases are covered locally.
 - Exercise Redis-backed retries and locking across workers/restarts, real payment sandbox callbacks, and Resend callbacks against a test audience.
-- Add durable email delivery tracking beyond the provider's 24-hour deduplication window.
+- Durable email acceptance tracking and encrypted rendered snapshots are implemented. Deploy the additive migration and configure `EMAIL_DELIVERY_ENCRYPTION_KEY` on backend/workers. Operator resolution UI and a receipt-lifecycle policy remain follow-ups; see [Email retry behavior](email-reliability.md).
 - Configure alerting, edge/proxy limits, backups and restore drills from the deployment checklist. Apply the approved log-retention policy through the hosted providers; see [Production operations](production-operations.md) for decisions and remaining setup gates.
 - Populate the reviewed trending vocabulary in **Settings > Trending searches** and enforce the approved log-retention policy. The editor is implemented; repeated requests can still influence ranking.
 - Resolve the remaining dependency findings below through compatible upstream upgrades or tested overrides.

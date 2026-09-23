@@ -257,7 +257,11 @@ module.exports = defineConfig({
       resolve: "./src/modules/search-insights",
     },
     {
+      resolve: "./src/modules/email-delivery",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
+      dependencies: ["emailDelivery", "locking"],
       options: {
         providers: [
           {
@@ -269,6 +273,7 @@ module.exports = defineConfig({
               channels: ["email"],
               api_key: process.env.RESEND_API_KEY,
               from: process.env.RESEND_FROM_EMAIL,
+              encryption_key: process.env.EMAIL_DELIVERY_ENCRYPTION_KEY,
             },
           },
         ],

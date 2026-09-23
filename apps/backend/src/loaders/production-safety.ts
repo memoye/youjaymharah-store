@@ -1,4 +1,5 @@
 import { MedusaError } from "@medusajs/framework/utils";
+import { snapshotKey } from "../modules/resend/snapshot";
 
 export function validateProductionEnvironment(env: NodeJS.ProcessEnv) {
   if (env.NODE_ENV !== "production") return;
@@ -16,6 +17,7 @@ export function validateProductionEnvironment(env: NodeJS.ProcessEnv) {
       );
     }
   }
+  snapshotKey(env.EMAIL_DELIVERY_ENCRYPTION_KEY);
 }
 
 export default async function productionSafety() {

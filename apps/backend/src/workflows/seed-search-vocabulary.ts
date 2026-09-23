@@ -14,21 +14,25 @@ import type SearchInsightsModuleService from "../modules/search-insights/service
 import { SEARCH_VOCABULARY_ID } from "../modules/search-insights/service";
 
 export async function seedSearchVocabulary(container: MedusaContainer) {
-  const service: SearchInsightsModuleService = container.resolve(SEARCH_INSIGHTS_MODULE);
+  const service: SearchInsightsModuleService = container.resolve(
+    SEARCH_INSIGHTS_MODULE,
+  );
   // Share the admin-save lock so a seed cannot overwrite a concurrent edit.
-  return container.resolve(Modules.LOCKING).execute("search-vocabulary", async () => {
-    const current = await service.readVocabulary();
-    if (current.revision !== null) return { created: false };
-    const terms = process.env.SEARCH_TRENDING_TERMS?.trim()
-      ? current.terms
-      : validateVocabulary(DEFAULT_SEARCH_VOCABULARY);
-    await service.createSearchVocabularies({
-      id: SEARCH_VOCABULARY_ID,
-      terms: { items: terms },
-      revision: randomUUID(),
+  return container
+    .resolve(Modules.LOCKING)
+    .execute("search-vocabulary", async () => {
+      const current = await service.readVocabulary();
+      if (current.revision !== null) return { created: false };
+      const terms = process.env.SEARCH_TRENDING_TERMS?.trim()
+        ? current.terms
+        : validateVocabulary(DEFAULT_SEARCH_VOCABULARY);
+      await service.createSearchVocabularies({
+        id: SEARCH_VOCABULARY_ID,
+        terms: { items: terms },
+        revision: randomUUID(),
+      });
+      return { created: true };
     });
-    return { created: true };
-  });
 }
 
 const seedSearchVocabularyStep = createStep(

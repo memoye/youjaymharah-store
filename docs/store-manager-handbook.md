@@ -58,7 +58,12 @@ For trending searches, open **Settings > Trending searches** and approve up to
 private messages. Saving an empty list disables trending; normal product search
 still works. Phrases only appear after five searches in seven days and a current
 published product match. Marketing, Store Managers and the owner can edit;
-Support is read-only. See [Search privacy](search-privacy.md).
+Support is read-only. Unapproved phrases still work in normal product search;
+they are not counted for trending or collected into a pending-approval queue.
+The initial seed provides 20 common clothing/fabric phrases unless a vocabulary
+is already saved or explicitly configured. Review the list for your catalog;
+re-running the focused seed will not overwrite your changes or an empty list.
+See [Search privacy](search-privacy.md).
 
 | Record                  | Created as                                                         | You still need to                                                         |
 | ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |

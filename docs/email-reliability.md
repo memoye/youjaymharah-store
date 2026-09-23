@@ -50,27 +50,82 @@ late with its original link; preparation does not extend or renew credentials.
 ## Limits and rollout
 
 Resend keeps idempotency keys for [24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys).
-This is duplicate protection within that window, not permanent exactly-once
-delivery. A changed payload under the same key is a provider conflict; do not
-work around it by generating random keys. A replay started as a new workflow
-can read newer branding or order data, unlike a send-step retry inside an
-existing execution. Template or sender changes during a retry can also alter
-the rendered provider request. Permanent delivery tracking and rendered-body
-snapshots across deploys remain follow-ups.
+The `email_delivery` module now retains acceptance receipts beyond that window.
+All Resend notification calls must supply `emailIdempotency(...)`; a missing
+identity fails closed rather than sending an untracked email. The provider
+shares a per-delivery lock and persists the encrypted rendered request before
+contacting Resend. Retries reuse the original recipient, subject, sender,
+Reply-To, rendered HTML/text and attachment contents even across template or
+branding changes. Verify SDK serialization when upgrading Resend.
+
+After provider acceptance, the ledger retains its hashed delivery identity,
+provider receipt, timestamps and attempt count; the encrypted payload is cleared.
+Later replays return that receipt without another provider call. "Accepted"
+means Resend accepted the request, not that it reached the shopper's inbox.
+Bounce/complaint handling remains separate.
+
+There is still no exactly-once transaction spanning PostgreSQL and Resend.
+If acceptance or the receipt write is uncertain, retries use the same snapshot
+and provider key for at most **23 hours from the first attempt**. Beyond that,
+a retry marks the row `needs_review` and refuses to resend. The one-hour margin
+avoids relying on a key near Resend's expiry. A stale `attempted` record needs
+the same review even when no further retry arrives to change its status.
+Existing workflow retry schedules are unchanged; the ledger is not a new
+automatic recovery queue. No automatic deletion or force-resend is added.
 
 Do not assign the stable provider key to Medusa's notification database key:
 Medusa 2.19's failed-key path can reference an unpersisted notification ID.
 These workflows create separate notification attempts while keeping the Resend
 key stable.
 
-No migration or seed is needed for these email changes. Restart the backend
-and workers to load the renamed refund subscriber. The five workflow graphs
+Run `pnpm exec medusa db:migrate --skip-scripts` before deploying this change;
+the new module needs its additive migration. No seed is needed. Set
+`EMAIL_DELIVERY_ENCRYPTION_KEY` to **32 cryptographically random bytes encoded
+as 64 hex characters**, identical on backend and workers. Generate and store it
+through your secret manager; never put it in source control or logs. Production
+startup rejects a missing/invalid key. In development, email sends fail closed
+until the key is configured. Snapshot encryption uses AES-256-GCM with a fresh
+IV and binds the ciphertext to its delivery ID.
+
+Keep this key available for pending snapshots and relevant backups. Do not
+rotate it while snapshots still need it without an explicit re-encryption/key
+rotation plan. Missing or wrong keys never trigger recreation of the message.
+Framework notification/workflow records still contain their original data;
+snapshot encryption does not encrypt those separate records.
+
+Pause/drain workers for rollout, migrate, configure the key, then restart the
+backend and workers. Old sends have no ledger receipt: do not replay historical
+notifications assuming they are covered by this new protection. Review uncertain
+pre-rollout sends separately against provider evidence.
+
+The five workflow graphs
 have changed: finish or explicitly review old pending executions before
 deploying into an environment that already has queued emails. Do not blindly
 replay an old refund workflow input containing only `payment_id`; the new
 input requires `refund_id`.
 
-Unit tests cover identities, skipped notifications and snapshot retry behavior.
+### Reviewing uncertain deliveries
+
+Run `pnpm exec medusa exec ./src/scripts/inspect-email-deliveries.ts` from
+`apps/backend` for counts and the oldest 100 review candidates. It is read-only
+and does not decrypt or print message content or recipient addresses. Review
+workflow/notification state and Resend request/email history in restricted tools.
+The ledger ID is `emdel_` plus SHA-256 of the notification's provider idempotency
+key; use that key to correlate provider evidence. Never paste credentials,
+message bodies or full customer details into an incident log.
+
+Do not delete a receipt, clear `first_attempt_at`, or generate a random new key
+to bypass a review block. If acceptance is confirmed, reconcile the original
+receipt through a separately approved operation. If non-acceptance is confirmed,
+authorize a deliberate replacement with a new business-event identity; for
+password resets/invites, request a fresh token instead of sending an expired
+snapshot. If the outcome cannot be established, leave it blocked. A review/admin
+resolution screen and a lifecycle policy for receipts remain follow-ups.
+
+Unit tests cover identities, skipped notifications, encryption, concurrent sends,
+saved-payload retries, receipt-write failures and blocking stale uncertainty.
+Focused PostgreSQL checks exercise notification-provider injection, persistence,
+concurrent deduplication and stale outcomes with email HTTP mocked.
 The PostgreSQL integration suites passed locally against an isolated database;
 CI still needs verification on the deployment commit. They do not send live
 gateway requests or prove live-provider compatibility.

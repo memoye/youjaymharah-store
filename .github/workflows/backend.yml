@@ -64,6 +64,7 @@ jobs:
           JWT_SECRET: migration_test_jwt_secret_not_for_production
           COOKIE_SECRET: migration_test_cookie_secret_not_for_production
           RESEND_API_KEY: re_migration_test
+          EMAIL_DELIVERY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           RESEND_FROM_EMAIL: test@example.com
           CREDO_PUBLIC_KEY: migration_test
           CREDO_SECRET_KEY: migration_test
@@ -87,6 +88,7 @@ jobs:
           JWT_SECRET: migration_test_jwt_secret_not_for_production
           COOKIE_SECRET: migration_test_cookie_secret_not_for_production
           RESEND_API_KEY: re_migration_test
+          EMAIL_DELIVERY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           RESEND_FROM_EMAIL: test@example.com
           CREDO_PUBLIC_KEY: migration_test
           CREDO_SECRET_KEY: migration_test
