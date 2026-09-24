@@ -11,10 +11,18 @@ import { SEARCH_INSIGHTS_MODULE } from "../../../modules/search-insights";
 import type SearchInsightsModuleService from "../../../modules/search-insights/service";
 
 /**
- * Faceted so a results page can offer refinements next to the hits, and count
- * them, without a second query per facet.
+ * Faceting is off, and cannot be turned back on as-is: the local provider drops
+ * any field a document has no value for -- an empty array or a null scalar --
+ * and Orama then throws "facetValue is not iterable" while counting a facet
+ * across documents that lack the key. One product without a tag, a type or a
+ * collection takes the whole endpoint down, which is what it did.
+ *
+ * Filtering is unaffected. `category`, `type`, `collection` and `tag` below are
+ * filters rather than facets, so a results page still narrows by them; what is
+ * missing is the counts beside each value. Restoring those needs either a
+ * sentinel value for empty fields in the index definition, or a patched
+ * provider.
  */
-const FACETS = ["categories", "type", "collection", "tags"];
 
 /**
  * Storefront product search.
@@ -66,7 +74,6 @@ export const GET = async (
     filters,
     pagination: { skip: offset, take: limit },
     search_options: {
-      facets: FACETS,
       // Shoppers type product names from memory, so one typo should still
       // match.
       typo_tolerance: true,

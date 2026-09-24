@@ -41,7 +41,7 @@ export const preparePasswordResetEmailStep = createStep(
     // Staff reset inside the admin dashboard; shoppers on the storefront.
     const isCustomer = input.actor_type === "customer";
     const base = isCustomer ? STOREFRONT_URL : ADMIN_URL;
-    const path = isCustomer ? "/account/reset-password" : "/app/reset-password";
+    const path = isCustomer ? "/account/reset-password" : "/reset-password";
 
     const url =
       `${base}${path}` +

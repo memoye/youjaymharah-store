@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
 type RemotePattern = NonNullable<
@@ -49,4 +50,12 @@ const nextConfig: NextConfig = {
   images: { remotePatterns },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Source maps upload only where SENTRY_AUTH_TOKEN exists, so a local build
+  // never fails for want of a token.
+  silent: !process.env.CI,
+  disableLogger: true,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+})

@@ -30,9 +30,11 @@
   --color-gold-hairline: var(--gold-hairline);
   --color-ink: var(--ink);
   --color-ink-foreground: var(--ink-foreground);
+  --color-scrim: var(--scrim);
   --color-sale: var(--sale);
 
-  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-bodoni), Didot, "Bodoni MT", Georgia, serif;
 
   --text-display-xl: clamp(3rem, 7vw, 6rem);
@@ -104,6 +106,13 @@
   --gold-hairline: oklch(0.728 0.138 89.7 / 0.35);
   --ink: oklch(0.145 0 0);
   --ink-foreground: oklch(0.96 0.018 85);
+  /*
+   * The brand black again, for gradients laid over photography, and
+   * deliberately left out of the .dark block: a scrim darkens an image in
+   * every theme, while --ink flips, which would turn the gradient ivory
+   * inside an inverted section.
+   */
+  --scrim: oklch(0.145 0 0);
   --sale: oklch(0.577 0.245 27.325);
 }
 

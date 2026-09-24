@@ -67,6 +67,15 @@ module.exports = defineConfig({
       },
     },
   },
+  admin: {
+    // The dashboard is deployed separately (admin.<domain>), so the server
+    // neither builds nor serves it.
+    disable: process.env.ADMIN_DISABLED === "true",
+    // Where the dashboard sends its API calls. Unset, it assumes the browser
+    // origin, which is wrong the moment it lives on its own host.
+    backendUrl: process.env.MEDUSA_BACKEND_URL,
+    storefrontUrl: process.env.STOREFRONT_URL,
+  },
   featureFlags: {
     // The dashboard gates all RBAC UI (role picker on invites, role settings
     // pages) behind this flag; the module alone does not reveal them.

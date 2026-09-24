@@ -4,6 +4,7 @@ packages:
   - "packages/*"
 allowBuilds:
   "@medusajs/telemetry": true
+  "@sentry/cli": true
   "@swc/core": true
   esbuild: true
   msgpackr-extract: true

@@ -105,3 +105,120 @@ jobs:
           DB_USERNAME: medusa_test
           DB_PASSWORD: migration_test_only
         run: pnpm run test:integration:http
+
+  # Only after the job above has linted, type-checked, built and migrated a
+  # throwaway database, so a red build never reaches the server.
+  image:
+    name: Build and push the image
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  admin:
+    name: Build and deploy the dashboard
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # MEDUSA_BACKEND_URL is compiled into the bundle, so it has to be set
+      # here rather than on the host that serves it.
+      - name: Build the dashboard
+        working-directory: apps/backend
+        env:
+          ADMIN_DISABLED: "true"
+          MEDUSA_BACKEND_URL: ${{ vars.MEDUSA_BACKEND_URL }}
+          STOREFRONT_URL: ${{ vars.STOREFRONT_URL }}
+        run: pnpm run build:admin
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config apps/backend/deploy/admin/wrangler.jsonc
+
+  deploy:
+    name: Deploy
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+
+    concurrency:
+      group: backend-deploy
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync the compose file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: apps/backend/deploy/docker-compose.yml
+          target: /opt/youjaymharah
+          strip_components: 3
+
+      - name: Pull and restart
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: REGISTRY_USER,REGISTRY_TOKEN,BACKEND_IMAGE,SENTRY_RELEASE
+          script: |
+            set -e
+            echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+            cd /opt/youjaymharah
+            export BACKEND_IMAGE SENTRY_RELEASE
+            docker compose pull
+            docker compose up -d --wait --wait-timeout 300
+            docker image prune -f
+            docker logout ghcr.io
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+          SENTRY_RELEASE: ${{ github.sha }}

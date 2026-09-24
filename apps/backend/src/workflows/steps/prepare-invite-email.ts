@@ -53,7 +53,7 @@ export const prepareInviteEmailStep = createStep(
     }
 
     // The admin dashboard reads the token off the query string on this route.
-    const url = `${ADMIN_URL}/app/invite?token=${encodeURIComponent(invite.token)}`;
+    const url = `${ADMIN_URL}/invite?token=${encodeURIComponent(invite.token)}`;
     const brand = await brandingModuleService.retrieveSettings();
 
     return new StepResponse<PreparedEmail<SendInviteEmailOutput>>({

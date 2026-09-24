@@ -15,7 +15,7 @@ export function AnnouncementBanner() {
     <section
       aria-label="Store announcements"
       data-mode={banner.mode}
-      className={`flex w-full items-center justify-center gap-2 px-3 py-2 text-sm ${banner.appearance === "dark" ? "bg-black text-white" : "bg-stone-100 text-stone-950"}`}
+      className={`flex w-full items-center justify-center gap-2 px-3 py-2 text-sm ${banner.appearance === "dark" ? "bg-ink text-ink-foreground" : "bg-muted text-foreground"}`}
     >
       {banner.mode === "carousel" && (
         <button

@@ -38,10 +38,10 @@ export function MenuLink({
 }
 
 const headingClass =
-  "text-[13px] font-medium tracking-[0.08em] text-muted-foreground uppercase"
+  "text-sm font-medium tracking-[0.08em] text-muted-foreground uppercase"
 
 const linkClass =
-  "text-[15px] leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
+  "leading-6 decoration-gold underline-offset-4 transition-colors hover:text-muted-foreground data-active:underline"
 
 const actionClass =
   "text-xs font-medium tracking-[0.06em] uppercase underline-offset-4 hover:underline"
@@ -50,7 +50,7 @@ const imageClass =
   "object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 
 const scrimClass =
-  "bg-linear-to-t from-black/85 from-5% via-black/30 via-55% to-transparent p-6 pt-32 text-white"
+  "bg-linear-to-t from-scrim/85 from-5% via-scrim/30 via-55% to-transparent p-6 pt-32 text-white"
 
 const bannerTitleClass =
   "font-display text-balance decoration-gold decoration-[1.5px] underline-offset-10"
@@ -112,7 +112,7 @@ export function DepartmentPanel({
       {promos.length > 0 && (
         <div
           className={cn(
-            "group/promos hidden shrink-0 gap-4 lg:flex",
+            "group/promos hidden shrink-0 gap-4 pb-4 lg:flex",
             promos.length > 1 ? "w-104 xl:w-136" : "w-76 xl:w-96",
           )}
         >

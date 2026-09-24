@@ -1,11 +1,12 @@
 import { getImageProps } from "next/image"
-import NextLink from "next/link"
+import Link from "next/link"
 
 import {
   getHeroContent,
   getHeroStill,
   type HeroSettings,
 } from "@/lib/medusa/hero"
+import { HeaderOverlay } from "@/features/layout/header-overlay"
 import { getStorefrontSettings } from "@/lib/medusa/storefront-settings"
 import { cn } from "@/lib/util/cn"
 
@@ -17,6 +18,14 @@ const MOBILE_SIZE = { width: 1080, height: 1350 }
 
 /** Tailwind's `md`, the width the media switches at. */
 const DESKTOP_QUERY = "(min-width: 48rem)"
+
+/**
+ * The one knob on the sticky copy. A sticky element only travels inside its
+ * own section, so at exactly one screen the copy sits at the foot of the hero
+ * and leaves with it; the surplus is how long it stays pinned to the bottom of
+ * the viewport while the hero scrolls past.
+ */
+const HERO_HEIGHT = "h-[125svh] min-h-128"
 
 const headlineClass = "font-display text-display-xl text-balance"
 
@@ -45,14 +54,29 @@ export async function Hero() {
   }
 
   return (
-    <section className="relative isolate flex h-[82svh] min-h-128 items-center justify-center overflow-hidden px-5 py-20 text-center text-white sm:px-6">
-      <HeroStill hero={homepage.hero} />
-      <HeroVideo hero={homepage.hero} />
+    <section
+      className={cn(
+        "relative flex flex-col text-center text-white",
+        HERO_HEIGHT,
+      )}
+    >
+      {/* Out of flow, so the column below lays out against the section itself,
+          and clipping stays here: an ancestor with `overflow` other than
+          visible becomes the scrollport a descendant sticks to, and a box that
+          never scrolls is a sticky that never moves. */}
+      <div className="absolute inset-0 overflow-hidden">
+        <HeroStill hero={homepage.hero} />
+        <HeroVideo hero={homepage.hero} />
 
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-1 bg-linear-to-t from-black/65 via-black/20 to-black/25"
-      />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-linear-to-t from-scrim/65 via-scrim/20 to-scrim/25"
+        />
+      </div>
+
+      <HeaderOverlay tone="light" />
+
+      <div aria-hidden className="flex-1" />
 
       <Copy content={content} inverted />
     </section>
@@ -100,7 +124,7 @@ function HeroStill({ hero }: { hero: HeroSettings }) {
         {...rest}
         alt=""
         fetchPriority="high"
-        className="absolute inset-0 -z-2 size-full object-cover"
+        className="absolute inset-0 size-full object-cover"
       />
     </picture>
   )
@@ -114,24 +138,33 @@ function Copy({
   inverted?: boolean
 }) {
   return (
-    <div className="container-wrapper flex flex-col items-center justify-between gap-6 lg:flex-row lg:items-end lg:px-12 lg:text-start">
-      {/*{content.eyebrow && (
-        <p
-          className={cn(
-            "text-[13px] font-medium tracking-[0.18em] uppercase",
-            inverted ? "text-white/75" : "text-muted-foreground",
-          )}
-        >
-          {content.eyebrow}
-        </p>
-      )}*/}
+    <div className="container-wrapper sticky bottom-0 mb-6 flex flex-col items-center justify-between gap-6 text-center lg:flex-row lg:items-end lg:px-12 lg:py-12 lg:text-start">
       <div className="max-w-4xl space-y-6">
-        {content.title && <h1 className={headlineClass}>{content.title}</h1>}
+        {content.eyebrow && (
+          <p
+            className={cn(
+              "text-[13px] font-medium tracking-[0.18em] uppercase",
+              inverted ? "text-white/75" : "text-muted-foreground",
+            )}
+          >
+            {content.eyebrow}
+          </p>
+        )}
+        {content.title && (
+          <h1
+            className={cn(
+              headlineClass,
+              inverted ? "text-white" : "text-foreground",
+            )}
+          >
+            {content.title}
+          </h1>
+        )}
 
         {content.description && (
           <p
             className={cn(
-              "max-w-[46ch] text-intro text-pretty",
+              "mx-auto max-w-[46ch] text-intro text-pretty lg:mx-0",
               inverted ? "text-white/85" : "text-muted-foreground",
             )}
           >
@@ -141,18 +174,17 @@ function Copy({
       </div>
 
       {content.cta && (
-        <NextLink
+        <Link
           href={content.cta.href}
           className={cn(
             ctaClass,
-            "mt-2",
             inverted
-              ? "border border-white/70 hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-              : "bg-primary text-primary-foreground hover:bg-primary/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
+              ? "border border-white/70 hover:bg-white hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              : "bg-primary-foreground text-primary hover:bg-primary-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
           )}
         >
           {content.cta.label}
-        </NextLink>
+        </Link>
       )}
     </div>
   )

@@ -382,7 +382,7 @@ function CollectionsPanel({
                   />
                 )}
 
-                <span className="relative flex flex-col items-start gap-1.5 bg-linear-to-t from-black/85 from-5% via-black/30 via-55% to-transparent p-4 pt-24 text-white">
+                <span className="relative flex flex-col items-start gap-1.5 bg-linear-to-t from-scrim/85 from-5% via-scrim/30 via-55% to-transparent p-4 pt-24 text-white">
                   <span
                     className={cn(
                       "line-clamp-2 font-display text-balance",

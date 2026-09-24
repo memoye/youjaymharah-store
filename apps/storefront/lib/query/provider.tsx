@@ -12,7 +12,6 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {/* Rendered only in development; the package ships nothing to production. */}
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   )

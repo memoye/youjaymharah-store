@@ -9,8 +9,14 @@ export const SUPPORT_EMAIL =
   process.env.SUPPORT_EMAIL ?? "support@youjaymharah.com";
 export const STOREFRONT_URL =
   process.env.STOREFRONT_URL ?? "http://localhost:8000";
-/** Base URL of the admin dashboard, used for invite and staff reset links. */
-export const ADMIN_URL = process.env.ADMIN_URL ?? "http://localhost:9000";
+/**
+ * Base URL of the admin dashboard, used for invite and staff reset links.
+ * Includes the path when the backend serves it (`https://api.example.com/app`);
+ * just the origin when the dashboard is deployed on its own host.
+ */
+export const ADMIN_URL = (
+  process.env.ADMIN_URL ?? "http://localhost:9000/app"
+).replace(/\/$/, "");
 
 /** The branding fields an email needs. Mirrors the `branding` model. */
 export type BrandSummary = {

@@ -1,0 +1,14 @@
+**/node_modules
+**/.git
+**/.next
+**/.turbo
+**/dist
+**/out
+**/.env
+**/.env.*
+**/*.log
+apps/backend/.medusa
+apps/backend/public/admin
+apps/storefront/**
+!apps/storefront/package.json
+docs

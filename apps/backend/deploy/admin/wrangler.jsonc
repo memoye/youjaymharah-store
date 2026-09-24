@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "youjaymharah-admin",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    // Output of `pnpm run build:admin`. The dashboard is a single-page app, so
+    // every unknown path has to return index.html rather than a 404.
+    "directory": "../../.medusa/admin",
+    "not_found_handling": "single-page-application"
+  }
+}

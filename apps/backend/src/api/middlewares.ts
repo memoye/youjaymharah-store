@@ -6,7 +6,10 @@ import {
 } from "@medusajs/framework/http";
 import type { BaseEntity } from "@medusajs/framework/types";
 import { z } from "@medusajs/framework/zod";
+import { errorHandler as defaultErrorHandler } from "@medusajs/framework/http";
+
 import { rateLimit } from "./rate-limit";
+import { reportRequestError } from "./report-error";
 import { UpdateSearchVocabulary } from "../modules/search-insights/vocabulary-input";
 import {
   AnnouncementBar,
@@ -378,6 +381,11 @@ export const StoreSearchTrending = z.object({
 export type StoreSearchTrendingType = z.infer<typeof StoreSearchTrending>;
 
 export default defineMiddlewares({
+  // Reports 5xx responses to Sentry, then answers exactly as Medusa would.
+  errorHandler: (error, req, res, next) => {
+    reportRequestError(error, req);
+    return defaultErrorHandler()(error, req, res, next);
+  },
   routes: [
     {
       matcher: "/admin/search-vocabulary",

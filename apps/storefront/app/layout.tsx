@@ -44,7 +44,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={cn(
-        "h-full",
         "antialiased",
         instrumentSans.variable,
         bodoniModa.variable,
