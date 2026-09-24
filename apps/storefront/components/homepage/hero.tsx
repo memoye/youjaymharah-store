@@ -60,10 +60,6 @@ export async function Hero() {
         HERO_HEIGHT,
       )}
     >
-      {/* Out of flow, so the column below lays out against the section itself,
-          and clipping stays here: an ancestor with `overflow` other than
-          visible becomes the scrollport a descendant sticks to, and a box that
-          never scrolls is a sticky that never moves. */}
       <div className="absolute inset-0 overflow-hidden">
         <HeroStill hero={homepage.hero} />
         <HeroVideo hero={homepage.hero} />
@@ -138,7 +134,7 @@ function Copy({
   inverted?: boolean
 }) {
   return (
-    <div className="container-wrapper sticky bottom-0 mb-6 flex flex-col items-center justify-between gap-6 text-center lg:flex-row lg:items-end lg:px-12 lg:py-12 lg:text-start">
+    <div className="container-wrapper sticky bottom-0 flex flex-col items-center justify-between gap-6 pb-12 text-center lg:flex-row lg:items-end lg:px-12 lg:text-start">
       <div className="max-w-4xl space-y-6">
         {content.eyebrow && (
           <p
@@ -179,7 +175,7 @@ function Copy({
           className={cn(
             ctaClass,
             inverted
-              ? "border border-white/70 hover:bg-white hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              ? "border border-white/70 bg-white text-center text-ink backdrop-blur hover:bg-transparent hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
               : "bg-primary-foreground text-primary hover:bg-primary-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
           )}
         >
