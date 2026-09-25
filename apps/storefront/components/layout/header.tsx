@@ -75,7 +75,7 @@ function HeaderBar() {
     >
       <div className="container-wrapper flex items-stretch justify-between">
         <div className="flex items-center justify-between gap-6">
-          <div className="flex h-12 items-stretch">
+          <div className="flex h-12 items-stretch md:hidden">
             <MobileNav />
             <Button
               className={"h-auto md:hidden"}
