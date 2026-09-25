@@ -18,7 +18,7 @@ import { CollectionsPanel, DepartmentPanel, MenuLink } from "./mega-menu"
 
 /** Overrides the kit's compact button look with the header's text style. */
 const itemClass =
-  "h-12 py-1.5 text-sm px-2 inline-flex font-medium tracking-[0.02em] decoration-gold underline-offset-6 hover:bg-transparent hover:text-muted-foreground focus:bg-transparent focus-visible:underline focus-visible:ring-0 data-current:underline data-popup-open:bg-transparent data-popup-open:text-muted-foreground data-popup-open:hover:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent"
+  "h-12 py-1.5 text-sm px-2 inline-flex font-medium tracking-[0.02em] decoration-gold underline-offset-6 hover:bg-transparent hover:text-muted-foreground focus:bg-transparent focus-visible:underline focus-visible:ring-0 data-current:underline data-popup-open:bg-muted data-popup-open:text-muted-foreground data-popup-open:hover:bg-muted data-popup-open:focus:bg-muted data-open:bg-muted data-open:hover:bg-muted data-open:focus:bg-muted"
 
 const contentClass = "p-0"
 

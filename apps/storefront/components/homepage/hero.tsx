@@ -16,7 +16,6 @@ import { HeroVideo } from "./hero-video"
 const DESKTOP_SIZE = { width: 2400, height: 1200 }
 const MOBILE_SIZE = { width: 1080, height: 1350 }
 
-/** Tailwind's `md`, the width the media switches at. */
 const DESKTOP_QUERY = "(min-width: 48rem)"
 
 /**
@@ -134,7 +133,7 @@ function Copy({
   inverted?: boolean
 }) {
   return (
-    <div className="container-wrapper sticky bottom-0 flex flex-col items-center justify-between gap-6 pb-12 text-center lg:flex-row lg:items-end lg:px-12 lg:text-start">
+    <div className="container-wrapper sticky bottom-0 flex flex-col items-center justify-between gap-6 pb-12 text-center lg:flex-row lg:items-end lg:px-12 lg:pb-16 lg:text-start">
       <div className="max-w-4xl space-y-6">
         {content.eyebrow && (
           <p

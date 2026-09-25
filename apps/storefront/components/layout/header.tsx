@@ -15,6 +15,7 @@ import { UtilityNav } from "./utility-nav"
 import { SearchOverlay } from "../search/search-overlay"
 import { Button } from "../ui/button"
 import { MagnifyingGlassIcon } from "@phosphor-icons/react"
+import { usePathname } from "next/navigation"
 
 export function Header() {
   return (
@@ -30,6 +31,7 @@ function HeaderBar() {
   const headerRef = useRef<HTMLElement>(null)
   const { tone, setHeight } = useHeaderTone()
   const search = useOverlay("search")
+  const pathname = usePathname()
 
   // A panel hanging off the bar turns it into a surface whatever the page
   // asked for, and everything on it -- lettering, the logo -- has to follow
@@ -57,12 +59,15 @@ function HeaderBar() {
     <header
       ref={headerRef}
       className={cn(
-        "group fixed top-0 z-40 w-full border-b px-5 transition-colors duration-300 sm:px-6",
-        overlaid
-          ? "border-transparent bg-transparent"
-          : "bg-background text-foreground",
-        overlaid && tone === "light" && "text-white",
-        overlaid && tone === "dark" && "text-foreground",
+        "group top-0 z-40 w-full border-b px-5 transition-colors duration-300 sm:px-6",
+        pathname === "/" ? "fixed" : "sticky",
+        {
+          "border-transparent bg-transparent": overlaid,
+          "bg-background text-foreground": !overlaid,
+          "text-white": overlaid && tone === "light",
+          "text-foreground": overlaid && tone === "dark",
+        },
+
         // A menu panel opens flush under the bar with its own background, so
         // the bar has to be solid behind it whatever the page asked for.
         "has-data-popup-open:border-border has-data-popup-open:bg-background has-data-popup-open:text-foreground",

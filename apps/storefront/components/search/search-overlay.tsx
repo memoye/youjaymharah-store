@@ -128,7 +128,7 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
           initialFocus={inputRef}
           aria-label="Search"
           className={cn(
-            "fixed inset-x-0 top-10 z-90 flex h-[calc(100dvh-2.5rem)] flex-col overflow-y-clip bg-background md:top-12 lg:h-[50dvh]",
+            "fixed inset-x-0 top-12 z-90 flex h-[calc(100dvh-2.5rem)] flex-col overflow-y-clip bg-background md:top-14 lg:h-[50dvh]",
             "transition-[height] duration-500 ease-out motion-reduce:transition-none",
             "data-ending-style:h-0 data-starting-style:h-0",
           )}
@@ -204,6 +204,8 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
 
           <div
             aria-live="polite"
+            role=""
+
             onClick={(event) => {
               // A result can be the page already open, or /search with only a
               // new query, and neither changes the pathname.
