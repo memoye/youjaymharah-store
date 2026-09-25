@@ -34,6 +34,10 @@ export const queryKeys = {
     product: (productId: string) =>
       [...queryKeys.sizeGuide.all, "product", productId] as const,
   },
+  newsletter: {
+    all: ["newsletter"] as const,
+    settings: () => [...queryKeys.newsletter.all, "settings"] as const,
+  },
   search: {
     all: ["search"] as const,
     suggestions: (term: string) =>

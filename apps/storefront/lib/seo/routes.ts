@@ -32,6 +32,8 @@ export const PRIVATE_PATHS = [
   "/account",
   SHOPPING_BAG_PATH,
   "/checkout",
+  // Landing pages for emailed confirm and unsubscribe links: one per token.
+  "/newsletter",
 ]
 
 /** An absolute URL on this storefront, e.g. for structured data. */
