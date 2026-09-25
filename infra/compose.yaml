@@ -1,0 +1,140 @@
+# Production stack for one VPS. PostgreSQL is Neon and files are in object
+# storage, so nothing here holds business data except Redis' job state.
+#
+# Run from the directory this file is deployed to (/opt/store by default), next
+# to .env and backend.env. Image tags are written into .env by deploy.sh; use
+# that script to change versions rather than editing them by hand.
+
+name: store
+
+x-logging: &logging
+  # Docker's default json-file driver never rotates. Five 10 MB files per
+  # container keeps `docker compose logs` useful without filling the disk.
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-medusa: &medusa
+  image: ${IMAGE_PREFIX:?set IMAGE_PREFIX in .env}/backend:${BACKEND_TAG:-unset}
+  restart: unless-stopped
+  # tini as PID 1, so SIGTERM from `docker compose stop` reaches Node and
+  # in-flight requests and jobs get the grace period below.
+  init: true
+  stop_grace_period: 30s
+  env_file: backend.env
+  depends_on:
+    redis:
+      condition: service_healthy
+  networks: [edge, data]
+  logging: *logging
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      # The directory, not the file: deploys replace the Caddyfile, and a
+      # single-file bind mount would keep pointing at the old inode.
+      - ./caddy:/etc/caddy:ro
+      # Certificates and ACME account keys. Losing this means reissuing every
+      # certificate, which Let's Encrypt rate-limits.
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+  # HTTP only: the Store and Admin APIs and webhooks. Subscribers, scheduled
+  # jobs and workflow steps run in medusa-worker.
+  medusa-server:
+    <<: *medusa
+    environment:
+      MEDUSA_WORKER_MODE: server
+      REDIS_URL: redis://redis:6379
+      SENTRY_RELEASE: ${BACKEND_TAG:-}
+      # Caps V8's heap below the host's RAM so GC works harder before the
+      # kernel OOM killer has to pick a victim; not a container memory limit.
+      NODE_OPTIONS: --max-old-space-size=1536
+
+  # Same image, no public route. Also fills and updates the search index.
+  medusa-worker:
+    <<: *medusa
+    environment:
+      MEDUSA_WORKER_MODE: worker
+      REDIS_URL: redis://redis:6379
+      SENTRY_RELEASE: ${BACKEND_TAG:-}
+      NODE_OPTIONS: --max-old-space-size=1536
+
+  admin:
+    image: ${IMAGE_PREFIX}/admin:${BACKEND_TAG:-unset}-${ENVIRONMENT:?set ENVIRONMENT in .env}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [edge]
+    logging: *logging
+
+  storefront:
+    image: ${IMAGE_PREFIX}/storefront:${STOREFRONT_TAG:-unset}-${ENVIRONMENT}
+    restart: unless-stopped
+    init: true
+    environment:
+      # Server-side calls stay on the Docker network instead of looping out
+      # through Caddy and Cloudflare. NEXT_PUBLIC_* values are compiled into
+      # the image and cannot be changed here.
+      MEDUSA_BACKEND_URL: http://medusa-server:9000
+    networks: [edge]
+    logging: *logging
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    # Holds the event bus queue, workflow state, locks, the cache and admin
+    # sessions. noeviction: an evicted BullMQ key is a silently dropped job, so
+    # a full Redis must fail writes loudly instead. maxmemory keeps a runaway
+    # queue from taking the host's RAM; 512 MB is far above this store's
+    # working set and is the first thing to raise if writes start failing.
+    # appendonly: queued jobs and in-flight workflows survive a restart.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+    # Only the two Medusa services share this network, and it has no route
+    # out, so Redis is unreachable from Caddy, the storefront and the
+    # internet. That isolation is why it runs without a password.
+    networks: [data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *logging
+
+networks:
+  edge: {}
+  data:
+    internal: true
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
+  redis_data: {}

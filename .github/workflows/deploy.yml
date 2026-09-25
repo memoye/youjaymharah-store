@@ -1,0 +1,289 @@
+name: Deploy
+
+# Manual only: Actions > Deploy > Run workflow, choosing the branch or tag in
+# "Use workflow from" and the GitHub Environment to deploy to. Nothing deploys
+# on push. To deploy automatically later, add a `push` trigger here.
+#
+# Order matters and is why the jobs are chained:
+#   1. CI (lint, type-check, tests, migrations on a scratch database)
+#   2. backend image (no domain in it) + admin image (API URL compiled in)
+#   3. VPS: migrate, then restart Medusa server, worker and admin
+#   4. storefront image, built against the API deployed in 3, because
+#      `next build` prerenders pages from it
+#   5. VPS: restart the storefront, then check all three hostnames publicly
+#
+# Images are tagged with the commit SHA (admin and storefront also carry the
+# environment name), so every running container traces back to a commit.
+# See docs/deployment.md for the secrets and variables this reads.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy to
+        type: environment
+        required: true
+      backend_only:
+        description: Deploy only the backend and admin (first bootstrap, before a publishable key exists)
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Deployable ref
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only main or a tag
+        if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "Deploy from main or a release tag, not ${GITHUB_REF}." >&2
+          exit 1
+
+  validate:
+    name: CI
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+
+  backend-image:
+    name: Build backend image
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: image
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          target: server
+          push: true
+          tags: ${{ steps.image.outputs.prefix }}/backend:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+  admin-image:
+    name: Build admin image
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Required variables
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          [ -n "$DOMAIN" ] || { echo "Set the DOMAIN variable on the ${{ inputs.environment }} environment." >&2; exit 1; }
+
+      - uses: actions/checkout@v4
+
+      - id: image
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          target: admin
+          push: true
+          build-args: |
+            MEDUSA_BACKEND_URL=https://api.${{ vars.DOMAIN }}
+            STOREFRONT_URL=https://${{ vars.DOMAIN }}
+          tags: ${{ steps.image.outputs.prefix }}/admin:${{ github.sha }}-${{ inputs.environment }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=admin,mode=max
+
+  deploy-backend:
+    name: Deploy backend and admin
+    needs: [backend-image, admin-image]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://admin.${{ vars.DOMAIN }}
+    # Read-only: this job's token is handed to the VPS for `docker pull`, and
+    # expires when the job ends.
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH setup
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] \
+            || { echo "DEPLOY_SSH_KEY and DEPLOY_KNOWN_HOSTS must be set on the environment." >&2; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pinned host keys: without them the first connection would trust
+          # whatever answers at DEPLOY_HOST.
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Sync infrastructure files
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/store' }}
+          PORT: ${{ vars.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          scp -i ~/.ssh/deploy_key -P "$PORT" -o StrictHostKeyChecking=yes -r \
+            infra/compose.yaml infra/deploy.sh infra/caddy \
+            infra/.env.template infra/backend.env.template \
+            "$TARGET:$DEPLOY_PATH/"
+
+      - name: Migrate and roll out
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/store' }}
+          PORT: ${{ vars.DEPLOY_SSH_PORT || '22' }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/deploy_key -p "$PORT" -o StrictHostKeyChecking=yes "$TARGET" \
+            "cd '$DEPLOY_PATH' && ./deploy.sh --registry-user '${{ github.actor }}' --environment '${{ inputs.environment }}' backend '${{ github.sha }}'"
+
+      - name: Public checks
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          for url in "https://api.$DOMAIN/health" "https://admin.$DOMAIN/"; do
+            curl -fsS -o /dev/null --max-time 15 --retry 10 --retry-delay 6 --retry-all-errors "$url"
+            echo "ok $url"
+          done
+
+  storefront-image:
+    name: Build storefront image
+    needs: deploy-backend
+    if: ${{ !inputs.backend_only }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Required variables
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+          KEY: ${{ vars.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }}
+          IMAGE_REMOTE_URLS: ${{ vars.IMAGE_REMOTE_URLS }}
+        run: |
+          missing=0
+          [ -n "$DOMAIN" ] || { echo "Set DOMAIN on the environment." >&2; missing=1; }
+          [ -n "$IMAGE_REMOTE_URLS" ] || { echo "Set IMAGE_REMOTE_URLS on the environment." >&2; missing=1; }
+          [ -n "$KEY" ] || {
+            echo "Set NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY on the environment. On a first deploy, run this workflow with backend_only, copy the key printed by the migration step, then run it again." >&2
+            missing=1
+          }
+          exit "$missing"
+
+      - uses: actions/checkout@v4
+
+      - id: image
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/storefront/Dockerfile
+          push: true
+          build-args: |
+            MEDUSA_BACKEND_URL=https://api.${{ vars.DOMAIN }}
+            NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_BASE_URL=https://${{ vars.DOMAIN }}
+            IMAGE_REMOTE_URLS=${{ vars.IMAGE_REMOTE_URLS }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
+          tags: ${{ steps.image.outputs.prefix }}/storefront:${{ github.sha }}-${{ inputs.environment }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=storefront
+          cache-to: type=gha,scope=storefront,mode=max
+
+  deploy-storefront:
+    name: Deploy storefront
+    needs: storefront-image
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://${{ vars.DOMAIN }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: SSH setup
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Roll out
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/store' }}
+          PORT: ${{ vars.DEPLOY_SSH_PORT || '22' }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/deploy_key -p "$PORT" -o StrictHostKeyChecking=yes "$TARGET" \
+            "cd '$DEPLOY_PATH' && ./deploy.sh --registry-user '${{ github.actor }}' --environment '${{ inputs.environment }}' storefront '${{ github.sha }}'"
+
+      - name: Public checks
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          for url in "https://$DOMAIN/api/health" "https://$DOMAIN/" "https://api.$DOMAIN/health" "https://admin.$DOMAIN/"; do
+            curl -fsS -o /dev/null --max-time 15 --retry 10 --retry-delay 6 --retry-all-errors "$url"
+            echo "ok $url"
+          done

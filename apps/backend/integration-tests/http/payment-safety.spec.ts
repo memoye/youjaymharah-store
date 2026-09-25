@@ -1,5 +1,5 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils";
-import { Modules } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import type { IPaymentModuleService } from "@medusajs/framework/types";
 import { requireIsolatedDatabase } from "../helpers/isolated-database";
 import { sendRefundIssuedEmailWorkflow } from "../../src/workflows/send-refund-issued-email";
@@ -105,6 +105,12 @@ medusaIntegrationTestRunner({
           name: "Isolated NG region",
           currency_code: "ngn",
           countries: ["ng"],
+        });
+        // Cart completion only accepts providers enabled in the cart's
+        // region, the same link initial-data-seed creates for the real one.
+        await container.resolve(ContainerRegistrationKeys.LINK).create({
+          [Modules.REGION]: { region_id: region.id },
+          [Modules.PAYMENT]: { payment_provider_id: "pp_paystack_paystack" },
         });
         const profile = await container
           .resolve(Modules.FULFILLMENT)

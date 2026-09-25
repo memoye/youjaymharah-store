@@ -1,0 +1,26 @@
+# Serves the prebuilt dashboard inside the admin image. Only the public Caddy
+# (infra/Caddyfile) talks to it, over the internal Docker network: no TLS here.
+{
+	admin off
+	persist_config off
+	auto_https off
+}
+
+:8080 {
+	root * /srv
+	encode zstd gzip
+
+	# Vite fingerprints everything under /assets, so it can be cached forever.
+	# Anything else is index.html under some route and must be revalidated, or
+	# a deploy is only picked up by chance. (Header matchers see the path
+	# before try_files rewrites it, hence "not /assets" rather than index.html.)
+	@hashed path /assets/*
+	@unhashed not path /assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	header @unhashed Cache-Control "no-cache"
+	header -Server
+
+	# A single-page app: unknown paths are client-side routes.
+	try_files {path} /index.html
+	file_server
+}

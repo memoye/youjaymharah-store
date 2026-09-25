@@ -11,17 +11,14 @@ import { SEARCH_INSIGHTS_MODULE } from "../../../modules/search-insights";
 import type SearchInsightsModuleService from "../../../modules/search-insights/service";
 
 /**
- * Faceting is off, and cannot be turned back on as-is: the local provider drops
- * any field a document has no value for -- an empty array or a null scalar --
- * and Orama then throws "facetValue is not iterable" while counting a facet
- * across documents that lack the key. One product without a tag, a type or a
- * collection takes the whole endpoint down, which is what it did.
+ * Faceting is off. It was switched off under the earlier in-memory (Orama)
+ * provider, which crashed counting a facet across documents missing the key.
+ * The Postgres provider computes facets in SQL and does not share that failure,
+ * so turning them back on is now a product decision rather than a workaround.
  *
  * Filtering is unaffected. `category`, `type`, `collection` and `tag` below are
  * filters rather than facets, so a results page still narrows by them; what is
- * missing is the counts beside each value. Restoring those needs either a
- * sentinel value for empty fields in the index definition, or a patched
- * provider.
+ * missing is the counts beside each value.
  */
 
 /**

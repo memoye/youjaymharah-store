@@ -18,8 +18,8 @@ const PRODUCT_FIELDS = ["id", "title", "handle", "thumbnail"];
 const TAXONOMY_LIMIT = 3;
 
 /**
- * Below this, Orama's edit distance of 1 matches almost anything: "dre"
- * would reach "tree". Short terms are prefix-matched instead, which is what a
+ * Below this, fuzzy matching on a two- or three-letter fragment reaches
+ * unrelated words. Short terms are only prefix-matched, which is what a
  * shopper three letters into a word actually means.
  */
 const TYPO_TOLERANCE_MIN_LENGTH = 4;
@@ -63,6 +63,9 @@ export const GET = async (
       },
       pagination: { skip: 0, take: limit },
       search_options: {
+        // Typeahead: the word still being typed is a prefix, so "dre" reaches
+        // "dress". The provider's default wants every term complete.
+        match_strategy: "last",
         typo_tolerance: q.length >= TYPO_TOLERANCE_MIN_LENGTH,
       },
     }),

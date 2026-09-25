@@ -34,6 +34,12 @@ export async function physicalCheckoutFixture(
     currency_code: "ngn",
     countries: ["ng"],
   });
+  // Cart completion only accepts providers enabled in the cart's region, the
+  // same link initial-data-seed creates for the real one.
+  await link.create({
+    [Modules.REGION]: { region_id: region.id },
+    [Modules.PAYMENT]: { payment_provider_id: "pp_paystack_paystack" },
+  });
   await createTaxRegionsWorkflow(container).run({
     input: [
       {

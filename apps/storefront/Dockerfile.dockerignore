@@ -14,7 +14,6 @@
 .github
 infra
 docs
-apps/backend/.medusa
-apps/backend/public/admin
-apps/storefront/**
-!apps/storefront/package.json
+apps/storefront/next-env.d.ts
+apps/backend/**
+!apps/backend/package.json

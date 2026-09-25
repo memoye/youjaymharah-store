@@ -9,10 +9,10 @@ when recording these decisions.
 
 | Area                        | Decision                                             | Configuration status                                             |
 | --------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Backend                     | Railway                                              | Deployment configuration pending                                 |
+| Hosting                     | One VPS (OVH), Docker Compose, see deployment.md     | Configuration in repo; host not yet provisioned                  |
 | PostgreSQL                  | Neon                                                 | Restore window and backup policy pending plan/account review     |
-| Redis                       | Upstash                                              | Verify TLS, eviction disabled, capacity and region before launch |
-| DNS/edge                    | Cloudflare recommended in front of Railway           | Provider/domain and origin protection not yet confirmed          |
+| Redis                       | Container on the VPS (noeviction, append-only)       | Configured in infra/compose.yaml                                 |
+| DNS/edge                    | Cloudflare recommended in front of the VPS           | Provider/domain and origin protection not yet confirmed          |
 | Application monitoring      | PostHog intended                                     | Backend/worker instrumentation, alerts and account setup pending |
 | Availability/job monitoring | External uptime and heartbeat monitoring recommended | Provider not yet selected                                        |
 | Alert destination           | Not yet supplied                                     | No notifications configured                                      |
@@ -46,18 +46,20 @@ unchanged here is not a decision to retain them forever.
 
 ## Enforcing the policy in hosted services
 
-1. Inventory every copy: Railway application/build/network logs, backend and
-   worker exports, PostHog logs/errors, edge logs, alert destinations and any
+1. Inventory every copy: container logs on the VPS (Docker keeps 5 x 10 MB per
+   container, so they age out by volume, not by date), GitHub Actions deploy
+   logs, backend and worker exports, PostHog logs/errors, edge logs, alert destinations and any
    archived exports. Record the owner, destination and actual expiry for each.
 2. Select a destination capable of separate operational/security retention.
    Configure 30-day and 90-day streams or equivalent per-class lifecycle rules.
    Do not silently substitute the provider's default period.
-3. Review the hosting plan and provider-managed copies. Railway currently lists
-   7-day Hobby, 30-day Pro and up-to-90-day Enterprise log retention. It also
-   states that upgrading can make older logs visible again, so searchable
-   retention is not sufficient evidence of physical erasure. Confirm deletion
-   semantics with the provider if enforcing a hard maximum across all copies.
-   See [Railway log retention](https://docs.railway.com/observability/logs).
+3. Review provider-managed copies. On the VPS, Docker's size-based rotation
+   is the only expiry, so a quiet container can keep lines longer than 30
+   days and a busy one far less; a shipper with per-class lifecycle rules is
+   what makes the periods enforceable. GitHub keeps Actions logs for the
+   repository's configured retention (90 days by default). Searchable
+   retention is not evidence of physical erasure: confirm deletion semantics
+   with each provider if enforcing a hard maximum across all copies.
 4. Verify PostHog's actual project/plan settings before selecting it as the
    retention destination. Its [Logs product](https://posthog.com/docs/logs)
    accepts OpenTelemetry records; installing product analytics alone does not
@@ -116,7 +118,7 @@ authorized just by approval of the log-retention periods.
   trusting forwarded shopper addresses.
 - Select/configure the log destination that meets the approved periods and
   verify the retention/deletion semantics of provider-managed copies.
-- Review Neon/Upstash project settings and agree backup/recovery targets.
+- Review Neon project settings and agree backup/recovery targets.
 
 Continue operational configuration and implementation improvements before
 expanding the test matrix, as requested. This does not remove the need to

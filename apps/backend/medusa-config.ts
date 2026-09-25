@@ -85,8 +85,12 @@ module.exports = defineConfig({
     // The dashboard is deployed separately (admin.<domain>), so the server
     // neither builds nor serves it.
     disable: process.env.ADMIN_DISABLED === "true",
-    // Where the dashboard sends its API calls. Unset, it assumes the browser
-    // origin, which is wrong the moment it lives on its own host.
+    // The admin image is built at "/" for the root of admin.<domain>; locally
+    // the dashboard stays on this server at /app.
+    path: (process.env.ADMIN_PATH as `/${string}` | undefined) || "/app",
+    // Where the dashboard sends its API calls (https://api.<domain> in
+    // production). Compiled into the bundle, so it is a build-time value.
+    // Unset, it assumes the browser origin.
     backendUrl: process.env.MEDUSA_BACKEND_URL,
     storefrontUrl: process.env.STOREFRONT_URL,
   },
@@ -170,18 +174,17 @@ module.exports = defineConfig({
       // Medusa's defaults, so declaring it here is what turns it on; the
       // indexes themselves are declared under src/search.
       //
-      // The local provider keeps its index in this process's memory (Orama),
-      // so it is rebuilt from each index' `seed` on every boot and never
-      // shared between instances. That is a deliberate fit for a single
-      // service: no engine to run and nothing to pay for. Swapping in a
-      // hosted engine later is a change to this block alone -- the index
-      // definitions stay as they are.
+      // The Postgres provider keeps its index in the application database
+      // (tsvector for ranking, pg_trgm for typo tolerance), so every process
+      // reads the same index and it survives restarts: the HTTP server only
+      // queries it, while the worker fills it and keeps it in step with
+      // product events. `db:migrate` creates the tables and extensions.
       resolve: "@medusajs/medusa/search",
       options: {
         providers: [
           {
-            resolve: "@medusajs/medusa/search-local",
-            id: "local",
+            resolve: "@medusajs/medusa/search-postgres",
+            id: "postgres",
           },
         ],
       },

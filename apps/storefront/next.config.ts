@@ -1,3 +1,5 @@
+import path from "node:path"
+
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
@@ -48,6 +50,13 @@ if (!remotePatterns.length) {
 
 const nextConfig: NextConfig = {
   images: { remotePatterns },
+  // Set by the Docker build only, so `next start` keeps working locally.
+  // Standalone traces just the files the server needs into .next/standalone,
+  // from the workspace root so hoisted pnpm packages are included.
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "true" && {
+    output: "standalone",
+    outputFileTracingRoot: path.join(process.cwd(), "../.."),
+  }),
 }
 
 export default withSentryConfig(nextConfig, {

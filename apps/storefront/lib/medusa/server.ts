@@ -6,8 +6,9 @@ import { PUBLISHABLE_KEY } from "./constants"
 import { getAuthToken } from "./session"
 
 /**
- * Where the Next.js server reaches Medusa. On Render, the backend's private
- * network address, so server-to-server calls never leave the datacentre.
+ * Where the Next.js server reaches Medusa. In production, the backend's
+ * address on the Docker network, so server-to-server calls never leave the
+ * host.
  */
 export const MEDUSA_BACKEND_URL =
   process.env.MEDUSA_BACKEND_URL ?? "http://localhost:9000"

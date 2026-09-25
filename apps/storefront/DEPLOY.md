@@ -16,31 +16,27 @@ Because of this, the storefront and backend do **not** need to share a domain.
 
 For building features on this setup, see `DATA-LAYER.md`.
 
-## Render
+## Production image
 
-Create a Web Service from this repository, **in the same region as the
-backend**. Proxied calls then travel over Render's private network.
+Production runs `apps/storefront/Dockerfile` (Next.js standalone output)
+behind Caddy on the VPS; the full setup is in
+[docs/deployment.md](../../docs/deployment.md). Two things differ from a
+local build:
 
-| Setting        | Value                                                                                               |
-| -------------- | --------------------------------------------------------------------------------------------------- |
-| Root directory | the repository root                                                                                 |
-| Build command  | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @youjaymharah/storefront build` |
-| Start command  | `pnpm --filter @youjaymharah/storefront exec next start -p $PORT`                                   |
-| Node version   | from `.node-version` at the repository root                                                         |
+- **Build time needs a live API.** `next build` prerenders pages (the root
+  layout loads settings, categories and collections), so the Deploy workflow
+  builds this image after the backend is deployed, with
+  `MEDUSA_BACKEND_URL=https://api.<domain>`. At runtime the container uses
+  `http://medusa-server:9000` over the Docker network instead.
+- **`NEXT_PUBLIC_*` and `IMAGE_REMOTE_URLS` are compiled in.** They come from
+  the GitHub Environment's variables. Changing one means a new deploy, not a
+  container restart. Each image therefore belongs to one deployment and is
+  tagged `<sha>-<environment>`.
 
-Environment variables (see `.env.template`). **Set them before the first build:**
-`NEXT_PUBLIC_*` values are baked into the build, not read at runtime.
-
-| Variable                             | Value                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MEDUSA_BACKEND_URL`                 | The backend's internal address, from its service's **Connect** menu                                                                                                                                                                                                                                    |
-| `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | The "Web Storefront" key from `Settings › Publishable API Keys`                                                                                                                                                                                                                                        |
-| `NEXT_PUBLIC_BASE_URL`               | The storefront's real public address, e.g. `https://youjaymharah.com` (no trailing slash). Canonical links, the sitemap, robots.txt and link previews are built from it, so a wrong value points search engines at the wrong site                                                                      |
-| `IMAGE_REMOTE_URLS`                  | Comma-separated hosts images may load from: the backend's `S3_FILE_URL` (uploads), plus any other photo source the catalogue uses. Fixed at build time; when `S3_FILE_URL` changes (say, to a custom domain), update this and rebuild, keeping the old address while existing images still point at it |
-
-**Free tier:** like the backend, a free storefront service sleeps after 15
-minutes idle, and the first visitor waits for it to start. The speed of the
-private network only shows once both services are on always-on instances.
+`output: "standalone"` is switched on only by the Docker build
+(`NEXT_OUTPUT_STANDALONE=true`), so `pnpm start` keeps working locally.
+`GET /api/health` answers without calling Medusa; the container health check
+and the deploy use it.
 
 ## Backend settings that depend on the storefront URL
 
@@ -53,7 +49,8 @@ Set these on the **backend** once the storefront has its URL:
 | `STOREFRONT_URL`       | `https://<storefront>` (links in emails)        |
 
 `STORE_CORS` does not need the storefront origin while all browser traffic goes
-through the proxy. Add it only if Client Components ever call Medusa directly.
+through the proxy; production sets it to the storefront origin anyway, so a
+future direct call works.
 
 ## Known gotchas
 

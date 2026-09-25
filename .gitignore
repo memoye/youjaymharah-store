@@ -58,3 +58,5 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 **/.DS_Store
+# Production env files, if created next to their templates in infra/
+infra/*.env

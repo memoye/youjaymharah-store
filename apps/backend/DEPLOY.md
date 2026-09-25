@@ -1,20 +1,21 @@
 # Deploy Notes — Backend / Admin
 
-Runbook for deploying `@youjaymharah/backend` to a dev environment, and the
-gotchas that are easy to hit exactly once.
+What the backend needs from its environment, and the gotchas that are easy to
+hit exactly once. The production setup (VPS, Docker Compose, Caddy, Neon, the
+Deploy workflow) is in [docs/deployment.md](../../docs/deployment.md).
 
 ## Environment variables
 
 Copy `.env.template` and fill in every key. Notes on the non-obvious ones:
 
-| Variable                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`                            | PostgreSQL 15+. Neon free tier works; make sure the URL is URL-encoded if the password contains special characters.                                                                                                                                                                                                                                                                                                                              |
-| `REDIS_URL`                               | Required in production (Upstash, standard TCP `rediss://...` URL, not the REST one). Backs the event bus, workflow engine, cache, locks and admin sessions: events survive deploys, failed email steps retry durably, and admins stay signed in across deploys. Use a single-region instance in the service's region with eviction off (`noeviction`), or queued jobs such as order emails are silently dropped. Leave unset only for local dev. |
-| `STORE_CORS` / `ADMIN_CORS` / `AUTH_CORS` | Comma-separated origins. Include the deployed storefront and admin origins.                                                                                                                                                                                                                                                                                                                                                                      |
-| `STOREFRONT_URL` / `ADMIN_URL`            | Used to build links inside emails (order confirmations, invites, newsletter confirm/unsubscribe). Wrong values here produce dead links in live emails.                                                                                                                                                                                                                                                                                           |
-| `STOREFRONT_REVALIDATE_SECRET`            | Optional. A long random string, set to the same value on the storefront. When set, saving Brand or Sharing & search in Settings › Storefront calls `POST <STOREFRONT_URL>/api/revalidate` so the site updates at once; unset, it updates within 5 minutes. A failed call is only logged, never blocks the save.                                                                                                                                  |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL`    | Transactional email. Without these, notification sends fail (they retry, but nothing arrives).                                                                                                                                                                                                                                                                                                                                                   |
+| Variable                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                            | PostgreSQL 15+. Neon free tier works; make sure the URL is URL-encoded if the password contains special characters.                                                                                                                                                                                                                                                                                             |
+| `REDIS_URL`                               | Required in production, where `infra/compose.yaml` points it at the Redis container. Backs the event bus, workflow engine, cache, locks and admin sessions: events survive deploys, failed email steps retry durably, and admins stay signed in across deploys. Any Redis used must have eviction off (`noeviction`), or queued jobs such as order emails are silently dropped. Leave unset only for local dev. |
+| `STORE_CORS` / `ADMIN_CORS` / `AUTH_CORS` | Comma-separated origins. Include the deployed storefront and admin origins.                                                                                                                                                                                                                                                                                                                                     |
+| `STOREFRONT_URL` / `ADMIN_URL`            | Used to build links inside emails (order confirmations, invites, newsletter confirm/unsubscribe). Wrong values here produce dead links in live emails.                                                                                                                                                                                                                                                          |
+| `STOREFRONT_REVALIDATE_SECRET`            | Optional. A long random string, set to the same value on the storefront. When set, saving Brand or Sharing & search in Settings › Storefront calls `POST <STOREFRONT_URL>/api/revalidate` so the site updates at once; unset, it updates within 5 minutes. A failed call is only logged, never blocks the save.                                                                                                 |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL`    | Transactional email. Without these, notification sends fail (they retry, but nothing arrives).                                                                                                                                                                                                                                                                                                                  |
 
 ## First deploy checklist
 
@@ -30,7 +31,8 @@ Copy `.env.template` and fill in every key. Notes on the non-obvious ones:
      "Lagos Warehouse" stock location (`initial-data-seed.ts`)
    - The first admin user from `ADMIN_EMAIL` / `ADMIN_PASSWORD`, already
      attached to the Super Admin role -- log straight in, no bootstrap needed
-4. Verify: `GET /health` returns 200, admin loads at `/app`, log in with
+4. Verify: `GET /health` returns 200, admin loads (at `/app` locally, at
+   `admin.<domain>` in production), log in with
    `ADMIN_EMAIL`, and the boot log shows
    `Connection to Redis in module 'event-bus-redis' established` when
    `REDIS_URL` is set.
@@ -76,18 +78,3 @@ courier pricing), and any publishable key beyond the first.
   **Products › Size guides**.
 - **Resend audience picker.** Settings -> Newsletter needs `RESEND_API_KEY`;
   if it is missing the picker shows an error but settings can still be saved.
-
-## Hosting (free tier to start)
-
-Recommendation: **Render (free)** for the web service, with Neon (free) for
-Postgres and Upstash for Redis.
-
-- Railway no longer has a true free tier (one-time trial credit, then Hobby
-  $5/mo). Render's Hobby workspace is genuinely $0.
-- Render free caveats: spins down after 15 min idle (~1 min cold start),
-  750 free instance-hours/month (enough for one always-on service), 500
-  build minutes/month, 5 GB bandwidth. Fine for a dev environment.
-- Render's free Postgres expires after 30 days -- use Neon instead (already
-  the case) and set `DATABASE_URL` from there.
-- Local filesystem is ephemeral on free tiers; the app stores uploads in
-  Cloudflare R2 (S3), so nothing is lost on restart.

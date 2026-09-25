@@ -1,0 +1,147 @@
+name: CI
+
+# Validation only; nothing here deploys. deploy.yml calls this workflow first,
+# so a release is held to the same checks as a pull request.
+#
+# The backend job runs what the image build runs. `medusa build` generates
+# .medusa/types, then lints and type-checks the backend source before
+# compiling, so a type error fails here rather than in a deploy.
+#
+# Deliberately NOT a standalone `tsc --noEmit` step for the backend:
+#   - .medusa/types is gitignored and only exists after a build, so type-checking
+#     first reports errors (query.graph results degrade to `unknown`) that no one
+#     sees locally;
+#   - the root tsconfig sweeps in src/admin, which Vite compiles separately as
+#     ESM with its own tsconfig, producing CommonJS errors the real build never hits.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend lint, type-check, build and tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: medusa_test
+          POSTGRES_PASSWORD: migration_test_only
+          POSTGRES_DB: medusa_migration_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U medusa_test -d medusa_migration_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from the root package.json `packageManager` field.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Backend regression tests
+        working-directory: apps/backend
+        run: pnpm run test:unit
+
+      - name: Build backend (generates types, lints, type-checks, compiles)
+        working-directory: apps/backend
+        run: pnpm run build
+
+      - name: Fresh database migrations and repeat-run smoke test
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: postgres://medusa_test:migration_test_only@localhost:5432/medusa_migration_test
+          STORE_CORS: http://localhost:8000
+          ADMIN_CORS: http://localhost:9000
+          AUTH_CORS: http://localhost:9000
+          JWT_SECRET: migration_test_jwt_secret_not_for_production
+          COOKIE_SECRET: migration_test_cookie_secret_not_for_production
+          RESEND_API_KEY: re_migration_test
+          EMAIL_DELIVERY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          RESEND_FROM_EMAIL: test@example.com
+          CREDO_PUBLIC_KEY: migration_test
+          CREDO_SECRET_KEY: migration_test
+          PAYSTACK_SECRET_KEY: sk_test_migration
+          S3_FILE_URL: https://example.com
+          S3_BUCKET: migration-test
+          S3_REGION: us-east-1
+          S3_ACCESS_KEY_ID: migration_test
+          S3_SECRET_ACCESS_KEY: migration_test
+        run: |
+          pnpm exec medusa db:migrate --skip-scripts
+          pnpm exec medusa db:migrate --skip-scripts
+
+      - name: Security HTTP and database integration tests
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: postgres://medusa_test:migration_test_only@localhost:5432/medusa_migration_test
+          STORE_CORS: http://localhost:8000
+          ADMIN_CORS: http://localhost:9000
+          AUTH_CORS: http://localhost:9000
+          JWT_SECRET: migration_test_jwt_secret_not_for_production
+          COOKIE_SECRET: migration_test_cookie_secret_not_for_production
+          RESEND_API_KEY: re_migration_test
+          EMAIL_DELIVERY_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          RESEND_FROM_EMAIL: test@example.com
+          CREDO_PUBLIC_KEY: migration_test
+          CREDO_SECRET_KEY: migration_test
+          PAYSTACK_SECRET_KEY: sk_test_migration
+          S3_FILE_URL: https://example.com
+          S3_BUCKET: migration-test
+          S3_REGION: us-east-1
+          S3_ACCESS_KEY_ID: migration_test
+          S3_SECRET_ACCESS_KEY: migration_test
+          NODE_ENV: test
+          MEDUSA_TEST_DB_ISOLATED: "1"
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USERNAME: medusa_test
+          DB_PASSWORD: migration_test_only
+        run: pnpm run test:integration:http
+
+  storefront:
+    name: Storefront lint, type-check and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `next build` is not run here: it prerenders pages from a live Medusa,
+      # so it only runs in deploy.yml against the deployed API. `next typegen`
+      # generates the route types (PageProps, RouteContext) tsc needs.
+      - name: Type-check
+        working-directory: apps/storefront
+        run: |
+          pnpm exec next typegen
+          pnpm exec tsc --noEmit
+
+      - name: Lint
+        working-directory: apps/storefront
+        run: pnpm run lint
+
+      - name: Unit tests
+        working-directory: apps/storefront
+        run: pnpm run test

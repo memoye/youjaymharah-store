@@ -1,374 +1,405 @@
 # Production deployment
 
-Everything needed to take this store from a laptop to a public domain, in the
-order it should be done. Operational policy once it is live -- log retention,
-backups, restore drills -- lives in [production-operations.md](./production-operations.md).
+How this store runs in production and how to operate it: one VPS running
+Docker Compose, with PostgreSQL on Neon and files in object storage.
+Operational policy (log retention, backups, restore drills) lives in
+[production-operations.md](./production-operations.md).
 
-## Where each service runs
+Nothing here deploys on its own. Production goes live when the steps in
+[First deployment](#first-deployment) are followed and the Deploy workflow is
+run by hand.
 
-| Service              | Host                                               | Why there                                                                            | Monthly                                        |
-| -------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| Storefront (Next 16) | Cloudflare Workers, OpenNext adapter               | Same account as DNS and R2; SSR and ISR both supported                               | $0, or $5 if the bundle outgrows the free plan |
-| Backend API (Medusa) | Fly.io, London (`lhr`)                             | Needs an always-on Node process for cron, subscribers and the in-memory search index | ~$6                                            |
-| Admin dashboard      | Cloudflare Workers static assets, `admin.<domain>` | A static bundle on the edge; keeps dashboard traffic off the backend host            | $0                                             |
-| Postgres             | Neon, `eu-west-2`                                  | Free tier is enough at this catalogue size                                           | $0                                             |
-| Redis                | Upstash, `eu-west-2`                               | Event bus, workflow engine, cache, locks, admin sessions                             | $0                                             |
-| Files                | Cloudflare R2                                      | No egress charges, same account as the domain                                        | $0                                             |
-| Email                | Resend                                             | 3,000/month free                                                                     | $0                                             |
+## Architecture
 
-**Put the backend, Neon and Upstash in the same city.** London keeps
-backend-to-database hops at single-digit milliseconds while sitting ~90 ms from
-Lagos. A US region doubles shopper latency on cart and checkout; splitting the
-three across regions is worse than either.
+```text
+Internet ─ Cloudflare (optional) ─ VPS :80/:443 ─ Caddy
+                                                    ├── <domain>         → storefront   (Next.js, :8000)
+                                                    ├── www.<domain>     → 301 to <domain>
+                                                    ├── api.<domain>     → medusa-server (:9000)
+                                                    └── admin.<domain>   → admin        (static dashboard, :8080)
 
-### Why not the GCP free tier
+medusa-server ─┬─ Neon PostgreSQL (direct endpoint, TLS)
+medusa-worker ─┤
+               └─ redis (container, internal network only)
+storefront ──── medusa-server over the Docker network (never through Caddy)
+```
 
-An e2-micro is free in `us-west1`, `us-central1` and `us-east1`, but Google
-bills in-use external IPv4 addresses at $0.005/hour -- about **$3.65/month** --
-and a VM without one cannot reach Neon, Upstash or a registry without Cloud NAT
-at roughly $32/month. So the real comparison is $3.65 plus your own ops, 1 GB of
-RAM and a US-only region, against ~$6 for a managed machine in London. Appendix
-A covers the GCE path anyway, because the Dockerfile and workflow are identical.
+| Service         | Image                            | Role                                                                       |
+| --------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `caddy`         | `caddy:2.10-alpine`              | TLS (Let's Encrypt), routing by hostname, the only published ports         |
+| `medusa-server` | `backend:<sha>`                  | Store and Admin APIs, auth, payment and email webhooks. No background work |
+| `medusa-worker` | `backend:<sha>` (same image)     | Subscribers, scheduled jobs, workflow steps, search indexing. No routes    |
+| `admin`         | `admin:<sha>-<environment>`      | The dashboard as static files, built for `https://api.<domain>`            |
+| `storefront`    | `storefront:<sha>-<environment>` | Next.js standalone server                                                  |
+| `redis`         | `redis:7.4-alpine`               | Event bus, workflow engine, cache, locks, admin sessions                   |
 
----
+Files: [`infra/compose.yaml`](../infra/compose.yaml),
+[`infra/caddy/Caddyfile`](../infra/caddy/Caddyfile),
+[`infra/deploy.sh`](../infra/deploy.sh),
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
 
-## Phase 1 -- Domain
+### Why it is built this way
 
-1. Buy the domain through **Cloudflare Registrar** (at-cost, and DNS is wired up
-   for you). Existing domain elsewhere: add the site to Cloudflare and move the
-   nameservers first.
-2. Names used throughout this guide:
-   - `example.com` -- storefront
-   - `www.example.com` -- redirect to apex
-   - `api.example.com` -- backend and, to begin with, the admin dashboard
-   - `admin.example.com` -- the admin dashboard
-3. Under SSL/TLS, set the mode to **Full (strict)**.
+- **Admin is static files on its own hostname**, built with
+  `medusa build --admin-only` at base path `/` and `https://api.<domain>`
+  compiled in. Serving Medusa's built-in `/app` at `admin.<domain>` would need
+  path rewriting that breaks asset URLs and client-side routes. The dashboard
+  calls `api.<domain>` cross-origin. That is a different origin but the same
+  site, so Medusa's `SameSite=Lax` session cookie still flows. `ADMIN_CORS` and
+  `AUTH_CORS` allow exactly `https://admin.<domain>`.
+- **Server and worker are split.** Search uses the PostgreSQL provider, so the
+  index lives in Neon: the worker fills and updates it, the server only
+  queries it. Background work (emails, cart reminders, stock alerts, index
+  updates) cannot slow down API requests, and each process can be restarted
+  on its own.
+- **One Medusa server, no blue/green.** A deploy restarts it. Caddy holds
+  requests that cannot connect for up to 30 s, so a restart normally shows up
+  as a slow response rather than an error. Genuine zero-downtime deployment
+  (two servers behind a health-checked switch) is possible with this
+  architecture and deliberately deferred: not worth it at this traffic.
+- **Neon's direct endpoint, not the pooler.** Medusa is a long-running process
+  holding a small pool (knex/pg, 2 to 10 connections per process). The two
+  processes plus a migration run stay far below Neon's direct connection
+  limit. PgBouncer's transaction mode would add a hop and buy nothing, so one
+  `DATABASE_URL` serves runtime and migrations alike.
+- **Redis runs next to Medusa** with `noeviction`, append-only persistence and
+  no published port, on a Docker network only the two Medusa services join.
+  It holds job and session state, not business data.
+- **Images are built in GitHub Actions, never on the VPS.** The backend image
+  has no domain in it. The admin and storefront images compile in their
+  deployment's URLs and publishable key, so they are tagged per environment.
 
-## Phase 2 -- Data services
+## Configuration: where each value lives
 
-Create these before the backend; it needs their credentials to boot.
+| Where                                           | What                                                                                                                                                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GitHub Environment **secrets**                  | `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`; optional `SENTRY_AUTH_TOKEN` (storefront source maps)                                                                                  |
+| GitHub Environment **variables** (build-time)   | `DOMAIN`, `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `IMAGE_REMOTE_URLS`; optional `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `DEPLOY_PATH` (default `/opt/store`), `DEPLOY_SSH_PORT` (default 22) |
+| VPS `/opt/store/.env` (not secret)              | `DOMAIN`, `ACME_EMAIL`, `ENVIRONMENT`, `IMAGE_PREFIX`, and the image tags `deploy.sh` maintains. Template: [`infra/.env.template`](../infra/.env.template)                                                   |
+| VPS `/opt/store/backend.env` (secret, mode 600) | Everything Medusa reads at runtime: database, CORS, secrets, payments, email, storage. Template: [`infra/backend.env.template`](../infra/backend.env.template)                                               |
+| `infra/compose.yaml`                            | `REDIS_URL`, `MEDUSA_WORKER_MODE`, `NODE_OPTIONS`, `SENTRY_RELEASE`, the storefront's runtime `MEDUSA_BACKEND_URL`                                                                                           |
 
-4. **Neon** -- new project in `eu-west-2`. Copy the _pooled_ connection string
-   into `DATABASE_URL`. The free tier autosuspends after inactivity, so the
-   first request after a quiet spell is slow; that is normal.
-5. **Upstash Redis** -- database in the same region. Set the eviction policy to
-   **`noeviction`**: this Redis holds workflow state and admin sessions, and
-   evicting either silently breaks them. Copy the `rediss://` URL into
-   `REDIS_URL`. Watch the command counter in week one -- five subsystems share
-   this instance and the free allowance is the first thing likely to run out.
-6. **R2** -- create a bucket, then an S3-compatible API token. That gives
-   `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` and
-   `S3_REGION` (`auto`). `S3_FILE_URL` is the bucket's public URL -- attach a
-   custom domain such as `files.example.com` rather than using `*.r2.dev`, so
-   the URLs already stored against products never have to change.
-7. **Resend** -- verify the sending domain (the DNS records go into Cloudflare),
-   create an API key, and set `RESEND_FROM_EMAIL` to an address on that domain.
-   Delivery-event webhooks are covered in [resend-webhooks.md](./resend-webhooks.md).
+The public URLs resolve as:
 
-## Phase 3 -- Secrets
+| Purpose     | Value                                                                        | Set in                                                     |
+| ----------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Storefront  | `https://<domain>`                                                           | `STOREFRONT_URL` (backend), `NEXT_PUBLIC_BASE_URL` (build) |
+| Backend/API | `https://api.<domain>`                                                       | admin and storefront image builds (`MEDUSA_BACKEND_URL`)   |
+| Admin       | `https://admin.<domain>`                                                     | `ADMIN_URL` (backend), invite and password-reset links     |
+| CORS        | `STORE_CORS=https://<domain>`, `ADMIN_CORS=AUTH_CORS=https://admin.<domain>` | `backend.env`                                              |
 
-8. Generate the four the backend signs and encrypts with:
+The workflow derives every URL from `DOMAIN`, so a new client deployment is a
+new GitHub Environment plus a VPS: no code changes.
+
+## One-time setup
+
+### VPS (OVH, 4 vCPU / 8 GB)
+
+Expected memory: roughly 0.5 to 1 GB for each Medusa process and 0.3 GB for
+the storefront, with Redis and Caddy well under 0.2 GB together. That leaves
+most of the 8 GB free. No container memory limits are set: on a single
+dedicated host a hard limit adds an OOM failure mode without protecting
+anything. Each Medusa process caps its V8 heap at 1.5 GB instead
+(`NODE_OPTIONS` in `compose.yaml`).
+
+1. Ubuntu 24.04 LTS (or Debian 12). Install Docker Engine and the Compose
+   plugin from Docker's apt repository (not the distribution's `docker.io`).
+   The deploy script also needs `curl` and `flock` (util-linux), both
+   present on a stock install.
+2. A deploy user, used only by GitHub Actions:
 
    ```sh
-   openssl rand -hex 32   # JWT_SECRET
-   openssl rand -hex 32   # COOKIE_SECRET
-   openssl rand -hex 32   # EMAIL_DELIVERY_ENCRYPTION_KEY (must be 64 hex chars)
-   openssl rand -hex 32   # AUTH_MFA_ENCRYPTION_KEY
+   sudo adduser --disabled-password deploy
+   sudo usermod -aG docker deploy
+   sudo install -d -o deploy -g deploy -m 750 /opt/store
    ```
 
-   Keep them in the host's secret store, never in the repository. The full list
-   of variables is in `apps/backend/.env.template`.
+   Membership of `docker` is root-equivalent: keep this key for deployments
+   only, and give people their own accounts.
 
-9. CORS, which is what usually breaks first:
+3. SSH: key authentication only (`PasswordAuthentication no`,
+   `PermitRootLogin no`). Generate a dedicated key pair for deployments and
+   add the public half to `~deploy/.ssh/authorized_keys`.
+4. Firewall: allow 22, 80 and 443 (plus 443/udp for HTTP/3), deny the rest.
+   `ufw` works for SSH, but Docker publishes ports through its own iptables
+   chain and bypasses `ufw`. Only Caddy publishes ports here, so nothing else
+   is exposed either way. To accept web traffic only from Cloudflare, do it in
+   OVH's network firewall (control panel), not in `ufw`.
+5. Put the runtime configuration in place:
 
    ```sh
-   STORE_CORS=https://example.com
-   ADMIN_CORS=https://admin.example.com
-   AUTH_CORS=https://example.com,https://admin.example.com
-   STOREFRONT_URL=https://example.com
-   ADMIN_URL=https://admin.example.com
-   ADMIN_DISABLED=true
-   MEDUSA_BACKEND_URL=https://api.example.com
+   cd /opt/store
+   # copy infra/.env.template and infra/backend.env.template from the repo
+   cp .env.template .env && cp backend.env.template backend.env
+   chmod 600 backend.env
+   # edit both
    ```
 
-## Phase 4 -- Backend on Fly.io
-
-The image is built from `apps/backend/Dockerfile`, whose context is the
-repository root.
-
-10. From the repository root:
-
-    ```sh
-    fly launch --no-deploy --dockerfile apps/backend/Dockerfile --name youjaymharah-api --region lhr
-    ```
-
-11. Edit `fly.toml` so the machine never stops -- a stopped machine misses cron
-    runs and drops the search index:
-
-    ```toml
-    [http_service]
-      internal_port = 9000
-      force_https = true
-      auto_stop_machines = false
-      auto_start_machines = true
-      min_machines_running = 1
-
-    [[http_service.checks]]
-      grace_period = "180s"
-      interval = "30s"
-      method = "GET"
-      path = "/health"
-      timeout = "5s"
-
-    [[vm]]
-      size = "shared-cpu-1x"
-      memory = "1gb"
-    ```
-
-12. Set the secrets (`fly secrets set KEY=value ...`) for everything in Phase 2
-    and 3, plus `REDIS_PREFIX=youjaymharah:` and the payment keys.
-
-13. `fly deploy`. The container entrypoint runs `medusa db:migrate` before
-    starting, so the first boot creates the schema. Watch it with `fly logs`.
-
-14. Point the domain at it:
-
-    ```sh
-    fly certs add api.example.com
-    ```
-
-    Add the CNAME Fly prints, **DNS-only (grey cloud)** until the certificate is
-    issued. Once `fly certs show` reports it ready you may turn the proxy on.
-
-15. The first `medusa db:migrate` also runs `src/migration-scripts/initial-data-seed.ts`,
-    which creates what a store cannot boot without: the default sales channel, a
-    publishable API key, NGN and USD currencies, the Lagos region and stock
-    location, the search vocabulary -- and, if `ADMIN_EMAIL` and `ADMIN_PASSWORD`
-    are set, the first Super Admin. Set those two before the first deploy and
-    remove them afterwards; the script skips a user that already exists.
-
-    The publishable key token is printed once during that run, and it is what
-    the storefront authenticates with:
-
-    ```sh
-    fly logs | grep "Publishable API key token"
-    ```
-
-    Without `ADMIN_EMAIL`/`ADMIN_PASSWORD`, create the user by hand instead:
-
-    ```sh
-    fly ssh console -C "medusa user -e you@example.com -p 'a-strong-password'"
-    ```
-
-## Phase 5 -- Storefront on Cloudflare Workers
-
-Cloudflare's own default is now `vinext`, which is in beta and reimplements the
-Next.js API surface on Vite. `npx vinext check` scores this storefront at 87%:
-one auto-fixable issue, image optimisation no better or worse than OpenNext, and
-`getImageProps` supported, so the art-directed hero survives. It was passed over
-for two reasons -- `next/font/google` loads from a CDN instead of self-hosting
-Bodoni and Instrument Sans at build time, which costs brand typography a
-third-party round trip and a flash of fallback type, and build-time static
-pre-rendering is still on its roadmap. Revisit when both land; `vinext init` is
-non-destructive and leaves `next dev` working, so the spike stays cheap.
-
-16. In `apps/storefront`:
-
-    ```sh
-    pnpm add -D @opennextjs/cloudflare wrangler
-    ```
-
-17. Add `wrangler.jsonc` beside `next.config.ts`:
-
-    ```jsonc
-    {
-      "name": "youjaymharah-storefront",
-      "main": ".open-next/worker.js",
-      "compatibility_date": "2026-09-01",
-      "compatibility_flags": ["nodejs_compat"],
-      "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-    }
-    ```
-
-    and `open-next.config.ts`:
-
-    ```ts
-    import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-
-    export default defineCloudflareConfig();
-    ```
-
-18. Build and deploy commands, from the repository root:
-
-    ```sh
-    pnpm install --frozen-lockfile
-    pnpm --filter @youjaymharah/storefront exec opennextjs-cloudflare build
-    pnpm --filter @youjaymharah/storefront exec opennextjs-cloudflare deploy
-    ```
-
-    In the Cloudflare dashboard (Workers -> Builds) point the project at the
-    repository with the root directory `apps/storefront` and those same
-    commands, so pushes to `main` deploy themselves.
-
-19. Variables. `NEXT_PUBLIC_*` are inlined at build time, so they must be set on
-    the build, not only at runtime:
-
-    ```sh
-    MEDUSA_BACKEND_URL=https://api.example.com
-    NEXT_PUBLIC_BASE_URL=https://example.com
-    NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_...
-    IMAGE_REMOTE_URLS=https://files.example.com
-    ```
-
-20. Attach the domain: add `example.com` as a custom domain on the Worker, and a
-    redirect rule sending `www.example.com/*` to `https://example.com/$1`.
-
-21. **Two caveats.** Cloudflare's free plan caps a Worker at 3 MiB compressed --
-    if the build exceeds it, Workers Paid is $5/month. And Next's image
-    optimiser needs Cloudflare Images to run on Workers; until that is set up,
-    set `images.unoptimized = true` in `next.config.ts` and let R2 serve the
-    files directly. Phones then download desktop-sized images, so revisit it
-    before you push traffic at the site.
-
-## Phase 6 -- Admin dashboard
-
-The dashboard is a static single-page app that talks to the API over CORS.
-`ADMIN_DISABLED=true` on the backend means the server never builds or serves it,
-which also keeps its assets off the backend's bandwidth.
-
-22. Add repository **variables** `MEDUSA_BACKEND_URL` (`https://api.example.com`)
-    and `STOREFRONT_URL` (`https://example.com`), and repository **secrets**
-    `CLOUDFLARE_API_TOKEN` (Workers deploy permission) and
-    `CLOUDFLARE_ACCOUNT_ID`. `MEDUSA_BACKEND_URL` is compiled into the bundle,
-    so it must be right at build time; changing it later needs a rebuild.
-
-23. The `admin` job in `.github/workflows/backend.yml` runs
-    `pnpm run build:admin` (`medusa build --admin-only`, output `.medusa/admin`)
-    and deploys it with `apps/backend/deploy/admin/wrangler.jsonc`, which serves
-    the directory with `not_found_handling: "single-page-application"` so deep
-    links resolve. To do it by hand:
-
-    ```sh
-    ADMIN_DISABLED=true MEDUSA_BACKEND_URL=https://api.example.com \
-      pnpm --filter @youjaymharah/backend run build:admin
-    pnpm --filter @youjaymharah/backend exec wrangler deploy \
-      --config deploy/admin/wrangler.jsonc
-    ```
-
-24. In the Cloudflare dashboard, attach `admin.example.com` to the
-    `youjaymharah-admin` Worker.
-
-25. `ADMIN_URL` is the dashboard's own base URL, because invite and staff
-    password-reset emails build their links from it. On this layout it is
-    `https://admin.example.com`; if you ever move the dashboard back onto the
-    backend it becomes `https://api.example.com/app`, path included.
-
-    The session cookie is set by `api.example.com`, and `admin.example.com` is a
-    different origin but the _same site_, so the default `SameSite=Lax` cookie is
-    still sent -- `ADMIN_CORS` and `AUTH_CORS` are all that is needed. Attach the
-    custom domain before testing sign-in: a `*.workers.dev` preview is a
-    different site, and only then would you need `sessionOptions.cookieOptions`
-    with `sameSite: "none"`.
-
-## Phase 7 -- Continuous deployment
-
-The workflow in `.github/workflows/backend.yml` already lints, type-checks,
-builds and migrates a throwaway database on every push. Its `image` and `deploy`
-jobs run only on `main`.
-
-26. On Fly, replace the two SSH steps with:
-
-    ```yaml
-    - uses: superfly/flyctl-actions/setup-flyctl@master
-    - run: flyctl deploy --remote-only --config apps/backend/fly.toml
-      env:
-        FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-    ```
-
-    On a VM, keep the shipped steps and set `DEPLOY_HOST`, `DEPLOY_USER` and
-    `DEPLOY_SSH_KEY` as repository secrets.
-
-27. Rolling back is redeploying a known-good tag: `fly releases` then
-    `fly deploy --image <previous>`, or on a VM
-    `BACKEND_IMAGE=ghcr.io/<owner>/<repo>/backend:<sha> docker compose up -d`.
-
-## Phase 8 -- Error tracking and uptime
-
-28. Create two Sentry projects (Node for the backend, Next.js for the
-    storefront). Both SDKs are inert without a DSN, so development and CI stay
-    silent.
-
-    - Backend: `SENTRY_DSN` on the host. `instrumentation.ts` initialises it
-      before the server boots, and the `errorHandler` in
-      `src/api/middlewares.ts` reports 5xx responses. Expected 4xx errors --
-      validation, not found, unauthorised -- are filtered out, and query
-      strings are never attached: they carry search terms and one-time tokens.
-    - Storefront: `NEXT_PUBLIC_SENTRY_DSN` (public by design, and needed in the
-      browser). For readable stack traces also set `SENTRY_ORG`,
-      `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` on the build, which uploads
-      source maps and deletes them afterwards.
-
-    Tracing and session replay are both off (`0`). Replay records what shoppers
-    type, which needs a consent story first.
-
-29. Set the repository variable `HEALTH_URL` to
-    `https://api.example.com/health`. `.github/workflows/uptime.yml` probes it
-    every 15 minutes and opens (or comments on) an issue labelled `uptime` when
-    it fails.
-
-    Treat that as a backstop, not monitoring: GitHub delays scheduled runs under
-    load and disables them after 60 days of repository inactivity. Add an
-    external monitor -- UptimeRobot's free tier is enough -- pointing at the
-    same URL.
-
-30. Prove both work before you need them: stop the backend briefly and confirm
-    an issue appears, and throw once from a route to confirm Sentry receives it.
-
-## Phase 9 -- Before you call it live
-
-- [ ] Error tracking and an uptime check are wired up and have fired once in
-      anger, so you know they work.
-- [ ] A test order end to end, including the payment callback URLs.
-- [ ] Order confirmation, cart reminder and password reset emails all arrive.
-- [ ] `robots.txt` and `sitemap.xml` reflect the real domain, and
-      `allow_indexing` is on in admin.
-- [ ] Neon backups and the restore drill in
-      [production-operations.md](./production-operations.md).
-- [ ] An uptime check on `https://api.example.com/health`.
-- [ ] Upstash command usage checked after a week of real traffic.
-
----
-
-## Appendix A -- Backend on a GCE e2-micro
-
-Same image, same workflow; you supply the machine.
-
-1. Create an **e2-micro** in `us-east1` (Debian 12, 30 GB standard disk). Under
-   networking set the **Standard** network tier -- 200 GiB of free egress a
-   month against Premium's 1 GiB.
-2. Add swap, because 1 GB of RAM is not enough on its own:
-
-   ```sh
-   sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile
-   sudo mkswap /swapfile && sudo swapon /swapfile
-   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-   ```
-
-3. Install Docker, create `/opt/youjaymharah` owned by the deploy user, and put
-   the environment from Phases 2-3 in `/opt/youjaymharah/.env`.
-4. Never build on the box -- `medusa build` bundles the admin dashboard and
-   wants more than 1 GB. The GitHub workflow builds the image; the VM only
-   pulls it.
-5. Front it with a Cloudflare Tunnel, so nothing is exposed and there are no
-   certificates to renew:
-
-   ```sh
-   cloudflared tunnel create youjaymharah
-   cloudflared tunnel route dns youjaymharah api.example.com
-   ```
-
-   Point the tunnel at `http://localhost:9000`, which is where
-   `apps/backend/deploy/docker-compose.yml` binds the container.
-
-6. Set a budget alert in GCP. Budgets only notify -- they do not stop spending --
-   so treat the alert as the signal to act.
+   (The first workflow run also copies the templates, `compose.yaml`,
+   `deploy.sh` and `caddy/` into `/opt/store`; it never touches `.env` or
+   `backend.env`.)
+
+### DNS and Cloudflare
+
+Create A (and AAAA, if the VPS has IPv6) records for `<domain>`,
+`www.<domain>`, `api.<domain>` and `admin.<domain>`, all pointing at the VPS.
+Caddy requests one certificate per hostname through HTTP-01 on port 80.
+
+With Cloudflare in front:
+
+- **SSL/TLS mode: Full (strict).** Caddy has real certificates.
+- **Always Use HTTPS: off.** Caddy already redirects HTTP to HTTPS, and
+  leaving this off lets Let's Encrypt reach port 80 for issuance and renewal
+  through the proxy.
+- **First deployment:** start the records as DNS-only (grey cloud). Switch
+  them to proxied once the three hostnames serve valid certificates.
+- **Caching:** the defaults are right, since Cloudflare caches only static
+  file extensions. Do not add Cache Everything or APO rules for `api.` or
+  `admin.`: their responses are per-user. The admin's JS bundles have hashed
+  names and `immutable` headers, and the storefront's `/_next/static` files
+  are fingerprinted too.
+- **Leave off:** Rocket Loader (breaks Next.js hydration), and Bot Fight Mode
+  or challenges on `api.` (they block payment webhooks and the deploy
+  workflow, which builds the storefront from GitHub's runners against
+  `api.<domain>`).
+- WebSockets can stay on. Nothing here needs them today.
+- Client addresses: Caddy trusts `CF-Connecting-IP` only from Cloudflare's
+  published ranges (listed in the Caddyfile; re-check them yearly) and passes
+  Medusa a single `X-Forwarded-For`, so rate limits apply per shopper and
+  cannot be spoofed.
+
+### Neon
+
+1. Create a project in the region nearest the VPS, e.g. AWS `eu-central-1`
+   (Frankfurt) for an OVH Gravelines, Strasbourg or Frankfurt server. Keep it
+   separate from the development project (currently `us-east-2`).
+2. Copy the **direct** connection string (host without `-pooler`) with
+   `sslmode=require` into `DATABASE_URL` in `backend.env`.
+3. On a paid plan, disable scale-to-zero for the production branch. Otherwise
+   the first request after an idle spell waits for the compute to wake.
+4. Set the restore window (point-in-time recovery). It is the only backup of
+   business data; see [production-operations.md](./production-operations.md).
+
+`db:migrate` enables the `pg_trgm` and `unaccent` extensions the search index
+needs; Neon supports both.
+
+### GitHub
+
+1. Create an Environment (Settings → Environments), e.g. `production`:
+   - **Deployment branches and tags:** `main` and your release tags only.
+   - Required reviewers are optional. The workflow is already manual, and
+     several of its jobs use the environment, so a reviewer would approve
+     each of them.
+   - Secrets: `DEPLOY_HOST`, `DEPLOY_USER` (`deploy`), `DEPLOY_SSH_KEY` (the
+     private half of the deploy key), `DEPLOY_KNOWN_HOSTS` (output of
+     `ssh-keyscan -t ed25519 <host>`, checked against the server's real
+     fingerprint).
+   - Variables: `DOMAIN` (e.g. `example.com`), `IMAGE_REMOTE_URLS` (the
+     `S3_FILE_URL` origin, comma-separated with any other image hosts). Also
+     `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, which you only get during the first
+     deployment.
+2. **GHCR access.** Images are pushed to `ghcr.io/<owner>/<repo>/*` with the
+   workflow's own token and stay private. The VPS never holds a GitHub
+   credential. Each deploy job passes it that job's token, restricted to
+   `packages: read`, which expires when the job ends. `deploy.sh` logs out
+   afterwards. The first time the packages exist, check each one under
+   Package settings → Manage Actions access: this repository must be listed
+   (it is by default for packages the repository pushed).
+
+This fits client ownership. The client's VPS pulls only these images, only
+during a deploy you run, and needs no GitHub account or source access. You
+hold the deploy key; the client can revoke it by removing it from
+`authorized_keys`. Note that the images contain the compiled application, with
+inline source maps. Anyone with root on the VPS can read that code.
+
+## First deployment
+
+From an empty Neon database to a live store:
+
+1. **Configure** the VPS (`.env`, `backend.env` including `ADMIN_EMAIL` and
+   `ADMIN_PASSWORD`), DNS (DNS-only), Neon and the GitHub Environment as
+   above. Leave `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` unset.
+2. **Backend bootstrap:** Actions → Deploy → Run workflow, from `main`, with
+   the environment and **backend_only** ticked. It runs CI, builds the
+   backend and admin images, then on the VPS:
+   - starts Redis and Caddy (certificates are issued now);
+   - runs `medusa db:migrate --execute-safe-links --all-or-nothing`, which
+     creates the schema, the search index tables, and runs the seed scripts.
+     These create the sales channel, the publishable API key, NGN/USD, the
+     Nigeria region with Credo and Paystack, the Lagos stock location, RBAC
+     roles, the search vocabulary, and the Super Admin from
+     `ADMIN_EMAIL`/`ADMIN_PASSWORD`;
+   - starts `medusa-server`, `medusa-worker` (which fills the search index)
+     and `admin`, then checks `api.` and `admin.` publicly.
+3. **Publishable key:** copy the `Publishable API key token: pk_...` line from
+   the "Migrate and roll out" step's log into the Environment variable
+   `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`. (Later, find it in the dashboard
+   under Settings → Publishable API Keys.)
+4. **Tidy up:** remove `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `backend.env`.
+   Sign in at `https://admin.<domain>`.
+5. **Full deployment:** run the workflow again without backend_only. It
+   redeploys the backend (no pending migrations), builds the storefront
+   against `https://api.<domain>` with the key, deploys it, and checks all
+   three hostnames.
+6. Switch the Cloudflare records to proxied, and set the webhook URLs in
+   the provider dashboards:
+   - Paystack: `https://api.<domain>/hooks/payment/paystack_paystack`
+   - Credo: `https://api.<domain>/hooks/payment/credo_credo`
+   - Resend: `https://api.<domain>/webhooks/resend` (see
+     [resend-webhooks.md](./resend-webhooks.md))
+7. Work through [Before going live](#before-going-live).
+
+## Normal deployments
+
+Merge to `main`, then run the Deploy workflow for the environment. It:
+
+1. runs CI (`ci.yml`: backend build with lint and type-check, unit tests,
+   migrations twice on a scratch database, HTTP integration tests;
+   storefront type-check, lint and tests);
+2. builds and pushes `backend:<sha>` and `admin:<sha>-<env>`;
+3. on the VPS (`deploy.sh backend <sha>`): pulls, migrates with a one-off
+   container of the new image while the old version keeps serving, restarts
+   server, worker and admin, waits for their health checks, checks routes
+   through Caddy, then checks `api.` and `admin.` publicly;
+4. builds `storefront:<sha>-<env>` against the API just deployed;
+5. on the VPS (`deploy.sh storefront <sha>`): same pattern, then checks all
+   three hostnames publicly.
+
+Any failure stops the workflow and shows red. Two runs for the same
+environment queue rather than overlap, and `deploy.sh` also takes a lock on
+the host. Caddy config changes ship with the deploy and are applied with
+`caddy reload`, without dropping connections.
+
+To deploy automatically on every merge later, add a `push` trigger to
+`deploy.yml`. No other change is needed.
+
+## Migrations
+
+- `db:migrate` runs once per backend deploy, in its own container, in
+  `server` worker mode (it consumes no jobs). Neither Medusa service runs
+  migrations on boot.
+- `--all-or-nothing` reverts the migrations of a run that fails partway; the
+  running version is left untouched and the deploy stops.
+- `--execute-safe-links` applies link changes that drop nothing. A link
+  removal that would drop data is reported and skipped. Run it deliberately
+  on the host (`docker compose run --rm medusa-server medusa db:sync-links`)
+  after checking what it drops.
+- Search-index changes (a new field in `src/search/*.ts`) are rebuilt by
+  `db:migrate`; the worker refills the index when it starts.
+- **Migrations run before the new code starts**, so for a short time the old
+  code runs against the new schema. Keep migrations backward compatible: add
+  columns and tables first, remove them in a later release. Migrations are
+  forward-only. A code rollback does not undo them, and there is no automatic
+  schema rollback. Neon's point-in-time restore is the last resort for a
+  destructive mistake.
+
+## Rollback
+
+`deploy.sh` rolls back on its own when the new version fails its health
+checks: it restarts the previous tag and exits non-zero. To roll back a
+version that deployed fine but misbehaves, on the VPS:
+
+```sh
+cd /opt/store
+./deploy.sh status                       # current and previous tags
+./deploy.sh backend <previous-sha>       # server, worker and admin
+./deploy.sh storefront <previous-sha>
+```
+
+The previous images are kept on the host, so this needs no registry login.
+Anything older can be deployed from GitHub: tag the commit and run the
+workflow from the tag. Remember that migrations are not rolled back.
+
+## Operating it
+
+Everything below runs in `/opt/store` as the deploy user (or with `sudo`).
+
+**Logs.** Medusa and Next.js log to stdout. Medusa writes one JSON object per
+line in production. Docker keeps five 10 MB files per container.
+
+```sh
+docker compose logs -f --tail=200 medusa-server
+docker compose logs -f medusa-worker        # emails, jobs, search indexing
+docker compose logs --since=1h storefront caddy
+```
+
+Caddy writes no access log. Request URLs carry search terms and one-time
+tokens, which the log-retention policy keeps out of logs. To debug routing,
+add a `log` directive to a site block temporarily and reload.
+
+**Status and restarts.**
+
+```sh
+docker compose ps                    # health of every service
+docker compose restart medusa-worker # one service, same version
+docker compose up -d                 # after a reboot or edit, recreate what changed
+```
+
+Every service has `restart: unless-stopped`, and Docker starts at boot, so a
+reboot brings the stack back by itself.
+
+**Updating secrets or runtime settings.** Edit `backend.env`, then recreate
+the two Medusa services. `restart` does not reread env files.
+
+```sh
+docker compose up -d --force-recreate medusa-server medusa-worker
+```
+
+Build-time values (anything `NEXT_PUBLIC_*`, `IMAGE_REMOTE_URLS`, `DOMAIN`)
+change in the GitHub Environment and need a new deploy.
+
+**Admin users.** Invite from the dashboard, or create one on the host:
+
+```sh
+docker compose run --rm medusa-server medusa user -e someone@example.com -p '<password>'
+```
+
+**State on the VPS.**
+
+| Data                                                    | Where                                  | If lost                                                                     |
+| ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| Orders, customers, catalogue, search index              | Neon                                   | Not on the VPS; covered by Neon's restore window                            |
+| Uploaded images and files                               | S3/R2 bucket                           | Not on the VPS                                                              |
+| Queued jobs, in-flight workflows, admin sessions, cache | `redis_data` volume (append-only file) | Pending emails and retries are lost; admins sign in again. No business data |
+| TLS certificates, ACME account                          | `caddy_data` volume                    | Reissued automatically, subject to Let's Encrypt rate limits                |
+| Configuration and secrets                               | `.env`, `backend.env`                  | Keep a copy in a password manager                                           |
+
+No local backup job is needed. Back up the two env files, and snapshot the
+VPS through OVH if you want faster rebuilds.
+
+**Troubleshooting.**
+
+| Symptom                                        | Look at                                                                                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Certificates not issued                        | `docker compose logs caddy`. DNS must point at the VPS, port 80 must be reachable, and Cloudflare's Always Use HTTPS must be off   |
+| 502 from one hostname                          | `docker compose ps`; the upstream is unhealthy or restarting                                                                       |
+| Deploy fails at migrations                     | Workflow log of "Migrate and roll out"; the old version is still serving                                                           |
+| Admin sign-in fails, CORS error in the browser | `ADMIN_CORS` and `AUTH_CORS` must be exactly `https://admin.<domain>`. The admin image must have been built for the right `DOMAIN` |
+| Search returns nothing                         | `docker compose logs medusa-worker \| grep Search`; the worker seeds the index at start                                            |
+| Emails not sending                             | Worker logs; `docker compose exec redis redis-cli info memory` (writes fail if the 512 MB cap is reached)                          |
+| Storefront build fails in the workflow         | It fetches from `https://api.<domain>`: the API must be up, and not challenged by Cloudflare                                       |
+
+## Error tracking and uptime
+
+- Sentry is inert without a DSN. Set `SENTRY_DSN` in `backend.env`; the release
+  is the commit SHA. For the storefront, set `NEXT_PUBLIC_SENTRY_DSN` and,
+  for readable stack traces, `SENTRY_ORG`, `SENTRY_PROJECT` (variables) and
+  `SENTRY_AUTH_TOKEN` (secret) on the Environment.
+- `.github/workflows/uptime.yml` probes the repository variable `HEALTH_URL`
+  (`https://api.<domain>/health`) every 15 minutes and opens an issue when it
+  fails. It is a backstop: pair it with an external monitor on
+  `https://<domain>/api/health` and `https://api.<domain>/health`.
+
+## Before going live
+
+- [ ] A test order end to end with live payment keys, including the payment
+      callback and webhooks.
+- [ ] Order confirmation, cart reminder and password reset emails arrive.
+- [ ] `robots.txt` and `sitemap.xml` show the real domain, and indexing is
+      allowed in the dashboard.
+- [ ] Neon restore window set, and a restore drill done
+      ([production-operations.md](./production-operations.md)).
+- [ ] An external uptime monitor, and Sentry receiving an error from each app.
+- [ ] Cloudflare records proxied, and all three hostnames verified afterwards.
+- [ ] `ADMIN_EMAIL`/`ADMIN_PASSWORD` removed from `backend.env`, and
+      `backend.env` backed up.
