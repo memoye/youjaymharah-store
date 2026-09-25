@@ -10,7 +10,10 @@ import { errorHandler as defaultErrorHandler } from "@medusajs/framework/http";
 
 import { rateLimit } from "./rate-limit";
 import { reportRequestError } from "./report-error";
-import { UpdateSearchVocabulary } from "../modules/search-insights/vocabulary-input";
+import {
+  UpdateSearchFallbackTerms,
+  UpdateSearchVocabulary,
+} from "../modules/search-insights/vocabulary-input";
 import {
   AnnouncementBar,
   AnnouncementOptionsQuery,
@@ -396,6 +399,17 @@ export default defineMiddlewares({
       matcher: "/admin/search-vocabulary",
       method: ["POST"],
       middlewares: [validateAndTransformBody(UpdateSearchVocabulary)],
+      policies: [{ resource: "storefront_settings", operation: "update" }],
+    },
+    {
+      matcher: "/admin/search-fallback-terms",
+      method: ["GET"],
+      policies: [{ resource: "storefront_settings", operation: "read" }],
+    },
+    {
+      matcher: "/admin/search-fallback-terms",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(UpdateSearchFallbackTerms)],
       policies: [{ resource: "storefront_settings", operation: "update" }],
     },
     {

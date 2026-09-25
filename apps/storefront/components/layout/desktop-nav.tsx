@@ -1,6 +1,6 @@
 "use client"
 
-import type { RefObject } from "react"
+import { useState, type RefObject } from "react"
 
 import {
   NavigationMenu,
@@ -10,6 +10,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
 import { useCatalog } from "@/features/catalog/provider"
+import { useOverlay } from "@/features/layout/overlays"
 import { useActiveMenuItem } from "@/features/catalog/use-active-menu-item"
 import { NEW_ARRIVALS_PATH } from "@/lib/seo/routes"
 
@@ -17,7 +18,7 @@ import { CollectionsPanel, DepartmentPanel, MenuLink } from "./mega-menu"
 
 /** Overrides the kit's compact button look with the header's text style. */
 const itemClass =
-  "h-12 py-1.5 text-[13px] px-2 inline-flex font-medium tracking-[0.02em] decoration-gold underline-offset-6 hover:bg-transparent hover:text-muted-foreground focus:bg-transparent focus-visible:underline focus-visible:ring-0 data-current:underline data-popup-open:bg-transparent data-popup-open:text-muted-foreground data-popup-open:hover:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent"
+  "h-12 py-1.5 text-sm px-2 inline-flex font-medium tracking-[0.02em] decoration-gold underline-offset-6 hover:bg-transparent hover:text-muted-foreground focus:bg-transparent focus-visible:underline focus-visible:ring-0 data-current:underline data-popup-open:bg-transparent data-popup-open:text-muted-foreground data-popup-open:hover:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent"
 
 const contentClass = "p-0"
 
@@ -41,6 +42,13 @@ export function DesktopNav({
 }) {
   const { menu, collectionMenu, storeMenuCards } = useCatalog()
   const active = useActiveMenuItem()
+  const overlay = useOverlay("menu")
+  const [item, setItem] = useState<string | null>(null)
+
+  // Derived rather than synced: when search or the drawer takes the slot this
+  // falls to null on the same render and the panel closes with it, instead of
+  // an effect racing the panel that replaced it.
+  const value = overlay.open ? item : null
 
   const departments = menu.showDepartments
     ? menu.departments
@@ -48,6 +56,11 @@ export function DesktopNav({
 
   return (
     <NavigationMenu
+      value={value}
+      onValueChange={(next) => {
+        setItem(next as string | null)
+        overlay.setOpen(next !== null)
+      }}
       aria-label="Catalogue"
       className="hidden items-stretch md:flex"
       delay={80}

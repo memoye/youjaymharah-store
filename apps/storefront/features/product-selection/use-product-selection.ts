@@ -1,7 +1,7 @@
 "use client"
 
 import type { HttpTypes } from "@medusajs/types"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { parseAsString, useQueryStates } from "nuqs"
 import { useCallback, useMemo } from "react"
 
 import {
@@ -24,15 +24,34 @@ function paramName(optionTitle: string): string {
  * - An option with a single choice (such as One Size) is chosen automatically.
  * - `variant` is set once every option is chosen.
  *
- * It reads `useSearchParams`, so render the component that calls it inside a
+ * It reads the URL, so render the component that calls it inside a
  * `<Suspense>` boundary; otherwise a production build fails for prerendered
  * pages. The product needs `*options` and `*variants.options` in `fields`
  * (`getProductByHandle` requests them).
+ *
+ * Updates are shallow: the page's server render doesn't depend on the chosen
+ * variant, so a tap on a swatch changes the URL without a round trip for it.
  */
 export function useProductSelection(product: HttpTypes.StoreProduct) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  // One key per option this product has, so unrelated query params -- `q`
+  // among them -- are neither read nor touched.
+  const parsers = useMemo(
+    () =>
+      Object.fromEntries(
+        (product.options ?? []).map((option) => [
+          paramName(option.title),
+          parseAsString,
+        ]),
+      ),
+    [product],
+  )
+
+  const [params, setParams] = useQueryStates(parsers, {
+    // Replace rather than push: each tap on a swatch shouldn't become a
+    // back-button step, and the page shouldn't jump to the top.
+    history: "replace",
+    scroll: false,
+  })
 
   const selection = useMemo<OptionSelection>(() => {
     const chosen: OptionSelection = {}
@@ -41,7 +60,7 @@ export function useProductSelection(product: HttpTypes.StoreProduct) {
       const values = getOptionChoices(product, option.title).map(
         (choice) => choice.value,
       )
-      const fromUrl = searchParams.get(paramName(option.title))
+      const fromUrl = params[paramName(option.title)]
 
       if (fromUrl && values.includes(fromUrl)) {
         chosen[option.title] = fromUrl
@@ -51,7 +70,7 @@ export function useProductSelection(product: HttpTypes.StoreProduct) {
     }
 
     return chosen
-  }, [product, searchParams])
+  }, [product, params])
 
   const variant = useMemo(
     () => findVariant(product, selection),
@@ -61,22 +80,9 @@ export function useProductSelection(product: HttpTypes.StoreProduct) {
   /** Choose a value, or pass null to clear the option. */
   const setOption = useCallback(
     (optionTitle: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString())
-
-      if (value) {
-        params.set(paramName(optionTitle), value)
-      } else {
-        params.delete(paramName(optionTitle))
-      }
-
-      const query = params.toString()
-      // Replace rather than push: each tap on a swatch shouldn't become a
-      // back-button step, and the page shouldn't jump to the top.
-      router.replace(query ? `${pathname}?${query}` : pathname, {
-        scroll: false,
-      })
+      void setParams({ [paramName(optionTitle)]: value })
     },
-    [pathname, router, searchParams],
+    [setParams],
   )
 
   return { selection, variant, setOption }

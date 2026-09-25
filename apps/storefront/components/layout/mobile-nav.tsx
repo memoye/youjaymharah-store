@@ -19,6 +19,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 import { useCatalog } from "@/features/catalog/provider"
+import { useOverlay } from "@/features/layout/overlays"
 import { useActiveMenuItem } from "@/features/catalog/use-active-menu-item"
 import { getMenuGroups, type MenuDepartment } from "@/lib/medusa/menu"
 import { NEW_ARRIVALS_PATH } from "@/lib/seo/routes"
@@ -60,7 +61,7 @@ const actionClass =
 export function MobileNav() {
   const { menu, collectionMenu } = useCatalog()
   const active = useActiveMenuItem()
-  const [open, setOpen] = useState(false)
+  const { open, setOpen } = useOverlay("mobile-nav")
   const { view, canGoBack, push, back, reset } = useDrillStack()
 
   return (
@@ -74,7 +75,7 @@ export function MobileNav() {
     >
       <DrawerTrigger
         aria-label="Open menu"
-        className="-ml-2 inline-flex size-10 items-center justify-center md:hidden"
+        className="-ml-2 inline-flex w-10 items-center justify-center md:hidden"
       >
         <ListIcon size={20} />
         <span className="sr-only">toggle side menu</span>
@@ -119,7 +120,7 @@ function Header({
   const { brand } = useStorefrontSettings()
 
   return (
-    <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between bg-popover px-3">
+    <div className="sticky top-0 z-50 flex h-12 shrink-0 items-center justify-between bg-popover px-3">
       {canGoBack ? (
         <button
           type="button"

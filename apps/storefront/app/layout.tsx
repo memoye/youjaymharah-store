@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Bodoni_Moda, Instrument_Sans } from "next/font/google"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 import "./globals.css"
 import { JsonLd } from "@/components/seo/json-ld"
@@ -53,22 +54,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd
           data={[organizationJsonLd(settings), websiteJsonLd(settings)]}
         />
-        <TooltipProvider>
-          <QueryProvider>
-            <StorefrontSettingsProvider settings={settings}>
-              <CatalogProvider
-                menu={getMenuModel(categoryTree)}
-                collectionMenu={getCollectionMenu(
-                  collections,
-                  settings.homepage.featured_collection_id,
-                )}
-                storeMenuCards={settings.navigation.store_menu_cards}
-              >
-                {children}
-              </CatalogProvider>
-            </StorefrontSettingsProvider>
-          </QueryProvider>
-        </TooltipProvider>
+        <NuqsAdapter>
+          <TooltipProvider>
+            <QueryProvider>
+              <StorefrontSettingsProvider settings={settings}>
+                <CatalogProvider
+                  menu={getMenuModel(categoryTree)}
+                  collectionMenu={getCollectionMenu(
+                    collections,
+                    settings.homepage.featured_collection_id,
+                  )}
+                  storeMenuCards={settings.navigation.store_menu_cards}
+                >
+                  {children}
+                </CatalogProvider>
+              </StorefrontSettingsProvider>
+            </QueryProvider>
+          </TooltipProvider>
+        </NuqsAdapter>
       </body>
     </html>
   )

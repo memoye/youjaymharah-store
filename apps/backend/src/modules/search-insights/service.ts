@@ -5,6 +5,7 @@ import { SearchVocabulary } from "./models/search-vocabulary";
 import {
   approvedSearchTerm,
   approvedTrendingTerms,
+  validateFallbackTerms,
   validateVocabulary,
 } from "./approved-terms";
 export { normaliseTerm } from "./approved-terms";
@@ -14,6 +15,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** How many day rows one trending read will look at. */
 const READ_LIMIT = 5000;
 export const SEARCH_VOCABULARY_ID = "search_vocabulary_default";
+
+/**
+ * A second reviewed list in the same table: phrases the merchant wants shown
+ * when nothing is trending. Its own row, so it carries its own revision and
+ * saving one list never invalidates a draft of the other.
+ */
+export const SEARCH_FALLBACK_TERMS_ID = "search_fallback_terms";
 
 export const TRENDING_DEFAULTS = {
   window_days: 7,
@@ -46,6 +54,23 @@ class SearchInsightsModuleService extends MedusaService({
           revision: null,
           source: "environment" as const,
         };
+  }
+
+  /**
+   * Written by the merchant directly, so unlike shopper searches they need no
+   * approval -- only the same validation, which keeps names and contact
+   * details out of a list shown to every visitor.
+   */
+  async readFallbackTerms() {
+    const [stored] = await this.listSearchVocabularies({
+      id: SEARCH_FALLBACK_TERMS_ID,
+    });
+    return stored
+      ? {
+          terms: validateFallbackTerms(stored.terms.items),
+          revision: stored.revision,
+        }
+      : { terms: [] as string[], revision: null };
   }
 
   async approveTerm(raw: unknown) {

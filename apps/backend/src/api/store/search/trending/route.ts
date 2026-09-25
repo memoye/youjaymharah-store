@@ -11,8 +11,9 @@ import { getTrendingSearchTermsWorkflow } from "../../../../workflows/get-trendi
  * search box.
  *
  * Built from submitted searches only, never from suggestion requests, and
- * from terms that actually found something. New stores answer with an empty
- * list until searches accumulate, so the storefront needs its own fallback.
+ * from terms that actually found something. Until searches accumulate, the
+ * merchant's suggested phrases stand in, marked `source: "curated"` so the
+ * storefront doesn't present them as popular.
  */
 export const GET = async (
   req: MedusaStoreRequest<unknown, StoreSearchTrendingType>,
@@ -26,5 +27,5 @@ export const GET = async (
     },
   });
   res.setHeader("Cache-Control", "no-store");
-  res.json({ terms: result });
+  res.json(result);
 };

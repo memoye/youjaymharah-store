@@ -650,6 +650,32 @@ export type StoreSearchProduct = {
   sales_channel_ids: string[];
 };
 
+/** The four fields the suggestions route returns; enough for a row. */
+export type StoreSearchSuggestionProduct = {
+  id: string;
+  title: string;
+  handle: string;
+  thumbnail: string | null;
+};
+
+export type StoreSearchSuggestionsResponse = {
+  products: StoreSearchSuggestionProduct[];
+  categories: { id: string; name: string; handle: string }[];
+  collections: { id: string; title: string; handle: string }[];
+  /** Every product the term matches, not just the ones returned above. */
+  count: number;
+};
+
+/**
+ * Submitted searches that found something, busiest first -- or, while there
+ * are none, the merchant's suggested phrases. Empty when neither applies.
+ */
+export type StoreSearchTrendingResponse = {
+  terms: string[];
+  /** `curated` terms were chosen by the merchant, not searched by shoppers. */
+  source: "trending" | "curated";
+};
+
 export type StoreSearchResponse = {
   products: {
     id: string;

@@ -59,3 +59,19 @@ export function approvedSearchTerm(
   const term = normaliseTerm(raw);
   return term && approved.includes(term) ? term : null;
 }
+
+/**
+ * The store route returns at most ten terms, so a longer fallback list would
+ * only ever show its head.
+ */
+export const MAX_FALLBACK_TERMS = 10;
+
+export function validateFallbackTerms(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > MAX_FALLBACK_TERMS) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      `Use at most ${MAX_FALLBACK_TERMS} suggested phrases.`,
+    );
+  }
+  return validateVocabulary(value);
+}

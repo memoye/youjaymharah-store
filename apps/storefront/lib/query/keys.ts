@@ -34,6 +34,12 @@ export const queryKeys = {
     product: (productId: string) =>
       [...queryKeys.sizeGuide.all, "product", productId] as const,
   },
+  search: {
+    all: ["search"] as const,
+    suggestions: (term: string) =>
+      [...queryKeys.search.all, "suggestions", term] as const,
+    trending: () => [...queryKeys.search.all, "trending"] as const,
+  },
   products: {
     all: ["products"] as const,
     list: (params: Record<string, unknown>, context: CatalogContext) =>

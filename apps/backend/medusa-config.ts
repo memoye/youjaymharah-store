@@ -5,11 +5,11 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd());
 /**
  * Validates REDIS_URL before any module tries to connect.
  *
- * Provider consoles offer several "connect" snippets, and pasting the
- * `redis-cli --tls -u redis://...` command instead of the URL is an easy
- * mistake: every Redis module then fails deep inside the module loader with a
- * bare "Invalid URL" and the server exits. Failing here instead names the
- * variable and says what to paste, without logging any part of the value.
+ * A malformed value otherwise fails deep inside the module loader with a bare
+ * "Invalid URL" and the server exits. Failing here names the variable and the
+ * likely mistake -- a `redis-cli` snippet pasted from a provider console, or
+ * the key pasted a second time -- without logging any part of the value,
+ * which for a hosted Redis carries its password.
  */
 function resolveRedisUrl(): string | undefined {
   const raw = process.env.REDIS_URL?.trim();
@@ -19,7 +19,21 @@ function resolveRedisUrl(): string | undefined {
   }
 
   const hint =
-    "Use the connection URL (rediss://default:<token>@<host>:6379), not a redis-cli command.";
+    "Use redis://localhost:6379 for Redis on this machine -- including a Docker container's published port, since the container's name only resolves inside Docker's network -- or rediss://default:<token>@<host>:6379 for a hosted Redis such as Upstash.";
+
+  if (/^REDIS_URL\s*=/.test(raw)) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      "REDIS_URL appears twice on its line in .env (REDIS_URL=REDIS_URL=...). Delete the second REDIS_URL=.",
+    );
+  }
+
+  if (/^redis-cli\b/.test(raw)) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      `REDIS_URL holds a redis-cli command. Keep only the URL that follows -u. ${hint}`,
+    );
+  }
 
   let parsed: URL;
   try {

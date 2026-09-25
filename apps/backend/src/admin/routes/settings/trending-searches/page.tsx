@@ -154,6 +154,117 @@ function VocabularyEditor({ vocabulary }: { vocabulary: Vocabulary }) {
   );
 }
 
+type Fallback = { terms: string[]; revision: string | null };
+const FALLBACK_KEY = ["search-fallback-terms"];
+const MAX_SUGGESTED = 10;
+
+function SuggestedPhrasesEditor({ fallback }: { fallback: Fallback }) {
+  const { can } = usePermissions();
+  const queryClient = useQueryClient();
+  const [text, setText] = useState(fallback.terms.join("\n"));
+  const terms = text
+    .split(/\r?\n/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+  const canEdit = can("storefront_settings", "update");
+  const dirty = text !== fallback.terms.join("\n");
+  const save = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{ fallback: Fallback }>("/admin/search-fallback-terms", {
+        method: "POST",
+        body: { terms, revision: fallback.revision },
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(FALLBACK_KEY, data);
+      toast.success("Suggested phrases saved");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canEdit) save.mutate();
+      }}
+    >
+      <Text size="small">
+        Shown in the empty search box while nothing is trending: on a new store,
+        or whenever no approved phrase has reached five searches in seven days.
+        Real trending searches replace them as soon as there are any, and the
+        storefront labels these as suggestions rather than popular searches.
+      </Text>
+      <Text size="small" className="text-ui-fg-subtle">
+        These don&apos;t need to be on the approved list above. A phrase that
+        doesn&apos;t currently match a published product is hidden, so a shopper
+        is never sent to an empty results page.
+      </Text>
+      <Label htmlFor="suggested-search-phrases">
+        Suggested phrases — one per line, in the order to show them
+      </Label>
+      <Textarea
+        id="suggested-search-phrases"
+        aria-describedby="suggested-search-help"
+        rows={6}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        disabled={!canEdit || save.isPending}
+      />
+      <Text id="suggested-search-help" size="small">
+        {terms.length}/{MAX_SUGGESTED} phrases. Same rules as above: 2–64
+        letters, spaces, apostrophes or hyphens each.
+      </Text>
+      {!canEdit && (
+        <Text size="small">
+          Read-only: you need permission to update Storefront settings.
+        </Text>
+      )}
+      <div className="flex gap-2">
+        {canEdit && (
+          <Button
+            type="submit"
+            isLoading={save.isPending}
+            disabled={!dirty || terms.length > MAX_SUGGESTED || save.isPending}
+          >
+            Save suggestions
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={save.isPending}
+          onClick={async () => {
+            if (
+              dirty &&
+              !window.confirm(
+                "Discard your unsaved changes and reload the latest suggestions?",
+              )
+            )
+              return;
+            const data = await queryClient
+              .fetchQuery({
+                queryKey: FALLBACK_KEY,
+                staleTime: 0,
+                queryFn: () =>
+                  sdk.client.fetch<{ fallback: Fallback }>(
+                    "/admin/search-fallback-terms",
+                  ),
+              })
+              .catch(() => null);
+            if (data) setText(data.fallback.terms.join("\n"));
+            else
+              toast.error(
+                "Could not reload suggestions. Your draft is unchanged.",
+              );
+          }}
+        >
+          Reload latest
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 const TrendingSearchesPage = () => {
   const query = useQuery({
     queryKey: KEY,
@@ -162,27 +273,57 @@ const TrendingSearchesPage = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  const fallback = useQuery({
+    queryKey: FALLBACK_KEY,
+    queryFn: () =>
+      sdk.client.fetch<{ fallback: Fallback }>("/admin/search-fallback-terms"),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
   return (
-    <Container className="flex flex-col gap-4">
-      <Heading level="h1">Trending searches</Heading>
-      {query.isPending ? (
-        <Text>Loading approved phrases…</Text>
-      ) : query.isError ? (
-        <div role="alert">
-          <Text>
-            Unable to load phrases. Check your permissions and try again.
-          </Text>
-          <Button variant="secondary" onClick={() => query.refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : (
-        <VocabularyEditor
-          key={query.data.vocabulary.revision ?? "environment"}
-          vocabulary={query.data.vocabulary}
-        />
-      )}
-    </Container>
+    <div className="flex flex-col gap-y-3">
+      <Container className="flex flex-col gap-4">
+        <Heading level="h1">Trending searches</Heading>
+        {query.isPending ? (
+          <Text>Loading approved phrases…</Text>
+        ) : query.isError ? (
+          <div role="alert">
+            <Text>
+              Unable to load phrases. Check your permissions and try again.
+            </Text>
+            <Button variant="secondary" onClick={() => query.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <VocabularyEditor
+            key={query.data.vocabulary.revision ?? "environment"}
+            vocabulary={query.data.vocabulary}
+          />
+        )}
+      </Container>
+      <Container className="flex flex-col gap-4">
+        <Heading level="h2">Suggested searches</Heading>
+        {fallback.isPending ? (
+          <Text>Loading suggested phrases…</Text>
+        ) : fallback.isError ? (
+          <div role="alert">
+            <Text>
+              Unable to load suggested phrases. Check your permissions and try
+              again.
+            </Text>
+            <Button variant="secondary" onClick={() => fallback.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <SuggestedPhrasesEditor
+            key={fallback.data.fallback.revision ?? "empty"}
+            fallback={fallback.data.fallback}
+          />
+        )}
+      </Container>
+    </div>
   );
 };
 

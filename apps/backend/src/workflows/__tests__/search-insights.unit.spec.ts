@@ -4,9 +4,13 @@ import { recordSearchTerm } from "../steps/record-search-term";
 import {
   approvedTrendingTerms,
   approvedSearchTerm,
+  validateFallbackTerms,
   validateVocabulary,
 } from "../../modules/search-insights/approved-terms";
-import { visibleTrendingTerms } from "../get-trending-search-terms";
+import {
+  trendingSearchTerms,
+  visibleTrendingTerms,
+} from "../get-trending-search-terms";
 import { GET as searchProducts } from "../../api/store/search/route";
 
 const originalTerms = process.env.SEARCH_TRENDING_TERMS;
@@ -255,5 +259,121 @@ describe("search insights", () => {
     await expect(service.recordSearch("linen", 3)).rejects.toThrow(
       "database unavailable",
     );
+  });
+
+  describe("suggested phrases when nothing is trending", () => {
+    const withMatches = (matching: string[]) => ({
+      search: jest.fn(async ({ filters }) => ({
+        hits: matching.includes(filters.q) ? [{ document: { id: "p" } }] : [],
+      })),
+    });
+    const containerFor = (search: unknown, service: unknown) =>
+      ({
+        resolve: (key: string) => (key === "search" ? search : service),
+      }) as unknown as MedusaContainer;
+    const input = { limit: 6, sales_channel_ids: ["channel_1"] };
+
+    it("validates the merchant's list like the vocabulary, capped at ten", () => {
+      expect(
+        validateFallbackTerms([" Linen ", "linen", "Wool  coats"]),
+      ).toEqual(["linen", "wool coats"]);
+      expect(() => validateFallbackTerms(["ada@example.com"])).toThrow();
+      expect(() => validateFallbackTerms(Array(11).fill("linen"))).toThrow(
+        "at most 10",
+      );
+    });
+
+    it("reads as an empty, unsaved list until the merchant saves one", async () => {
+      const service = Object.create(SearchInsightsModuleService.prototype);
+      service.listSearchVocabularies = jest.fn().mockResolvedValue([]);
+      expect(await service.readFallbackTerms()).toEqual({
+        terms: [],
+        revision: null,
+      });
+      expect(service.listSearchVocabularies).toHaveBeenCalledWith({
+        id: "search_fallback_terms",
+      });
+    });
+
+    it("prefers real trending terms and never reads the fallback then", async () => {
+      const service = {
+        listTrendingTerms: jest.fn().mockResolvedValue(["linen"]),
+        readFallbackTerms: jest.fn(),
+      };
+      expect(
+        await trendingSearchTerms(
+          input,
+          containerFor(withMatches(["linen"]), service),
+        ),
+      ).toEqual({ terms: ["linen"], source: "trending" });
+      expect(service.readFallbackTerms).not.toHaveBeenCalled();
+    });
+
+    it("falls back to suggestions that find a product, marked as curated", async () => {
+      const service = {
+        listTrendingTerms: jest.fn().mockResolvedValue([]),
+        readFallbackTerms: jest
+          .fn()
+          .mockResolvedValue({
+            terms: ["wool coats", "velvet"],
+            revision: "r",
+          }),
+      };
+      expect(
+        await trendingSearchTerms(
+          input,
+          containerFor(withMatches(["wool coats"]), service),
+        ),
+      ).toEqual({ terms: ["wool coats"], source: "curated" });
+    });
+
+    it("returns nothing rather than suggestions that lead to empty results", async () => {
+      const service = {
+        listTrendingTerms: jest.fn().mockResolvedValue([]),
+        readFallbackTerms: jest
+          .fn()
+          .mockResolvedValue({ terms: ["velvet"], revision: "r" }),
+      };
+      expect(
+        await trendingSearchTerms(
+          input,
+          containerFor(withMatches([]), service),
+        ),
+      ).toEqual({ terms: [], source: "trending" });
+    });
+
+    it("honours the requested limit on the fallback too", async () => {
+      const service = {
+        listTrendingTerms: jest.fn().mockResolvedValue([]),
+        readFallbackTerms: jest
+          .fn()
+          .mockResolvedValue({
+            terms: ["linen", "wool", "silk"],
+            revision: "r",
+          }),
+      };
+      expect(
+        await trendingSearchTerms(
+          { ...input, limit: 2 },
+          containerFor(withMatches(["linen", "wool", "silk"]), service),
+        ),
+      ).toEqual({ terms: ["linen", "wool"], source: "curated" });
+    });
+
+    it("searches nothing for a key with no sales channels", async () => {
+      const search = withMatches(["linen"]);
+      const service = {
+        listTrendingTerms: jest.fn(),
+        readFallbackTerms: jest.fn(),
+      };
+      expect(
+        await trendingSearchTerms(
+          { limit: 6, sales_channel_ids: [] },
+          containerFor(search, service),
+        ),
+      ).toEqual({ terms: [], source: "trending" });
+      expect(search.search).not.toHaveBeenCalled();
+      expect(service.readFallbackTerms).not.toHaveBeenCalled();
+    });
   });
 });
