@@ -7225,6 +7225,76 @@
         }
       }
     },
+    "/store/newsletter": {
+      "get": {
+        "operationId": "getStoreNewsletter",
+        "tags": [
+          "Newsletter"
+        ],
+        "summary": "Get public newsletter settings",
+        "description": "Whether signup is on, and the consent wording the form must show verbatim: signup records it on the subscriber as what they agreed to.",
+        "security": [
+          {
+            "publishableKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public newsletter settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "newsletter": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "double_opt_in": {
+                          "type": "boolean"
+                        },
+                        "consent_text": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "double_opt_in",
+                        "consent_text"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "newsletter"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid publishable API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/store/newsletter/subscribe": {
       "post": {
         "operationId": "postStoreNewsletterSubscribe",

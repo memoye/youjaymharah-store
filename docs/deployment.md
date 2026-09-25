@@ -173,8 +173,11 @@ With Cloudflare in front:
 1. Create a project in the region nearest the VPS, e.g. AWS `eu-central-1`
    (Frankfurt) for an OVH Gravelines, Strasbourg or Frankfurt server. Keep it
    separate from the development project (currently `us-east-2`).
-2. Copy the **direct** connection string (host without `-pooler`) with
-   `sslmode=require` into `DATABASE_URL` in `backend.env`.
+2. Copy the **direct** connection string (host without `-pooler`) into
+   `DATABASE_URL` in `backend.env`, changing its `sslmode=require` to
+   `sslmode=verify-full`. The `pg` driver treats `require` as `verify-full`
+   today but warns that it will stop checking the certificate in a future
+   release; `verify-full` keeps the check and silences the warning.
 3. On a paid plan, disable scale-to-zero for the production branch. Otherwise
    the first request after an idle spell waits for the compute to wake.
 4. Set the restore window (point-in-time recovery). It is the only backup of

@@ -79,6 +79,19 @@ const NewsletterSettings = z.object({
   checkout_label: z.string().nullable(),
 });
 
+/**
+ * The public part of the newsletter settings; the audience id and reply-to
+ * address stay admin-only. The form shows `consent_text` verbatim, since signup
+ * records it as what the subscriber agreed to.
+ */
+const StoreNewsletter = z.object({
+  newsletter: NewsletterSettings.pick({
+    enabled: true,
+    double_opt_in: true,
+    consent_text: true,
+  }),
+});
+
 const NewsletterSubscriber = z.object({
   id: z.string(),
   email: z.string(),
@@ -521,6 +534,7 @@ export const TYPES: {
     schema: z.object({ audiences: z.array(ResendAudience) }),
     io: "output",
   },
+  { name: "StoreNewsletterResponse", schema: StoreNewsletter, io: "output" },
   { name: "StoreNewsletterAckResponse", schema: Acknowledged, io: "output" },
   {
     name: "StoreWishlistResponse",
@@ -1291,6 +1305,19 @@ export const ROUTES: RouteDoc[] = [
     response: {
       description: "Audiences from Resend.",
       schema: z.object({ audiences: z.array(ResendAudience) }),
+    },
+  },
+  {
+    method: "GET",
+    path: "/store/newsletter",
+    tag: "Newsletter",
+    summary: "Get public newsletter settings",
+    description:
+      "Whether signup is on, and the consent wording the form must show verbatim: signup records it on the subscriber as what they agreed to.",
+    auth: "public",
+    response: {
+      description: "Public newsletter settings.",
+      schema: StoreNewsletter,
     },
   },
   {

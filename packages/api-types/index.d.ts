@@ -88,16 +88,6 @@ export type StoreNewsletterSubscribeBody = {
   source?: string;
 };
 
-/** The public part of the newsletter settings, from `GET /store/newsletter`. */
-export type StoreNewsletterResponse = {
-  newsletter: {
-    enabled: boolean;
-    double_opt_in: boolean;
-    /** Show beside the form verbatim: signup records it as what was agreed to. */
-    consent_text: string | null;
-  };
-};
-
 export type StoreNewsletterTokenBody = {
   token: string;
 };
@@ -180,6 +170,14 @@ export type AdminNewsletterAudiencesResponse = {
     id: string;
     name: string;
   }[];
+};
+
+export type StoreNewsletterResponse = {
+  newsletter: {
+    enabled: boolean;
+    double_opt_in: boolean;
+    consent_text: string | null;
+  };
 };
 
 export type StoreNewsletterAckResponse = {
