@@ -26,3 +26,11 @@ overrides:
   # 6.2.0 and later accept both (^3 || ^4), and the plugin only uses fdir's
   # directory crawling, not the glob matching picomatch backs. Same 6.x API.
   "@medusajs/admin-vite-plugin>fdir": "^6.5.0"
+packageExtensions:
+  # @medusajs/eslint-plugin 2.20.1 requires @typescript-eslint/typescript-estree
+  # from three rules without declaring it, so under pnpm's strict layout
+  # `medusa build` fails with "Cannot find module". Remove once the plugin
+  # lists it itself.
+  "@medusajs/eslint-plugin@2.20.1":
+    dependencies:
+      "@typescript-eslint/typescript-estree": "^8.0.0"
