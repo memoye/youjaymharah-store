@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         bodoniModa.variable,
       )}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-dvh flex-col">
         <JsonLd
           data={[organizationJsonLd(settings), websiteJsonLd(settings)]}
         />

@@ -32,8 +32,8 @@ export function Footer() {
   console.log(seo.social_links)
 
   return (
-    <footer className="dark bg-background text-foreground">
-      <div className="container-wrapper flex flex-col gap-6 px-5 py-6 sm:px-6">
+    <footer className="dark bg-background py-6 text-foreground">
+      <div className="container-wrapper flex flex-col gap-6 px-5 py-6 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center font-display text-xl">
             {brand.logo_url && (
@@ -42,7 +42,7 @@ export function Footer() {
                 alt={brand.name}
                 width={150}
                 height={150}
-                className="h-auto w-8"
+                className="-ml-1 h-auto w-8"
                 title={brand.name}
               />
             )}
@@ -64,10 +64,13 @@ export function Footer() {
         </div>
 
         <nav>
-          <ul className="flex flex-wrap gap-4 text-sm font-medium text-muted-foreground md:gap-6">
+          <ul className="flex flex-wrap gap-4 text-sm font-medium text-foreground md:gap-6">
             {navLinks.map((link) => (
               <li key={link.label}>
-                <a className="hover:text-foreground" href={link.href}>
+                <a
+                  className="underline-offset-5 hover:underline"
+                  href={link.href}
+                >
                   {link.label}
                 </a>
               </li>
@@ -76,7 +79,7 @@ export function Footer() {
         </nav>
       </div>
 
-      <div className="flex items-center justify-between gap-4 border-t px-5 py-4 text-sm text-muted-foreground sm:px-6">
+      <div className="flex items-center justify-between gap-4 border-t px-5 py-4 text-sm font-extralight text-muted-foreground sm:px-6 lg:px-8">
         <p>
           &copy; {new Date().getFullYear()} {brand.name}
         </p>

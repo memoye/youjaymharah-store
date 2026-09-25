@@ -22,9 +22,10 @@ export default async function PageLayout(props: LayoutProps<"/">) {
   return (
     <HeaderOverlayProvider>
       <AnnouncementBanner />
-      <Header />
 
-      {props.children}
+      <Header />
+      <main className="flex-1">{props.children}</main>
+
       <Footer />
     </HeaderOverlayProvider>
   )
