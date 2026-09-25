@@ -204,13 +204,6 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
 
           <div
             aria-live="polite"
-            role=""
-
-            onClick={(event) => {
-              // A result can be the page already open, or /search with only a
-              // new query, and neither changes the pathname.
-              if ((event.target as Element).closest("a")) onOpenChange(false)
-            }}
             className="container-wrapper min-h-0 flex-1 overflow-y-auto py-6"
           >
             {!term && trending.data?.terms.length ? (
@@ -252,6 +245,7 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
                           <Link
                             href={productPath(product.handle)}
                             className="group flex items-center gap-4"
+                            onClick={() => onOpenChange(false)}
                           >
                             <span className="relative block h-18 w-14 shrink-0 overflow-hidden bg-muted">
                               {product.thumbnail && (
@@ -286,6 +280,7 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
                           <Link
                             href={categoryPath(category.handle)}
                             className="underline-offset-4 hover:underline"
+                            onClick={() => onOpenChange(false)}
                           >
                             {category.name}
                           </Link>
@@ -297,6 +292,7 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
                           <Link
                             href={collectionPath(collection.handle)}
                             className="underline-offset-4 hover:underline"
+                            onClick={() => onOpenChange(false)}
                           >
                             {collection.title}
                           </Link>
@@ -310,6 +306,7 @@ export function SearchOverlay({ open, onOpenChange }: SearchOverlayProps) {
                   <Link
                     href={searchUrl(SEARCH_PATH, { q: query })}
                     className="inline-flex text-sm underline underline-offset-4"
+                    onClick={() => onOpenChange(false)}
                   >
                     See all {results.count} results
                   </Link>

@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/header"
 import { AnnouncementBanner } from "@/components/layout/announcement-banner"
 import { HeaderOverlayProvider } from "@/features/layout/header-overlay"
 import { getBaseURL } from "@/lib/util/env"
+import { Footer } from "@/components/layout/footer"
 // import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
 // import Footer from "@modules/layout/templates/footer"
 // import Nav from "@modules/layout/templates/nav"
@@ -24,6 +25,7 @@ export default async function PageLayout(props: LayoutProps<"/">) {
       <Header />
 
       {props.children}
+      <Footer />
     </HeaderOverlayProvider>
   )
 }
