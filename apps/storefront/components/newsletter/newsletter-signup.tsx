@@ -1,18 +1,23 @@
 "use client"
 
-import { useId } from "react"
+import { ArrowRightIcon } from "@phosphor-icons/react"
+import { useId, useState } from "react"
 
 import {
   FieldError,
   useAppForm,
   validateOnSubmitThenChange,
 } from "@/components/form"
+import { Button } from "@/components/ui/button"
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@/components/ui/input-group"
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   useNewsletterSettings,
   useSubscribeToNewsletter,
@@ -20,8 +25,6 @@ import {
 import { newsletterSignupSchema } from "@/features/newsletter/schema"
 import { errorStatus } from "@/lib/medusa/errors"
 import { cn } from "@/lib/util/cn"
-
-const DEFAULT_SUCCESS = "Thanks. Check your inbox to confirm."
 
 function signupError(error: unknown): string {
   switch (errorStatus(error)) {
@@ -50,6 +53,9 @@ export function NewsletterSignup({
 }) {
   const settings = useNewsletterSettings()
   const subscribe = useSubscribeToNewsletter(source)
+  // Kept apart from `open` so the dialog's text doesn't change while it fades out.
+  const [sentTo, setSentTo] = useState("")
+  const [confirming, setConfirming] = useState(false)
   const headingId = useId()
   const inputId = useId()
   const consentId = useId()
@@ -60,9 +66,14 @@ export function NewsletterSignup({
     defaultValues: { email: "" },
     validationLogic: validateOnSubmitThenChange(),
     validators: { onDynamic: newsletterSignupSchema },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
+      const email = value.email.trim()
+
       try {
-        await subscribe.mutateAsync(value.email.trim())
+        await subscribe.mutateAsync(email)
+        setSentTo(email)
+        setConfirming(true)
+        formApi.reset()
       } catch {
         // Shown from the mutation's own error state below the field.
       }
@@ -73,129 +84,165 @@ export function NewsletterSignup({
     return null
   }
 
-  const consent = settings.data.consent_text
+  const { consent_text: consent, double_opt_in: needsConfirmation } =
+    settings.data
 
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("flex flex-col gap-4", className)}
+      className={cn(
+        "flex flex-wrap items-end justify-between gap-x-16 gap-y-8",
+        className,
+      )}
     >
-      <div className="flex flex-col gap-2">
-        <h2 id={headingId} className="font-display text-2xl">
+      <div className="flex max-w-md grow basis-72 flex-col gap-3">
+        <h2 id={headingId} className="font-display text-3xl">
           The YJ Edit
         </h2>
-        <p className="max-w-[46ch] text-sm text-pretty text-muted-foreground">
+        <p className="text-sm text-pretty text-muted-foreground">
           New collections, considered pieces and invitations to discover
           what&apos;s next.
         </p>
       </div>
 
-      {subscribe.isSuccess ? (
-        <p
-          role="status"
-          tabIndex={-1}
-          // The form, and the focus inside it, has just gone; land the reader
-          // on the outcome instead of the top of the page.
-          ref={(node) => node?.focus()}
-          className="text-sm outline-none"
-        >
-          {subscribe.data.message ?? DEFAULT_SUCCESS}
-        </p>
-      ) : (
-        <form
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            void form.handleSubmit()
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          void form.handleSubmit()
+        }}
+        className="flex max-w-md grow basis-72 flex-col gap-3"
+      >
+        <form.AppField
+          name="email"
+          listeners={{
+            // A new attempt makes the last server error stale.
+            onChange: () => {
+              if (subscribe.isError) subscribe.reset()
+            },
           }}
-          className="flex flex-col gap-2"
         >
-          <form.AppField
-            name="email"
-            listeners={{
-              // A new attempt makes the last server error stale.
-              onChange: () => {
-                if (subscribe.isError) subscribe.reset()
-              },
-            }}
+          {(field) => {
+            const invalid = field.state.meta.errors.length > 0
+            const describedBy = [
+              invalid && errorId,
+              subscribe.isError && serverErrorId,
+              consent && consentId,
+            ]
+              .filter(Boolean)
+              .join(" ")
+
+            return (
+              <>
+                <label
+                  htmlFor={inputId}
+                  className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase"
+                >
+                  Email address
+                </label>
+
+                {/*
+                  One rule under the input and the button together: at rest it
+                  recedes into the footer; focus draws it in full and thickens
+                  it, without shifting anything below.
+                */}
+                <div className="flex items-center gap-4 border-b border-foreground/25 transition-[border-color,box-shadow] duration-200 focus-within:border-foreground focus-within:shadow-[0_1px_0_0_var(--foreground)] has-aria-invalid:border-destructive has-aria-invalid:shadow-none">
+                  <input
+                    id={inputId}
+                    name={field.name}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                    aria-invalid={invalid || undefined}
+                    aria-describedby={describedBy || undefined}
+                    className="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                  />
+
+                  <form.Subscribe selector={(state) => state.isSubmitting}>
+                    {(isSubmitting) => (
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        aria-busy={isSubmitting || undefined}
+                        className="group inline-flex h-11 shrink-0 items-center gap-2 text-[13px] font-medium tracking-[0.06em] uppercase underline-offset-4 outline-none focus-visible:underline disabled:opacity-50"
+                      >
+                        {isSubmitting ? "Subscribing…" : "Subscribe"}
+                        <ArrowRightIcon
+                          aria-hidden
+                          className="size-3.5 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                        />
+                      </button>
+                    )}
+                  </form.Subscribe>
+                </div>
+
+                <FieldError id={errorId} />
+              </>
+            )
+          }}
+        </form.AppField>
+
+        {subscribe.isError && (
+          <p
+            id={serverErrorId}
+            role="alert"
+            className="text-[13px] text-destructive"
           >
-            {(field) => {
-              const invalid = field.state.meta.errors.length > 0
-              const describedBy = [
-                invalid && errorId,
-                subscribe.isError && serverErrorId,
-                consent && consentId,
-              ]
-                .filter(Boolean)
-                .join(" ")
+            {signupError(subscribe.error)}
+          </p>
+        )}
 
-              return (
+        {consent && (
+          <p
+            id={consentId}
+            className="text-xs text-pretty text-muted-foreground"
+          >
+            {consent}
+          </p>
+        )}
+      </form>
+
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {needsConfirmation ? "Check your inbox" : "You're subscribed"}
+            </DialogTitle>
+            <DialogDescription>
+              {needsConfirmation ? (
                 <>
-                  <label htmlFor={inputId} className="text-[13px] font-medium">
-                    Email address
-                  </label>
-
-                  <InputGroup className="h-12">
-                    <InputGroupInput
-                      id={inputId}
-                      name={field.name}
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      placeholder="name@example.com"
-                      value={field.state.value}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      onBlur={field.handleBlur}
-                      aria-invalid={invalid || undefined}
-                      aria-describedby={describedBy || undefined}
-                      className="h-full px-4 text-sm"
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <form.Subscribe selector={(state) => state.isSubmitting}>
-                        {(isSubmitting) => (
-                          <InputGroupButton
-                            type="submit"
-                            size="sm"
-                            disabled={isSubmitting}
-                            aria-busy={isSubmitting || undefined}
-                            className="px-4 text-[13px] font-medium tracking-[0.06em] uppercase"
-                          >
-                            {isSubmitting ? "Signing up…" : "Sign up"}
-                          </InputGroupButton>
-                        )}
-                      </form.Subscribe>
-                    </InputGroupAddon>
-                  </InputGroup>
-
-                  <FieldError id={errorId} />
+                  We&apos;ve sent a confirmation link to{" "}
+                  <span className="text-foreground">{sentTo}</span>. Open it to
+                  start receiving The YJ Edit. If it hasn&apos;t arrived in a
+                  few minutes, check your spam or promotions folder.
                 </>
-              )
-            }}
-          </form.AppField>
-
-          {subscribe.isError && (
-            <p
-              id={serverErrorId}
-              role="alert"
-              className="text-[13px] text-destructive"
+              ) : (
+                <>
+                  Welcome to The YJ Edit. New collections and invitations will
+                  arrive at <span className="text-foreground">{sentTo}</span>.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose
+              render={
+                <Button
+                  size="lg"
+                  className="px-6 text-[13px] tracking-[0.06em] uppercase"
+                />
+              }
             >
-              {signupError(subscribe.error)}
-            </p>
-          )}
-
-          {consent && (
-            <p
-              id={consentId}
-              className="text-xs text-pretty text-muted-foreground"
-            >
-              {consent}
-            </p>
-          )}
-        </form>
-      )}
+              Got it
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
