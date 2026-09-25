@@ -88,6 +88,16 @@ export type StoreNewsletterSubscribeBody = {
   source?: string;
 };
 
+/** The public part of the newsletter settings, from `GET /store/newsletter`. */
+export type StoreNewsletterResponse = {
+  newsletter: {
+    enabled: boolean;
+    double_opt_in: boolean;
+    /** Show beside the form verbatim: signup records it as what was agreed to. */
+    consent_text: string | null;
+  };
+};
+
 export type StoreNewsletterTokenBody = {
   token: string;
 };
@@ -650,32 +660,6 @@ export type StoreSearchProduct = {
   sales_channel_ids: string[];
 };
 
-/** The four fields the suggestions route returns; enough for a row. */
-export type StoreSearchSuggestionProduct = {
-  id: string;
-  title: string;
-  handle: string;
-  thumbnail: string | null;
-};
-
-export type StoreSearchSuggestionsResponse = {
-  products: StoreSearchSuggestionProduct[];
-  categories: { id: string; name: string; handle: string }[];
-  collections: { id: string; title: string; handle: string }[];
-  /** Every product the term matches, not just the ones returned above. */
-  count: number;
-};
-
-/**
- * Submitted searches that found something, busiest first -- or, while there
- * are none, the merchant's suggested phrases. Empty when neither applies.
- */
-export type StoreSearchTrendingResponse = {
-  terms: string[];
-  /** `curated` terms were chosen by the merchant, not searched by shoppers. */
-  source: "trending" | "curated";
-};
-
 export type StoreSearchResponse = {
   products: {
     id: string;
@@ -698,6 +682,38 @@ export type StoreSearchResponse = {
   limit: number;
   offset: number;
   facets: Record<string, unknown>;
+};
+
+export type StoreSearchSuggestionProduct = {
+  id: string;
+  title: string;
+  handle: string;
+  thumbnail: string | null;
+};
+
+export type StoreSearchSuggestionsResponse = {
+  products: {
+    id: string;
+    title: string;
+    handle: string;
+    thumbnail: string | null;
+  }[];
+  categories: {
+    id: string;
+    name: string;
+    handle: string;
+  }[];
+  collections: {
+    id: string;
+    title: string;
+    handle: string;
+  }[];
+  count: number;
+};
+
+export type StoreSearchTrendingResponse = {
+  terms: string[];
+  source: "trending" | "curated";
 };
 
 export type AdminCartReminderSettingsResponse = {

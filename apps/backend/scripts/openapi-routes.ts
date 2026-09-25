@@ -1,5 +1,8 @@
 import { z } from "@medusajs/framework/zod";
-import { UpdateSearchVocabulary } from "../src/modules/search-insights/vocabulary-input";
+import {
+  UpdateSearchFallbackTerms,
+  UpdateSearchVocabulary,
+} from "../src/modules/search-insights/vocabulary-input";
 import {
   AnnouncementBar,
   PublicAnnouncements,
@@ -369,6 +372,36 @@ const SearchFacet = z.object({
   other_count: z.number().optional(),
 });
 
+/** The four fields the suggestions route returns; enough for a row. */
+const SearchSuggestionProduct = z.object({
+  id: z.string(),
+  title: z.string(),
+  handle: z.string(),
+  thumbnail: z.string().nullable(),
+});
+
+const SearchSuggestions = z.object({
+  products: z.array(SearchSuggestionProduct),
+  categories: z.array(
+    z.object({ id: z.string(), name: z.string(), handle: z.string() }),
+  ),
+  collections: z.array(
+    z.object({ id: z.string(), title: z.string(), handle: z.string() }),
+  ),
+  /** Every product the term matches, not just the ones returned above. */
+  count: z.number(),
+});
+
+/**
+ * Submitted searches that found something, busiest first -- or, while there
+ * are none, the merchant's suggested phrases. Empty when neither applies.
+ */
+const SearchTrending = z.object({
+  terms: z.array(z.string()),
+  /** `curated` terms were chosen by the merchant, not searched by shoppers. */
+  source: z.enum(["trending", "curated"]),
+});
+
 const SearchResult = z.object({
   products: z.array(SearchProduct),
   count: z.number(),
@@ -595,6 +628,17 @@ export const TYPES: {
   { name: "StoreSearchProduct", schema: SearchProduct, io: "output" },
   { name: "StoreSearchResponse", schema: SearchResult, io: "output" },
   {
+    name: "StoreSearchSuggestionProduct",
+    schema: SearchSuggestionProduct,
+    io: "output",
+  },
+  {
+    name: "StoreSearchSuggestionsResponse",
+    schema: SearchSuggestions,
+    io: "output",
+  },
+  { name: "StoreSearchTrendingResponse", schema: SearchTrending, io: "output" },
+  {
     name: "AdminCartReminderSettingsResponse",
     schema: z.object({ settings: CartReminderSettings }),
     io: "output",
@@ -663,6 +707,49 @@ export const ROUTES: RouteDoc[] = [
           terms: z.array(z.string()),
           revision: z.string(),
           source: z.literal("admin"),
+        }),
+      }),
+    },
+    errors: [
+      { status: 400, description: "Invalid phrase list." },
+      { status: 409, description: "Revision is stale; reload before saving." },
+    ],
+  },
+  {
+    method: "GET",
+    path: "/admin/search-fallback-terms",
+    tag: "Search",
+    summary: "Get search fallback phrases",
+    auth: "admin",
+    policies: ["storefront_settings:read"],
+    description:
+      "Reviewed phrases shown in search when nothing is trending, with the revision to send back when saving.",
+    response: {
+      description: "Current phrases and concurrency revision.",
+      schema: z.object({
+        fallback: z.object({
+          terms: z.array(z.string()),
+          revision: z.string().nullable(),
+        }),
+      }),
+    },
+  },
+  {
+    method: "POST",
+    path: "/admin/search-fallback-terms",
+    tag: "Search",
+    summary: "Replace search fallback phrases",
+    auth: "admin",
+    policies: ["storefront_settings:update"],
+    body: UpdateSearchFallbackTerms,
+    description:
+      "Up to 10 reviewed phrases; normalized and deduplicated. Send the revision from GET to prevent overwriting another admin's changes.",
+    response: {
+      description: "Saved phrases.",
+      schema: z.object({
+        fallback: z.object({
+          terms: z.array(z.string()),
+          revision: z.string(),
         }),
       }),
     },
@@ -1615,7 +1702,7 @@ export const ROUTES: RouteDoc[] = [
     response: {
       description:
         "Reviewed phrases with at least five searches in seven days and current published product matches in the requesting sales channels. Empty when SEARCH_TRENDING_TERMS is unset. No shopper-entered terms outside that list are published.",
-      schema: z.object({ terms: z.array(z.string()) }),
+      schema: SearchTrending,
     },
   },
   {
@@ -1638,23 +1725,7 @@ export const ROUTES: RouteDoc[] = [
     ],
     response: {
       description: "Matching products and taxonomy.",
-      schema: z.object({
-        products: z.array(
-          z.object({
-            id: z.string(),
-            title: z.string(),
-            handle: z.string(),
-            thumbnail: z.string().nullable(),
-          }),
-        ),
-        categories: z.array(
-          z.object({ id: z.string(), name: z.string(), handle: z.string() }),
-        ),
-        collections: z.array(
-          z.object({ id: z.string(), title: z.string(), handle: z.string() }),
-        ),
-        count: z.number(),
-      }),
+      schema: SearchSuggestions,
     },
   },
   {
