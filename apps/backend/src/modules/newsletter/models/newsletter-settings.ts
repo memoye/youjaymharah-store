@@ -11,6 +11,9 @@ export const NewsletterSettings = model.define("newsletter_settings", {
   /** Resend audience (segment) that confirmed contacts are pushed into. */
   audience_id: model.text().nullable(),
   double_opt_in: model.boolean().default(true),
+  /** Signup copy. Null means the default in ../copy.ts. */
+  heading: model.text().nullable(),
+  description: model.text().nullable(),
   consent_text: model.text().nullable(),
   success_message: model.text().nullable(),
   reply_to: model.text().nullable(),

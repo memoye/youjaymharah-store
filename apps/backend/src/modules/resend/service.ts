@@ -14,6 +14,7 @@ import { BoundedResend } from "./client";
 import { resolveEmailTemplate } from "./emails";
 import type EmailDeliveryModuleService from "../email-delivery/service";
 import { deliverEmail } from "./delivery";
+import { describeSendFailure } from "./send-failure";
 import { snapshotKey } from "./snapshot";
 import type { CreateEmailOptions } from "resend";
 
@@ -89,19 +90,24 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
       encryptionKey: snapshotKey(this.options.encryption_key),
       prepare: () => this.prepare(notification),
       send: async (payload, idempotencyKey) => {
+        // Resend reports a refusal as a returned `error`, not a throw.
+        let reason = "no receipt returned";
         try {
           const { data, error } = await this.resendClient.emails.send(payload, {
             idempotencyKey,
           });
+          if (error) reason = describeSendFailure(error);
           if (error || typeof data?.id !== "string" || !data.id)
             throw new MedusaError(
               MedusaError.Types.UNEXPECTED_STATE,
               "Provider did not confirm acceptance",
             );
           return data.id;
-        } catch {
+        } catch (thrown) {
+          if (!(thrown instanceof MedusaError))
+            reason = describeSendFailure(thrown);
           this.logger.error(
-            "Email provider acceptance was not confirmed; delivery retry/review is required.",
+            `Email provider acceptance was not confirmed (${reason}); delivery retry/review is required.`,
           );
           throw new MedusaError(
             MedusaError.Types.UNEXPECTED_STATE,

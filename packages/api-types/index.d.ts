@@ -14,6 +14,8 @@ export type NewsletterSettings = {
   enabled: boolean;
   audience_id: string | null;
   double_opt_in: boolean;
+  heading: string | null;
+  description: string | null;
   consent_text: string | null;
   success_message: string | null;
   reply_to: string | null;
@@ -76,6 +78,8 @@ export type AdminUpdateNewsletterSettingsBody = {
   enabled?: boolean;
   audience_id?: string | null;
   double_opt_in?: boolean;
+  heading?: string | null;
+  description?: string | null;
   consent_text?: string | null;
   success_message?: string | null;
   reply_to?: string | null;
@@ -126,6 +130,8 @@ export type AdminNewsletterSettingsResponse = {
     enabled: boolean;
     audience_id: string | null;
     double_opt_in: boolean;
+    heading: string | null;
+    description: string | null;
     consent_text: string | null;
     success_message: string | null;
     reply_to: string | null;
@@ -177,6 +183,8 @@ export type StoreNewsletterResponse = {
     enabled: boolean;
     double_opt_in: boolean;
     consent_text: string | null;
+    heading: string;
+    description: string;
   };
 };
 

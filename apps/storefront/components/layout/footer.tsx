@@ -30,8 +30,6 @@ type TSocialPlatform = keyof StorefrontSettings["seo"]["social_links"]
 export function Footer() {
   const { brand, seo } = useStorefrontSettings()
 
-  console.log(seo.social_links)
-
   return (
     <footer className="dark bg-background py-6 text-foreground">
       <div className="container-wrapper flex flex-col gap-6 px-5 py-6 sm:px-6 lg:px-8">

@@ -1,6 +1,19 @@
+import { logger } from "@medusajs/framework/logger";
 import { loadEnv, defineConfig, MedusaError } from "@medusajs/framework/utils";
 
+import {
+  developmentEnvironmentWarnings,
+  validateProductionEnvironment,
+  validateSearchEnvironment,
+} from "./src/lib/environment-safety";
+
 loadEnv(process.env.NODE_ENV || "development", process.cwd());
+
+validateProductionEnvironment(process.env);
+validateSearchEnvironment(process.env);
+for (const warning of developmentEnvironmentWarnings(process.env)) {
+  logger.warn(warning);
+}
 
 /**
  * Validates REDIS_URL before any module tries to connect.

@@ -1,11 +1,16 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 
 import { NEWSLETTER_MODULE } from "../../../modules/newsletter";
+import {
+  DEFAULT_NEWSLETTER_DESCRIPTION,
+  DEFAULT_NEWSLETTER_HEADING,
+} from "../../../modules/newsletter/copy";
 import type NewsletterModuleService from "../../../modules/newsletter/service";
 
 /**
- * What the storefront needs to render signup: whether it is on, and the
- * consent wording to show beside the form. Signup records `consent_text` on
+ * What the storefront needs to render signup: whether it is on, its heading
+ * and description (defaults filled in, so the storefront holds no copy), and
+ * the consent wording to show beside the form. Signup records `consent_text` on
  * the subscriber as evidence of what they agreed to, so the form has to show
  * that exact text -- this is where it gets it.
  *
@@ -19,6 +24,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     newsletter: {
       enabled: settings.enabled,
       double_opt_in: settings.double_opt_in,
+      heading: settings.heading || DEFAULT_NEWSLETTER_HEADING,
+      description: settings.description || DEFAULT_NEWSLETTER_DESCRIPTION,
       consent_text: settings.consent_text,
     },
   });

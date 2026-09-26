@@ -40,8 +40,9 @@ function signupError(error: unknown): string {
 /**
  * Newsletter signup, rendered only while signup is switched on in the admin.
  *
- * The consent wording is the admin's, shown verbatim: the backend records it
- * on the subscriber as what they agreed to, so it has to be what they saw.
+ * All of its copy is the admin's (Settings -> Newsletter); the backend fills
+ * in defaults, so nothing here is hardcoded. The consent wording is shown
+ * verbatim: it is recorded on the subscriber as what they agreed to.
  */
 export function NewsletterSignup({
   source,
@@ -84,8 +85,12 @@ export function NewsletterSignup({
     return null
   }
 
-  const { consent_text: consent, double_opt_in: needsConfirmation } =
-    settings.data
+  const {
+    heading,
+    description,
+    consent_text: consent,
+    double_opt_in: needsConfirmation,
+  } = settings.data
 
   return (
     <section
@@ -97,11 +102,10 @@ export function NewsletterSignup({
     >
       <div className="flex max-w-md grow basis-72 flex-col gap-3">
         <h2 id={headingId} className="font-display text-3xl">
-          The YJ Edit
+          {heading}
         </h2>
         <p className="text-sm text-pretty text-muted-foreground">
-          New collections, considered pieces and invitations to discover
-          what&apos;s next.
+          {description}
         </p>
       </div>
 
@@ -218,13 +222,13 @@ export function NewsletterSignup({
                 <>
                   We&apos;ve sent a confirmation link to{" "}
                   <span className="text-foreground">{sentTo}</span>. Open it to
-                  start receiving The YJ Edit. If it hasn&apos;t arrived in a
-                  few minutes, check your spam or promotions folder.
+                  confirm your subscription. If it hasn&apos;t arrived in a few
+                  minutes, check your spam or promotions folder.
                 </>
               ) : (
                 <>
-                  Welcome to The YJ Edit. New collections and invitations will
-                  arrive at <span className="text-foreground">{sentTo}</span>.
+                  New collections and invitations will now arrive at{" "}
+                  <span className="text-foreground">{sentTo}</span>.
                 </>
               )}
             </DialogDescription>

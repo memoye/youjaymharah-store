@@ -6589,6 +6589,26 @@
                         "double_opt_in": {
                           "type": "boolean"
                         },
+                        "heading": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "consent_text": {
                           "anyOf": [
                             {
@@ -6638,6 +6658,8 @@
                         "enabled",
                         "audience_id",
                         "double_opt_in",
+                        "heading",
+                        "description",
                         "consent_text",
                         "success_message",
                         "reply_to",
@@ -6706,6 +6728,28 @@
                   },
                   "double_opt_in": {
                     "type": "boolean"
+                  },
+                  "heading": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 280
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "consent_text": {
                     "anyOf": [
@@ -6787,6 +6831,26 @@
                         "double_opt_in": {
                           "type": "boolean"
                         },
+                        "heading": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "consent_text": {
                           "anyOf": [
                             {
@@ -6836,6 +6900,8 @@
                         "enabled",
                         "audience_id",
                         "double_opt_in",
+                        "heading",
+                        "description",
                         "consent_text",
                         "success_message",
                         "reply_to",
@@ -7264,12 +7330,20 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "heading": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
                         }
                       },
                       "required": [
                         "enabled",
                         "double_opt_in",
-                        "consent_text"
+                        "consent_text",
+                        "heading",
+                        "description"
                       ],
                       "additionalProperties": false
                     }

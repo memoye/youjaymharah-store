@@ -83,8 +83,10 @@ the new module needs its additive migration. No seed is needed. Set
 `EMAIL_DELIVERY_ENCRYPTION_KEY` to **32 cryptographically random bytes encoded
 as 64 hex characters**, identical on backend and workers. Generate and store it
 through your secret manager; never put it in source control or logs. Production
-startup rejects a missing/invalid key. In development, email sends fail closed
-until the key is configured. Snapshot encryption uses AES-256-GCM with a fresh
+startup rejects a missing/invalid key: `medusa-config.ts` checks it, so the
+migration step of a deploy fails before the running version is replaced. In
+development the backend warns at startup and email sends fail closed until the
+key is configured. Snapshot encryption uses AES-256-GCM with a fresh
 IV and binds the ciphertext to its delivery ID.
 
 Keep this key available for pending snapshots and relevant backups. Do not

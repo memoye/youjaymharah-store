@@ -19,12 +19,20 @@ import { useEffect, useState } from "react";
 
 import { usePermissions } from "../../../lib/permissions";
 import { sdk } from "../../../lib/sdk";
+import {
+  DEFAULT_NEWSLETTER_DESCRIPTION,
+  DEFAULT_NEWSLETTER_HEADING,
+  NEWSLETTER_DESCRIPTION_MAX,
+  NEWSLETTER_HEADING_MAX,
+} from "../../../../modules/newsletter/copy";
 
 type NewsletterSettings = {
   id: string;
   enabled: boolean;
   audience_id: string | null;
   double_opt_in: boolean;
+  heading: string | null;
+  description: string | null;
   consent_text: string | null;
   success_message: string | null;
   reply_to: string | null;
@@ -163,6 +171,19 @@ const NewsletterSettingsPage = () => {
             }
           />
           <Row
+            label="Heading"
+            value={
+              settings.heading || `${DEFAULT_NEWSLETTER_HEADING} (default)`
+            }
+          />
+          <Row
+            label="Description"
+            value={
+              settings.description ||
+              `${DEFAULT_NEWSLETTER_DESCRIPTION} (default)`
+            }
+          />
+          <Row
             label="Consent text"
             value={settings.consent_text ?? "Not set"}
           />
@@ -238,6 +259,8 @@ const EditNewsletterDrawer = ({
           enabled: form.enabled,
           audience_id: form.audience_id || null,
           double_opt_in: form.double_opt_in,
+          heading: form.heading || null,
+          description: form.description || null,
           consent_text: form.consent_text || null,
           success_message: form.success_message || null,
           reply_to: form.reply_to || null,
@@ -308,6 +331,39 @@ const EditNewsletterDrawer = ({
             checked={form.double_opt_in}
             onChange={(v) => setForm({ ...form, double_opt_in: v })}
           />
+
+          <div className="flex flex-col gap-2">
+            <Label size="small" weight="plus" htmlFor="signup-heading">
+              Heading
+            </Label>
+            <Input
+              id="signup-heading"
+              value={form.heading ?? ""}
+              placeholder={DEFAULT_NEWSLETTER_HEADING}
+              maxLength={NEWSLETTER_HEADING_MAX}
+              onChange={(e) => setForm({ ...form, heading: e.target.value })}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label size="small" weight="plus" htmlFor="signup-description">
+              Description
+            </Label>
+            <Textarea
+              id="signup-description"
+              rows={2}
+              value={form.description ?? ""}
+              placeholder={DEFAULT_NEWSLETTER_DESCRIPTION}
+              maxLength={NEWSLETTER_DESCRIPTION_MAX}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+            />
+            <Text size="small" leading="compact" className="text-ui-fg-subtle">
+              The heading and line above the signup field in the storefront
+              footer. Leave either empty to use the text shown in grey.
+            </Text>
+          </div>
 
           <div className="flex flex-col gap-2">
             <Label size="small" weight="plus" htmlFor="consent-text">

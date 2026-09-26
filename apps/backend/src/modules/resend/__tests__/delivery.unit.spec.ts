@@ -198,3 +198,31 @@ it("separates retry bookkeeping from the stable provider delivery identity", () 
   expect(first.provider_data).toEqual(retry.provider_data);
   expect(emailIdempotency("order:123").idempotency_key).toBeUndefined();
 });
+
+it("logs Resend's reason for a refusal without the addresses in it", async () => {
+  const { provider, notification, logger } = setup();
+  // The SDK prints raw errors itself outside production; keep the run quiet.
+  jest.spyOn(console, "error").mockImplementation(() => {});
+  global.fetch = jest.fn().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        statusCode: 403,
+        name: "validation_error",
+        message:
+          "You can only send testing emails to your own email address (owner@example.com).",
+      }),
+      { status: 403 },
+    ),
+  );
+
+  await expect(provider.send(notification)).rejects.toThrow(
+    "acceptance was not confirmed",
+  );
+
+  const [line] = (logger.error as jest.Mock).mock.calls[0];
+  expect(line).toContain("validation_error 403");
+  expect(line).toContain("your own email address ([email])");
+  expect(line).not.toContain("owner@example.com");
+  expect(line).not.toContain("buyer@example.com");
+  jest.restoreAllMocks();
+});

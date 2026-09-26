@@ -11,6 +11,10 @@ import { errorHandler as defaultErrorHandler } from "@medusajs/framework/http";
 import { rateLimit } from "./rate-limit";
 import { reportRequestError } from "./report-error";
 import {
+  NEWSLETTER_DESCRIPTION_MAX,
+  NEWSLETTER_HEADING_MAX,
+} from "../modules/newsletter/copy";
+import {
   UpdateSearchFallbackTerms,
   UpdateSearchVocabulary,
 } from "../modules/search-insights/vocabulary-input";
@@ -32,6 +36,8 @@ export const AdminUpdateNewsletterSettings = z.object({
   enabled: z.boolean().optional(),
   audience_id: z.string().nullable().optional(),
   double_opt_in: z.boolean().optional(),
+  heading: z.string().max(NEWSLETTER_HEADING_MAX).nullable().optional(),
+  description: z.string().max(NEWSLETTER_DESCRIPTION_MAX).nullable().optional(),
   consent_text: z.string().nullable().optional(),
   success_message: z.string().nullable().optional(),
   reply_to: z.email().nullable().optional(),

@@ -9,6 +9,8 @@ export type UpdateNewsletterSettingsInput = {
   enabled?: boolean;
   audience_id?: string | null;
   double_opt_in?: boolean;
+  heading?: string | null;
+  description?: string | null;
   consent_text?: string | null;
   success_message?: string | null;
   reply_to?: string | null;
@@ -33,6 +35,8 @@ export const updateNewsletterSettingsStep = createStep(
       enabled: previous.enabled,
       audience_id: previous.audience_id,
       double_opt_in: previous.double_opt_in,
+      heading: previous.heading,
+      description: previous.description,
       consent_text: previous.consent_text,
       success_message: previous.success_message,
       reply_to: previous.reply_to,

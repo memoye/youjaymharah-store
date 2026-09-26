@@ -72,6 +72,8 @@ const NewsletterSettings = z.object({
   enabled: z.boolean(),
   audience_id: z.string().nullable(),
   double_opt_in: z.boolean(),
+  heading: z.string().nullable(),
+  description: z.string().nullable(),
   consent_text: z.string().nullable(),
   success_message: z.string().nullable(),
   reply_to: z.string().nullable(),
@@ -82,13 +84,17 @@ const NewsletterSettings = z.object({
 /**
  * The public part of the newsletter settings; the audience id and reply-to
  * address stay admin-only. The form shows `consent_text` verbatim, since signup
- * records it as what the subscriber agreed to.
+ * records it as what the subscriber agreed to. `heading` and `description`
+ * arrive resolved -- the admin's copy or the default -- so they are never null.
  */
 const StoreNewsletter = z.object({
   newsletter: NewsletterSettings.pick({
     enabled: true,
     double_opt_in: true,
     consent_text: true,
+  }).extend({
+    heading: z.string(),
+    description: z.string(),
   }),
 });
 
